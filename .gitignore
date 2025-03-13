@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Build results
+/artifacts
+/target
+
+# Cargo+Git helper file (https://github.com/rust-lang/cargo/blob/0.44.1/src/cargo/sources/git/utils.rs#L320-L327)
+.cargo-ok
+
+# Text file backups
+**/*.rs.bk
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+**/.editorconfig
+
+# schemas
+contracts/**/schema/raw
+program-manager/schema/raw
+
+# e2e
+e2e/configs
+e2e/code_id_cache*
+e2e/tmp
+e2e/hyperlane_db_relayer
+
+deployment/results
+deployment/configs/local
+deployment/output_program
