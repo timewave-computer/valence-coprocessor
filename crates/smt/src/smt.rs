@@ -4,6 +4,64 @@ use valence_coprocessor_core::{ExecutionContext, Hash, Hasher, HASH_LEN};
 
 use crate::TreeBackend;
 
+/// A sparse Merkle tree implementation for the Valence protocol.
+///
+/// This module utilizes the underlying [TreeBackend] to manage node relationships, encapsulating
+/// implementation logic within its own boundaries.
+///
+/// The [ExecutionContext] offers the necessary cryptographic primitives, including a selection of
+/// hashes for use during data insertion.
+///
+/// The design employs a binary sparse Merkle tree, with each node categorized as either a pure
+/// node, a leaf (associated with a specific leaf key), or containing the related leaf data (a raw
+/// byte vector).
+///
+/// Isolated from its data persistence [TreeBackend], the tree is stateless and can be deployed
+/// flexibly across distributed instances of the data backend.
+///
+/// This design strategy aims to boost flexibility and enhance caching on the data backend, as
+/// straightforward cache mechanisms like LRU can significantly improve Merkle proof opening, given
+/// that certain nodes are frequently accessed.
+///
+/// The decoupling of tree logic from its data backend enables numerous optimization opportunities,
+/// since the tree essentially functions as a traversal through nodes.
+///
+/// Upon inserting data into the tree, the first step is to compute the leaf key associated with
+/// this data. The key method of the hasher of the execution environment (i.e. [Hasher::key]),
+/// which takes a constant context string (acting as a consistent namespace for the data) and the
+/// data itself, is responsible for computing the key. After the key is derived, traversal ensues
+/// bit by bit, progressively moving from the most significant bit (MSB). If the current bit is 0,
+/// traversal shifts to the left; if it's 1, it moves to the right.
+///
+/// The implementation is collision safe up to [HASH_LEN] bytes.
+///
+/// # Example
+///
+/// ```rust
+/// // An ephemeral in-memory data backend
+/// #[cfg(feature = "memory")]
+/// {
+///     use valence_smt::MemorySmt;
+///
+///     let context = "foo";
+///     let data = b"bar";
+///
+///     // creates a new instance of the backend
+///     let mut tree = MemorySmt::default();
+///
+///     // computes an empty root for inclusion
+///     let root = MemorySmt::empty_tree_root();
+///
+///     // appends the data into the tree, returning its new Merkle root
+///     let root = tree.insert(root, context, data.to_vec());
+///
+///     // generates a Merkle opening proof
+///     let proof = tree.get_opening(context, root, data).unwrap();
+///
+///     // asserts that the data opens to the provided root
+///     assert!(MemorySmt::verify(context, &root, &proof));
+/// }
+/// ```
 pub struct Smt<B, C>
 where
     B: TreeBackend,
@@ -13,24 +71,29 @@ where
     c: PhantomData<C>,
 }
 
+/// A children tuple of a parent node in the sparse Merkle tree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SmtChildren {
+    /// The left child associated with `0` in the key traversal.
     pub left: Hash,
+    /// The right child associated with `1` in the key traversal.
     pub right: Hash,
 }
 
 impl SmtChildren {
+    /// Computes the parent node in a sparse Merkle tree, given the children tuple.
     pub fn parent<C: ExecutionContext>(&self) -> Hash {
         <C as ExecutionContext>::Hasher::merge(&self.left, &self.right)
     }
 }
 
+/// A postorder traversal Merkle opening proof that opens the data to a Merkle root.
 #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SmtOpening {
     /// Preimage of the leaf hash
     pub data: Vec<u8>,
 
-    /// Merkle opening from root to leaf
+    /// Postorder traversal siblings from leaf to root.
     pub opening: Vec<Hash>,
 }
 
@@ -65,10 +128,14 @@ where
     B: TreeBackend,
     C: ExecutionContext,
 {
-    pub fn new_tree() -> Hash {
+    /// Returns a stateless empty root to be used for newly allocated sparse Merkle trees.
+    ///
+    /// This is a cryptographic stateless computation and won't touch the data backend.
+    pub fn empty_tree_root() -> Hash {
         Hash::default()
     }
 
+    /// Removes an entire subtree along with its linked leaf keys and data.
     pub fn prune(&mut self, root: &Hash) {
         // TODO don't recurse here to not overflow the stack on very deep trees
         if let Some(SmtChildren { left, right }) = self.b.get_children(root) {
@@ -83,6 +150,9 @@ where
         self.b.remove_children(root);
     }
 
+    /// Computes a Merkle opening proof for the provided leaf to the root.
+    ///
+    /// The leaf is defined by the combination of the context and its data.
     pub fn get_opening(&self, context: &str, root: Hash, data: &[u8]) -> Option<SmtOpening> {
         let key = C::Hasher::key(context, data);
         let data = self.b.get_key_data(&key)?;
@@ -117,15 +187,18 @@ where
             }
         }
 
+        opening.reverse();
+
         Some(SmtOpening { data, opening })
     }
 
+    /// Verifies a proof obtained via [Smt::get_opening].
     pub fn verify(context: &str, root: &Hash, proof: &SmtOpening) -> bool {
         let key = C::Hasher::key(context, &proof.data);
         let node = C::Hasher::hash(&proof.data);
         let mut depth = proof.opening.len();
 
-        let node = proof.opening.iter().rev().fold(node, |node, sibling| {
+        let node = proof.opening.iter().fold(node, |node, sibling| {
             depth -= 1;
 
             let i = depth / 8;
@@ -142,10 +215,15 @@ where
         &node == root
     }
 
+    /// Returns `true` if the provided node is associated with a leaf key.
     pub fn is_leaf(&self, node: &Hash) -> bool {
         self.b.has_node_key(node)
     }
 
+    /// Inserts a leaf into the tree.
+    ///
+    /// The leaf key will be computed given the context and data, and will have a collision
+    /// resistance up to [HASH_LEN] bytes.
     pub fn insert(&mut self, root: Hash, context: &str, data: Vec<u8>) -> Hash {
         let mut depth = 0;
 

@@ -1,7 +1,9 @@
 use crate::{ExecutionContext, Hash, Hasher};
 
+/// A blake3 hasher implementation for the Valence protocol.
 pub struct Blake3Hasher;
 
+/// A blake3 execution environment for the Valence protocol.
 pub struct Blake3Context;
 
 impl Hasher for Blake3Hasher {

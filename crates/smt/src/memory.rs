@@ -3,16 +3,16 @@ use valence_coprocessor_core::{Blake3Context, Hash};
 
 use crate::{Smt, SmtChildren, TreeBackend};
 
+/// An ephemeral memory tree associated with a blake3 hash execution environment.
 pub type MemorySmt = Smt<MemoryBackend, Blake3Context>;
 
+/// An ephemeral memory data backend for concrete sparse Merkle tree usage.
 #[derive(Debug, Default, Clone)]
 pub struct MemoryBackend {
     children: HashMap<Hash, SmtChildren>,
     keys: HashMap<Hash, Hash>,
     data: HashMap<Hash, Vec<u8>>,
 }
-
-impl MemoryBackend {}
 
 impl TreeBackend for MemoryBackend {
     fn insert_children(&mut self, parent: &Hash, children: &SmtChildren) -> bool {
@@ -72,7 +72,7 @@ mod tests {
 
         let mut tree = MemorySmt::default();
 
-        let root = MemorySmt::new_tree();
+        let root = MemorySmt::empty_tree_root();
         let root = tree.insert(root, context, data.to_vec());
         let proof = tree.get_opening(context, root, data).unwrap();
 
@@ -95,7 +95,7 @@ mod tests {
         assert_ne!(key[0] >> 7, keyp[0] >> 7);
 
         let mut tree = MemorySmt::default();
-        let root = MemorySmt::new_tree();
+        let root = MemorySmt::empty_tree_root();
 
         let root = tree.insert(root, context, data[0].to_vec());
         let root = tree.insert(root, context, data[1].to_vec());
@@ -123,7 +123,7 @@ mod tests {
         assert_ne!(key[0] >> 6, keyp[0] >> 6);
 
         let mut tree = MemorySmt::default();
-        let root = MemorySmt::new_tree();
+        let root = MemorySmt::empty_tree_root();
 
         let root = tree.insert(root, context, data.to_vec());
         let root = tree.insert(root, context, collision.to_vec());
@@ -155,7 +155,7 @@ mod tests {
         assert_ne!(key[0] >> 5, keyp[0] >> 5);
 
         let mut tree = MemorySmt::default();
-        let root = MemorySmt::new_tree();
+        let root = MemorySmt::empty_tree_root();
 
         let root = tree.insert(root, context, data.to_vec());
         let root = tree.insert(root, context, collision.to_vec());
@@ -187,7 +187,7 @@ mod tests {
         assert_ne!(key[1] >> 4, keyp[1] >> 4);
 
         let mut tree = MemorySmt::default();
-        let root = MemorySmt::new_tree();
+        let root = MemorySmt::empty_tree_root();
 
         let root = tree.insert(root, context, data.to_vec());
         let root = tree.insert(root, context, collision.to_vec());
@@ -229,7 +229,7 @@ mod tests {
         assert_eq!(keys[3][0] & mask, 0b01000000u8);
 
         let mut tree = MemorySmt::default();
-        let root = MemorySmt::new_tree();
+        let root = MemorySmt::empty_tree_root();
 
         let mut proofs = [
             SmtOpening::default(),
@@ -327,7 +327,7 @@ mod tests {
         let n = [1778514084u32, 252724253, 45104643];
 
         let ctx = "property";
-        let root = MemorySmt::new_tree();
+        let root = MemorySmt::empty_tree_root();
         let mut tree = MemorySmt::default();
 
         // R = 0
@@ -382,23 +382,29 @@ mod tests {
 
     proptest! {
         #[test]
-        #[ignore]
-        fn smt_property_check(numbers in proptest::collection::vec(0u32..u32::MAX, 1..1000)) {
+        fn smt_property_check(numbers in proptest::collection::vec(0u32..u32::MAX, 1..100)) {
             let context = "property";
             let mut tree = MemorySmt::default();
-            let mut root = MemorySmt::new_tree();
+            let mut root = MemorySmt::empty_tree_root();
             let mut values = Vec::with_capacity(numbers.len());
 
             for n in numbers {
-                values.push(n.to_le_bytes().to_vec());
+                let data = n.to_le_bytes();
 
-                root = tree.insert(root, context, values.last().cloned().unwrap());
+                values.push(data);
 
-                for v in &values {
-                    let proof = tree.get_opening(context, root, v).unwrap();
+                root = tree.insert(root, context, data.to_vec());
 
-                    assert!(MemorySmt::verify(context, &root, &proof));
-                }
+                let proof = tree.get_opening(context, root, &data).unwrap();
+
+                assert!(MemorySmt::verify(context, &root, &proof));
+            }
+
+            for v in values {
+                let proof = tree.get_opening(context, root, &v).unwrap();
+
+                assert!(MemorySmt::verify(context, &root, &proof));
+                assert_eq!(&v, proof.data.as_slice());
             }
         }
     }

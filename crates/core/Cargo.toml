@@ -6,8 +6,9 @@ authors = { workspace = true }
 description = "Sparse Merkle tree implementation for the Valence protocol"
 
 [dependencies]
-blake3 = { version = "=1.6.1", optional = true }
+blake3 = { version = "=1.6.1", optional = true, default-features = false }
 
 [features]
-default = ["blake3"]
+default = ["blake3", "std"]
 blake3 = ["dep:blake3"]
+std = ["blake3?/std"]
