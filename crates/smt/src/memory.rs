@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use hashbrown::HashMap;
 use valence_coprocessor_core::{Blake3Context, Hash};
 

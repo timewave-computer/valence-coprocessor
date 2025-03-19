@@ -1,5 +1,6 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
+use alloc::vec::Vec;
 use valence_coprocessor_core::{ExecutionContext, Hash, Hasher, HASH_LEN};
 
 use crate::TreeBackend;

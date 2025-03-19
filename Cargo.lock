@@ -355,14 +355,14 @@ checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
 
 [[package]]
 name = "valence-coprocessor-core"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "blake3",
 ]
 
 [[package]]
 name = "valence-smt"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "hashbrown",
  "proptest",

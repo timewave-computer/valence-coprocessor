@@ -1,6 +1,10 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
+#![no_std]
 
+extern crate alloc;
+
+use alloc::vec::Vec;
 use valence_coprocessor_core::Hash;
 
 #[cfg(feature = "memory")]
