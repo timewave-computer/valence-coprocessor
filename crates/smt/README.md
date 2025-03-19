@@ -18,6 +18,28 @@ Upon inserting data into the tree, the first step is to compute the leaf key ass
 
 The implementation is collision safe up to `HASH_LEN` bytes.
 
+```mermaid
+graph TD
+  subgraph ExecutionContext
+    SP1[SP1]
+    Risc0[Risc0]
+    Valida[Valida]
+  end
+
+  Tree[Smt]
+
+  subgraph TreeBackend
+    Memory[Memory]
+    Postgres[Postgres]
+    Redis[Redis]
+  end
+
+  User --> |Sends Data| Tree
+  Tree <--> |Persists Data| TreeBackend
+  User --> |Requests proofs| ExecutionContext
+  ExecutionContext --> |Queries Merkle proofs| Tree
+```
+
 ## Example
 
 ```rust
