@@ -11,6 +11,3 @@ repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]
 hashbrown = "=0.15.2"
-serde = { version = "=1.0.219", default-features = false, features = [
-  "alloc, derive",
-] }
