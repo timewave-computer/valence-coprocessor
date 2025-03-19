@@ -18,6 +18,8 @@ Upon inserting data into the tree, the first step is to compute the leaf key ass
 
 The implementation is collision safe up to `HASH_LEN` bytes.
 
+### General topology
+
 ```mermaid
 graph TD
   subgraph ExecutionContext
@@ -35,9 +37,42 @@ graph TD
   end
 
   User --> |Sends Data| Tree
-  Tree <--> |Persists Data| TreeBackend
+  Tree --> |Persists Data| TreeBackend
   User --> |Requests proofs| ExecutionContext
   ExecutionContext --> |Queries Merkle proofs| Tree
+```
+
+### Add data sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant T as Smt
+    participant C as ExecutionContext
+    participant D as TreeBackend
+
+    U->>T: Add data
+    T->>C: Query hash primitive
+    C-->>T: Poseidon
+    T->>D: Persist data
+```
+
+### Proof request
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as ExecutionContext
+    participant R as Dry run environment
+    participant T as Smt
+    participant D as TreeBackend
+
+    U->>C: Request proof
+    C->>R: Entire data set
+    R<<->>T: Query Merkle openings
+    T<<->>D: Persisted node data
+    R-->>C: Runtime relevant Merkle openings
+    C-->>U: Execution proof
 ```
 
 ## Example
