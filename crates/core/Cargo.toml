@@ -1,0 +1,14 @@
+[package]
+name = "valence-coprocessor-core"
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
+description = "Sparse Merkle tree implementation for the Valence protocol"
+
+[dependencies]
+blake3 = { version = "=1.6.1", optional = true, default-features = false }
+
+[features]
+default = ["blake3", "std"]
+blake3 = ["dep:blake3"]
+std = ["blake3?/std"]

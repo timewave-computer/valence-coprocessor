@@ -1,0 +1,13 @@
+[workspace]
+members = ["crates/core", "crates/smt"]
+resolver = "2"
+
+[workspace.package]
+authors = ["Timewave Labs"]
+edition = "2021"
+license = "Apache-2.0"
+version = "0.1.0"
+repository = "https://github.com/timewave-computer/valence-coprocessor"
+
+[workspace.dependencies]
+hashbrown = "=0.15.2"

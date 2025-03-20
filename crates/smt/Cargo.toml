@@ -1,0 +1,17 @@
+[package]
+name = "valence-smt"
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
+description = "Sparse Merkle tree implementation for the Valence protocol"
+
+[dependencies]
+hashbrown = { workspace = true }
+valence-coprocessor-core = { path = "../core" }
+
+[dev-dependencies]
+proptest = "1.6.0"
+
+[features]
+default = ["memory"]
+memory = ["valence-coprocessor-core/blake3"]
