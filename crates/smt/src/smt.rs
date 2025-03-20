@@ -41,7 +41,7 @@ use crate::TreeBackend;
 /// ```rust
 /// // An ephemeral in-memory data backend
 /// #[cfg(feature = "memory")]
-/// {
+/// async fn run() -> anyhow::Result<()> {
 ///     use valence_smt::MemorySmt;
 ///
 ///     let context = "foo";
@@ -54,13 +54,15 @@ use crate::TreeBackend;
 ///     let root = MemorySmt::empty_tree_root();
 ///
 ///     // appends the data into the tree, returning its new Merkle root
-///     let root = tree.insert(root, context, data.to_vec());
+///     let root = tree.insert(root, context, data.to_vec()).await?;
 ///
 ///     // generates a Merkle opening proof
-///     let proof = tree.get_opening(context, root, data).unwrap();
+///     let proof = tree.get_opening(context, root, data).await?.unwrap();
 ///
 ///     // asserts that the data opens to the provided root
 ///     assert!(MemorySmt::verify(context, &root, &proof));
+///
+///     Ok(())
 /// }
 /// ```
 pub struct Smt<B, C>
@@ -137,34 +139,44 @@ where
     }
 
     /// Removes an entire subtree along with its linked leaf keys and data.
-    pub fn prune(&mut self, root: &Hash) {
+    pub async fn prune(&mut self, root: &Hash) -> anyhow::Result<()> {
         // TODO don't recurse here to not overflow the stack on very deep trees
-        if let Some(SmtChildren { left, right }) = self.b.get_children(root) {
-            self.prune(&left);
-            self.prune(&right);
+        if let Some(SmtChildren { left, right }) = self.b.get_children(root).await? {
+            self.prune(&left).await?;
+            self.prune(&right).await?;
         }
 
-        if let Some(key) = self.b.remove_node_key(root) {
-            self.b.remove_key_data(&key);
+        if let Some(key) = self.b.remove_node_key(root).await? {
+            self.b.remove_key_data(&key).await?;
         }
 
-        self.b.remove_children(root);
+        self.b.remove_children(root).await?;
+
+        Ok(())
     }
 
     /// Computes a Merkle opening proof for the provided leaf to the root.
     ///
     /// The leaf is defined by the combination of the context and its data.
-    pub fn get_opening(&self, context: &str, root: Hash, data: &[u8]) -> Option<SmtOpening> {
+    pub async fn get_opening(
+        &self,
+        context: &str,
+        root: Hash,
+        data: &[u8],
+    ) -> anyhow::Result<Option<SmtOpening>> {
         let key = C::Hasher::key(context, data);
-        let data = self.b.get_key_data(&key)?;
+        let data = match self.b.get_key_data(&key).await? {
+            Some(d) => d,
+            None => return Ok(None),
+        };
 
         let (mut i, mut j) = (0, 0);
         let mut leaf_node = root;
         let mut opening = Vec::with_capacity(HASH_LEN * 8);
 
-        while let Some(SmtChildren { left, right }) = self.b.get_children(&leaf_node) {
+        while let Some(SmtChildren { left, right }) = self.b.get_children(&leaf_node).await? {
             // is current node a leaf?
-            if self.b.has_node_key(&leaf_node) {
+            if self.b.has_node_key(&leaf_node).await? {
                 break;
             }
 
@@ -190,7 +202,7 @@ where
 
         opening.reverse();
 
-        Some(SmtOpening { data, opening })
+        Ok(Some(SmtOpening { data, opening }))
     }
 
     /// Verifies a proof obtained via [Smt::get_opening].
@@ -217,33 +229,38 @@ where
     }
 
     /// Returns `true` if the provided node is associated with a leaf key.
-    pub fn is_leaf(&self, node: &Hash) -> bool {
-        self.b.has_node_key(node)
+    pub async fn is_leaf(&self, node: &Hash) -> anyhow::Result<bool> {
+        Ok(node == &Hash::default() || self.b.has_node_key(node).await?)
     }
 
     /// Inserts a leaf into the tree.
     ///
     /// The leaf key will be computed given the context and data, and will have a collision
     /// resistance up to [HASH_LEN] bytes.
-    pub fn insert(&mut self, root: Hash, context: &str, data: Vec<u8>) -> Hash {
+    pub async fn insert(
+        &mut self,
+        root: Hash,
+        context: &str,
+        data: Vec<u8>,
+    ) -> anyhow::Result<Hash> {
         let mut depth = 0;
 
         let key = C::Hasher::key(context, &data);
         let leaf = C::Hasher::hash(&data);
 
-        self.b.insert_key_data(&key, data);
-        self.b.insert_node_key(&leaf, &key);
+        self.b.insert_key_data(&key, data).await?;
+        self.b.insert_node_key(&leaf, &key).await?;
 
         // childless node
         if root == Hash::default() {
-            return leaf;
+            return Ok(leaf);
         }
 
         // single node tree
-        if self.is_leaf(&root) {
-            let sibling_key = match self.b.get_node_key(&root) {
+        if self.is_leaf(&root).await? {
+            let sibling_key = match self.b.get_node_key(&root).await? {
                 Some(k) => k,
-                None => unreachable!("fallback for inconsistent tree state"),
+                None => anyhow::bail!("inconsistent tree state; root {root:x?} is a leaf but doesn't have associated leaf key"),
             };
 
             let i = depth / 8;
@@ -268,7 +285,7 @@ where
             };
             let mut root = children.parent::<C>();
 
-            self.b.insert_children(&root, &children);
+            self.b.insert_children(&root, &children).await?;
 
             while depth > 0 {
                 depth -= 1;
@@ -285,23 +302,18 @@ where
 
                 root = children.parent::<C>();
 
-                self.b.insert_children(&root, &children);
+                self.b.insert_children(&root, &children).await?;
             }
 
-            return root;
+            return Ok(root);
         }
 
         let mut node = root;
         let mut opening = Vec::with_capacity(HASH_LEN * 8);
+        let mut is_leaf = false;
 
-        // TODO there is a corrupted state where a Merkle path doesn't end in 0 or leaf;
-        // in that case, this algorithm will extend the inconsistent state as it will
-        // halt on a node that has no children, but also is not associated with a leaf
-        // key. We might want to raise an error in that case. However, we might not want
-        // to make the function fallible only due to an inconsistent state.
-
-        // traverse until empty or leaf
-        while let Some(SmtChildren { left, right }) = self.b.get_children(&node) {
+        // traverse until leaf
+        while let Some(SmtChildren { left, right }) = self.b.get_children(&node).await? {
             let i = depth / 8;
             let j = depth % 8;
             let bit = (key[i] >> (7 - j)) & 1;
@@ -326,13 +338,15 @@ where
 
                 node = children.parent::<C>();
 
-                self.b.insert_children(&node, &children);
+                self.b.insert_children(&node, &children).await?;
+
+                is_leaf = true;
 
                 break;
             }
 
             // create a subtree to hold both the new leaf and the old leaf
-            if let Some(sibling_key) = self.b.get_node_key(&node) {
+            if let Some(sibling_key) = self.b.get_node_key(&node).await? {
                 if sibling_key == key {
                     break;
                 }
@@ -362,11 +376,15 @@ where
 
                 node = children.parent::<C>();
 
-                self.b.insert_children(&node, &children);
+                self.b.insert_children(&node, &children).await?;
+
+                is_leaf = true;
 
                 break;
             }
         }
+
+        anyhow::ensure!(is_leaf, "inconsistent tree state; the root {root:x?} traversed up to {node:x?}, but that node isn't a leaf");
 
         while let Some(sibling) = opening.pop() {
             depth -= 1;
@@ -383,9 +401,9 @@ where
 
             node = children.parent::<C>();
 
-            self.b.insert_children(&node, &children);
+            self.b.insert_children(&node, &children).await?;
         }
 
-        node
+        Ok(node)
     }
 }

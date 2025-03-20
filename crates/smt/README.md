@@ -80,7 +80,7 @@ sequenceDiagram
 ```rust
 // An ephemeral in-memory data backend
 #[cfg(feature = "memory")]
-{
+async fn run() -> anyhow::Result<()> {
     use valence_smt::MemorySmt;
 
     let context = "foo";
@@ -93,12 +93,14 @@ sequenceDiagram
     let root = MemorySmt::empty_tree_root();
 
     // appends the data into the tree, returning its new Merkle root
-    let root = tree.insert(root, context, data.to_vec());
+    let root = tree.insert(root, context, data.to_vec()).await?;
 
     // generates a Merkle opening proof
-    let proof = tree.get_opening(context, root, data).unwrap();
+    let proof = tree.get_opening(context, root, data).await?.unwrap();
 
     // asserts that the data opens to the provided root
     assert!(MemorySmt::verify(context, &root, &proof));
+
+    Ok(())
 }
 ```
