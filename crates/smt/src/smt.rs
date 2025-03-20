@@ -41,7 +41,7 @@ use crate::TreeBackend;
 /// ```rust
 /// // An ephemeral in-memory data backend
 /// #[cfg(feature = "memory")]
-/// async fn run() -> anyhow::Result<()> {
+/// fn run() -> anyhow::Result<()> {
 ///     use valence_smt::MemorySmt;
 ///
 ///     let context = "foo";
@@ -54,10 +54,10 @@ use crate::TreeBackend;
 ///     let root = MemorySmt::empty_tree_root();
 ///
 ///     // appends the data into the tree, returning its new Merkle root
-///     let root = tree.insert(root, context, data.to_vec()).await?;
+///     let root = tree.insert(root, context, data.to_vec())?;
 ///
 ///     // generates a Merkle opening proof
-///     let proof = tree.get_opening(context, root, data).await?.unwrap();
+///     let proof = tree.get_opening(context, root, data)?.unwrap();
 ///
 ///     // asserts that the data opens to the provided root
 ///     assert!(MemorySmt::verify(context, &root, &proof));
@@ -139,18 +139,18 @@ where
     }
 
     /// Removes an entire subtree along with its linked leaf keys and data.
-    pub async fn prune(&mut self, root: &Hash) -> anyhow::Result<()> {
+    pub fn prune(&mut self, root: &Hash) -> anyhow::Result<()> {
         // TODO don't recurse here to not overflow the stack on very deep trees
-        if let Some(SmtChildren { left, right }) = self.b.get_children(root).await? {
-            self.prune(&left).await?;
-            self.prune(&right).await?;
+        if let Some(SmtChildren { left, right }) = self.b.get_children(root)? {
+            self.prune(&left)?;
+            self.prune(&right)?;
         }
 
-        if let Some(key) = self.b.remove_node_key(root).await? {
-            self.b.remove_key_data(&key).await?;
+        if let Some(key) = self.b.remove_node_key(root)? {
+            self.b.remove_key_data(&key)?;
         }
 
-        self.b.remove_children(root).await?;
+        self.b.remove_children(root)?;
 
         Ok(())
     }
@@ -158,14 +158,14 @@ where
     /// Computes a Merkle opening proof for the provided leaf to the root.
     ///
     /// The leaf is defined by the combination of the context and its data.
-    pub async fn get_opening(
+    pub fn get_opening(
         &self,
         context: &str,
         root: Hash,
         data: &[u8],
     ) -> anyhow::Result<Option<SmtOpening>> {
         let key = C::Hasher::key(context, data);
-        let data = match self.b.get_key_data(&key).await? {
+        let data = match self.b.get_key_data(&key)? {
             Some(d) => d,
             None => return Ok(None),
         };
@@ -174,9 +174,9 @@ where
         let mut leaf_node = root;
         let mut opening = Vec::with_capacity(HASH_LEN * 8);
 
-        while let Some(SmtChildren { left, right }) = self.b.get_children(&leaf_node).await? {
+        while let Some(SmtChildren { left, right }) = self.b.get_children(&leaf_node)? {
             // is current node a leaf?
-            if self.b.has_node_key(&leaf_node).await? {
+            if self.b.has_node_key(&leaf_node)? {
                 break;
             }
 
@@ -229,27 +229,22 @@ where
     }
 
     /// Returns `true` if the provided node is associated with a leaf key.
-    pub async fn is_leaf(&self, node: &Hash) -> anyhow::Result<bool> {
-        Ok(node == &Hash::default() || self.b.has_node_key(node).await?)
+    pub fn is_leaf(&self, node: &Hash) -> anyhow::Result<bool> {
+        Ok(node == &Hash::default() || self.b.has_node_key(node)?)
     }
 
     /// Inserts a leaf into the tree.
     ///
     /// The leaf key will be computed given the context and data, and will have a collision
     /// resistance up to [HASH_LEN] bytes.
-    pub async fn insert(
-        &mut self,
-        root: Hash,
-        context: &str,
-        data: Vec<u8>,
-    ) -> anyhow::Result<Hash> {
+    pub fn insert(&mut self, root: Hash, context: &str, data: Vec<u8>) -> anyhow::Result<Hash> {
         let mut depth = 0;
 
         let key = C::Hasher::key(context, &data);
         let leaf = C::Hasher::hash(&data);
 
-        self.b.insert_key_data(&key, data).await?;
-        self.b.insert_node_key(&leaf, &key).await?;
+        self.b.insert_key_data(&key, data)?;
+        self.b.insert_node_key(&leaf, &key)?;
 
         // childless node
         if root == Hash::default() {
@@ -257,8 +252,8 @@ where
         }
 
         // single node tree
-        if self.is_leaf(&root).await? {
-            let sibling_key = match self.b.get_node_key(&root).await? {
+        if self.is_leaf(&root)? {
+            let sibling_key = match self.b.get_node_key(&root)? {
                 Some(k) => k,
                 None => anyhow::bail!("inconsistent tree state; root {root:x?} is a leaf but doesn't have associated leaf key"),
             };
@@ -285,7 +280,7 @@ where
             };
             let mut root = children.parent::<C>();
 
-            self.b.insert_children(&root, &children).await?;
+            self.b.insert_children(&root, &children)?;
 
             while depth > 0 {
                 depth -= 1;
@@ -302,7 +297,7 @@ where
 
                 root = children.parent::<C>();
 
-                self.b.insert_children(&root, &children).await?;
+                self.b.insert_children(&root, &children)?;
             }
 
             return Ok(root);
@@ -313,7 +308,7 @@ where
         let mut is_leaf = false;
 
         // traverse until leaf
-        while let Some(SmtChildren { left, right }) = self.b.get_children(&node).await? {
+        while let Some(SmtChildren { left, right }) = self.b.get_children(&node)? {
             let i = depth / 8;
             let j = depth % 8;
             let bit = (key[i] >> (7 - j)) & 1;
@@ -338,7 +333,7 @@ where
 
                 node = children.parent::<C>();
 
-                self.b.insert_children(&node, &children).await?;
+                self.b.insert_children(&node, &children)?;
 
                 is_leaf = true;
 
@@ -346,7 +341,7 @@ where
             }
 
             // create a subtree to hold both the new leaf and the old leaf
-            if let Some(sibling_key) = self.b.get_node_key(&node).await? {
+            if let Some(sibling_key) = self.b.get_node_key(&node)? {
                 if sibling_key == key {
                     break;
                 }
@@ -376,7 +371,7 @@ where
 
                 node = children.parent::<C>();
 
-                self.b.insert_children(&node, &children).await?;
+                self.b.insert_children(&node, &children)?;
 
                 is_leaf = true;
 
@@ -401,7 +396,7 @@ where
 
             node = children.parent::<C>();
 
-            self.b.insert_children(&node, &children).await?;
+            self.b.insert_children(&node, &children)?;
         }
 
         Ok(node)

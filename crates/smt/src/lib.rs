@@ -4,8 +4,6 @@
 
 extern crate alloc;
 
-use core::future::Future;
-
 use alloc::vec::Vec;
 use valence_coprocessor_core::Hash;
 
@@ -30,58 +28,34 @@ pub use smt::*;
 pub trait TreeBackend {
     /// Appends a relationship from the parent node to its children within a binary tree
     /// structure, returning true if a prior relationship from the parent node was overwritten.
-    fn insert_children(
-        &mut self,
-        parent: &Hash,
-        children: &SmtChildren,
-    ) -> impl Future<Output = anyhow::Result<bool>>;
+    fn insert_children(&mut self, parent: &Hash, children: &SmtChildren) -> anyhow::Result<bool>;
 
     /// Fetches the children linked to the provided parent node.
-    fn get_children(
-        &self,
-        parent: &Hash,
-    ) -> impl Future<Output = anyhow::Result<Option<SmtChildren>>>;
+    fn get_children(&self, parent: &Hash) -> anyhow::Result<Option<SmtChildren>>;
 
     /// Removes a parent-children relationship from the storage, returning it.
-    fn remove_children(
-        &mut self,
-        parent: &Hash,
-    ) -> impl Future<Output = anyhow::Result<Option<SmtChildren>>>;
+    fn remove_children(&mut self, parent: &Hash) -> anyhow::Result<Option<SmtChildren>>;
 
     /// Assign a leaf key to a tree node, logically converting the node into a leaf node,
     /// returning `true` if a prior relationship of the provided node was overwritten.
-    fn insert_node_key(
-        &mut self,
-        node: &Hash,
-        leaf: &Hash,
-    ) -> impl Future<Output = anyhow::Result<bool>>;
+    fn insert_node_key(&mut self, node: &Hash, leaf: &Hash) -> anyhow::Result<bool>;
 
     /// Returns `true` if the provided node is associated with a leaf key.
-    fn has_node_key(&self, node: &Hash) -> impl Future<Output = anyhow::Result<bool>>;
+    fn has_node_key(&self, node: &Hash) -> anyhow::Result<bool>;
 
     /// Fetches the associated leaf key of the node.
-    fn get_node_key(&self, node: &Hash) -> impl Future<Output = anyhow::Result<Option<Hash>>>;
+    fn get_node_key(&self, node: &Hash) -> anyhow::Result<Option<Hash>>;
 
     /// Removes a node to leaf key association from the node, returning it.
-    fn remove_node_key(
-        &mut self,
-        node: &Hash,
-    ) -> impl Future<Output = anyhow::Result<Option<Hash>>>;
+    fn remove_node_key(&mut self, node: &Hash) -> anyhow::Result<Option<Hash>>;
 
     /// Assign a leaf data to a leaf key, returning `true` if a prior relationship of the
     /// provided key to a leaf data was overwritten.
-    fn insert_key_data(
-        &mut self,
-        key: &Hash,
-        data: Vec<u8>,
-    ) -> impl Future<Output = anyhow::Result<bool>>;
+    fn insert_key_data(&mut self, key: &Hash, data: Vec<u8>) -> anyhow::Result<bool>;
 
     /// Fetches the associated leaf data to the provided leaf key.
-    fn get_key_data(&self, key: &Hash) -> impl Future<Output = anyhow::Result<Option<Vec<u8>>>>;
+    fn get_key_data(&self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>>;
 
     /// Removes a leaf key data association, returning it.
-    fn remove_key_data(
-        &mut self,
-        key: &Hash,
-    ) -> impl Future<Output = anyhow::Result<Option<Vec<u8>>>>;
+    fn remove_key_data(&mut self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>>;
 }

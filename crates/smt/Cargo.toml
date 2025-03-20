@@ -12,7 +12,6 @@ valence-coprocessor-core = { path = "../core", default-features = false }
 
 [dev-dependencies]
 proptest = "=1.6.0"
-tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 
 [features]
 std = ["anyhow/std", "valence-coprocessor-core/std"]
