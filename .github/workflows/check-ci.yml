@@ -15,6 +15,28 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
+  check-no-std:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: ["valence-coprocessor-core", "valence-smt"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Build artifacts
+        uses: Swatinem/rust-cache@v2.7.5
+        with:
+          cache-on-failure: true
+          shared-key: ${{ github.event.pull_request.number || github.ref }}
+
+      - name: Install bare metal ARM toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv7em-none-eabihf
+
+      - name: Run check
+        run: cargo check --package ${{ matrix.package }} --target thumbv7em-none-eabihf --no-default-features
+
   build:
     runs-on: ubuntu-latest
     steps:

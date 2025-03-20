@@ -6,12 +6,15 @@ authors = { workspace = true }
 description = "Sparse Merkle tree implementation for the Valence protocol"
 
 [dependencies]
+anyhow = { workspace = true }
 hashbrown = { workspace = true }
-valence-coprocessor-core = { path = "../core" }
+valence-coprocessor-core = { path = "../core", default-features = false }
 
 [dev-dependencies]
-proptest = "1.6.0"
+proptest = "=1.6.0"
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 
 [features]
-default = ["memory"]
+std = ["anyhow/std", "valence-coprocessor-core/std"]
+default = ["memory", "std"]
 memory = ["valence-coprocessor-core/blake3"]

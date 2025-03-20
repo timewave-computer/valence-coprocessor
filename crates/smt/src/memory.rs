@@ -1,3 +1,5 @@
+use core::future::{self, Future};
+
 use alloc::vec::Vec;
 use hashbrown::HashMap;
 use valence_coprocessor_core::{Blake3Context, Hash};
@@ -16,72 +18,99 @@ pub struct MemoryBackend {
 }
 
 impl TreeBackend for MemoryBackend {
-    fn insert_children(&mut self, parent: &Hash, children: &SmtChildren) -> bool {
-        self.children.insert(*parent, *children).is_some()
+    fn insert_children(
+        &mut self,
+        parent: &Hash,
+        children: &SmtChildren,
+    ) -> impl Future<Output = anyhow::Result<bool>> {
+        future::ready(Ok(self.children.insert(*parent, *children).is_some()))
     }
 
-    fn get_children(&self, parent: &Hash) -> Option<SmtChildren> {
-        self.children.get(parent).copied()
+    fn get_children(
+        &self,
+        parent: &Hash,
+    ) -> impl Future<Output = anyhow::Result<Option<SmtChildren>>> {
+        future::ready(Ok(self.children.get(parent).copied()))
     }
 
-    fn remove_children(&mut self, parent: &Hash) -> Option<SmtChildren> {
-        self.children.remove(parent)
+    fn remove_children(
+        &mut self,
+        parent: &Hash,
+    ) -> impl Future<Output = anyhow::Result<Option<SmtChildren>>> {
+        future::ready(Ok(self.children.remove(parent)))
     }
 
-    fn insert_node_key(&mut self, node: &Hash, leaf: &Hash) -> bool {
-        self.keys.insert(*node, *leaf).is_some()
+    fn insert_node_key(
+        &mut self,
+        node: &Hash,
+        leaf: &Hash,
+    ) -> impl Future<Output = anyhow::Result<bool>> {
+        future::ready(Ok(self.keys.insert(*node, *leaf).is_some()))
     }
 
-    fn has_node_key(&self, node: &Hash) -> bool {
-        self.keys.get(node).is_some()
+    fn has_node_key(&self, node: &Hash) -> impl Future<Output = anyhow::Result<bool>> {
+        future::ready(Ok(self.keys.get(node).is_some()))
     }
 
-    fn get_node_key(&self, node: &Hash) -> Option<Hash> {
-        self.keys.get(node).copied()
+    fn get_node_key(&self, node: &Hash) -> impl Future<Output = anyhow::Result<Option<Hash>>> {
+        future::ready(Ok(self.keys.get(node).copied()))
     }
 
-    fn remove_node_key(&mut self, node: &Hash) -> Option<Hash> {
-        self.keys.remove(node)
+    fn remove_node_key(
+        &mut self,
+        node: &Hash,
+    ) -> impl Future<Output = anyhow::Result<Option<Hash>>> {
+        future::ready(Ok(self.keys.remove(node)))
     }
 
-    fn insert_key_data(&mut self, key: &Hash, data: Vec<u8>) -> bool {
-        self.data.insert(*key, data).is_some()
+    fn insert_key_data(
+        &mut self,
+        key: &Hash,
+        data: Vec<u8>,
+    ) -> impl Future<Output = anyhow::Result<bool>> {
+        future::ready(Ok(self.data.insert(*key, data).is_some()))
     }
 
-    fn get_key_data(&self, key: &Hash) -> Option<Vec<u8>> {
-        self.data.get(key).cloned()
+    fn get_key_data(&self, key: &Hash) -> impl Future<Output = anyhow::Result<Option<Vec<u8>>>> {
+        future::ready(Ok(self.data.get(key).cloned()))
     }
 
-    fn remove_key_data(&mut self, key: &Hash) -> Option<Vec<u8>> {
-        self.data.remove(key)
+    fn remove_key_data(
+        &mut self,
+        key: &Hash,
+    ) -> impl Future<Output = anyhow::Result<Option<Vec<u8>>>> {
+        future::ready(Ok(self.data.remove(key)))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use tokio::runtime::Runtime;
     use valence_coprocessor_core::{Blake3Hasher, Hasher as _};
 
     use crate::SmtOpening;
 
     use super::*;
 
-    #[test]
-    fn single_node_opening() {
+    #[tokio::test]
+    async fn single_node_opening() -> anyhow::Result<()> {
         let context = "poem";
         let data = b"Two roads diverged in a wood, and I took the one less traveled by";
 
         let mut tree = MemorySmt::default();
 
         let root = MemorySmt::empty_tree_root();
-        let root = tree.insert(root, context, data.to_vec());
-        let proof = tree.get_opening(context, root, data).unwrap();
+        let root = tree.insert(root, context, data.to_vec()).await?;
+        let proof = tree.get_opening(context, root, data).await?.unwrap();
 
         assert!(MemorySmt::verify(context, &root, &proof));
+
+        Ok(())
     }
 
-    #[test]
-    fn double_node_opening() {
+    #[tokio::test]
+    async fn double_node_opening() -> anyhow::Result<()> {
         let context = "poem";
 
         let data = [
@@ -98,20 +127,22 @@ mod tests {
         let mut tree = MemorySmt::default();
         let root = MemorySmt::empty_tree_root();
 
-        let root = tree.insert(root, context, data[0].to_vec());
-        let root = tree.insert(root, context, data[1].to_vec());
+        let root = tree.insert(root, context, data[0].to_vec()).await?;
+        let root = tree.insert(root, context, data[1].to_vec()).await?;
 
         let proofs = [
-            tree.get_opening(context, root, &data[0]).unwrap(),
-            tree.get_opening(context, root, &data[1]).unwrap(),
+            tree.get_opening(context, root, &data[0]).await?.unwrap(),
+            tree.get_opening(context, root, &data[1]).await?.unwrap(),
         ];
 
         assert!(MemorySmt::verify(context, &root, &proofs[0]));
         assert!(MemorySmt::verify(context, &root, &proofs[1]));
+
+        Ok(())
     }
 
-    #[test]
-    fn double_one_bit_collision() {
+    #[tokio::test]
+    async fn double_one_bit_collision() -> anyhow::Result<()> {
         let context = "poem";
         let data = b"And miles to go before I sleep.";
         let collision = [0x00, 0x00, 0x00];
@@ -126,12 +157,12 @@ mod tests {
         let mut tree = MemorySmt::default();
         let root = MemorySmt::empty_tree_root();
 
-        let root = tree.insert(root, context, data.to_vec());
-        let root = tree.insert(root, context, collision.to_vec());
+        let root = tree.insert(root, context, data.to_vec()).await?;
+        let root = tree.insert(root, context, collision.to_vec()).await?;
 
         let proofs = [
-            tree.get_opening(context, root, data).unwrap(),
-            tree.get_opening(context, root, &collision).unwrap(),
+            tree.get_opening(context, root, data).await?.unwrap(),
+            tree.get_opening(context, root, &collision).await?.unwrap(),
         ];
 
         assert_eq!(proofs[0].opening.len(), 2);
@@ -139,10 +170,12 @@ mod tests {
 
         assert!(MemorySmt::verify(context, &root, &proofs[0]));
         assert!(MemorySmt::verify(context, &root, &proofs[1]));
+
+        Ok(())
     }
 
-    #[test]
-    fn double_two_bit_collision() {
+    #[tokio::test]
+    async fn double_two_bit_collision() -> anyhow::Result<()> {
         let context = "poem";
         let data = b"And miles to go before I sleep.";
         let collision = [0x00, 0x00, 0x02];
@@ -158,12 +191,12 @@ mod tests {
         let mut tree = MemorySmt::default();
         let root = MemorySmt::empty_tree_root();
 
-        let root = tree.insert(root, context, data.to_vec());
-        let root = tree.insert(root, context, collision.to_vec());
+        let root = tree.insert(root, context, data.to_vec()).await?;
+        let root = tree.insert(root, context, collision.to_vec()).await?;
 
         let proofs = [
-            tree.get_opening(context, root, data).unwrap(),
-            tree.get_opening(context, root, &collision).unwrap(),
+            tree.get_opening(context, root, data).await?.unwrap(),
+            tree.get_opening(context, root, &collision).await?.unwrap(),
         ];
 
         assert_eq!(proofs[0].opening.len(), 3);
@@ -171,10 +204,12 @@ mod tests {
 
         assert!(MemorySmt::verify(context, &root, &proofs[0]));
         assert!(MemorySmt::verify(context, &root, &proofs[1]));
+
+        Ok(())
     }
 
-    #[test]
-    fn double_long_collision() {
+    #[tokio::test]
+    async fn double_long_collision() -> anyhow::Result<()> {
         let context = "poem";
         let data = b"And miles to go before I sleep.";
         let collision = [0x25, 0x80, 0x30];
@@ -190,12 +225,12 @@ mod tests {
         let mut tree = MemorySmt::default();
         let root = MemorySmt::empty_tree_root();
 
-        let root = tree.insert(root, context, data.to_vec());
-        let root = tree.insert(root, context, collision.to_vec());
+        let root = tree.insert(root, context, data.to_vec()).await?;
+        let root = tree.insert(root, context, collision.to_vec()).await?;
 
         let proofs = [
-            tree.get_opening(context, root, data).unwrap(),
-            tree.get_opening(context, root, &collision).unwrap(),
+            tree.get_opening(context, root, data).await?.unwrap(),
+            tree.get_opening(context, root, &collision).await?.unwrap(),
         ];
 
         assert_eq!(proofs[0].opening.len(), 12);
@@ -203,10 +238,12 @@ mod tests {
 
         assert!(MemorySmt::verify(context, &root, &proofs[0]));
         assert!(MemorySmt::verify(context, &root, &proofs[1]));
+
+        Ok(())
     }
 
-    #[test]
-    fn complex_tree() {
+    #[tokio::test]
+    async fn complex_tree() -> anyhow::Result<()> {
         let context = "poem";
         let mask = 0b11100000u8;
 
@@ -241,9 +278,9 @@ mod tests {
 
         // R = 0
 
-        let root = tree.insert(root, context, data[0].to_vec());
+        let root = tree.insert(root, context, data[0].to_vec()).await?;
 
-        proofs[0] = tree.get_opening(context, root, &data[0]).unwrap();
+        proofs[0] = tree.get_opening(context, root, &data[0]).await?.unwrap();
 
         assert_eq!(proofs[0].opening.len(), 0);
 
@@ -257,10 +294,10 @@ mod tests {
         //    / \
         //   0   1
 
-        let root = tree.insert(root, context, data[1].to_vec());
+        let root = tree.insert(root, context, data[1].to_vec()).await?;
 
-        proofs[0] = tree.get_opening(context, root, &data[0]).unwrap();
-        proofs[1] = tree.get_opening(context, root, &data[1]).unwrap();
+        proofs[0] = tree.get_opening(context, root, &data[0]).await?.unwrap();
+        proofs[1] = tree.get_opening(context, root, &data[1]).await?.unwrap();
 
         assert_eq!(proofs[0].opening.len(), 2);
         assert_eq!(proofs[1].opening.len(), 2);
@@ -279,11 +316,11 @@ mod tests {
         //  / \
         // 0   2
 
-        let root = tree.insert(root, context, data[2].to_vec());
+        let root = tree.insert(root, context, data[2].to_vec()).await?;
 
-        proofs[0] = tree.get_opening(context, root, &data[0]).unwrap();
-        proofs[1] = tree.get_opening(context, root, &data[1]).unwrap();
-        proofs[2] = tree.get_opening(context, root, &data[2]).unwrap();
+        proofs[0] = tree.get_opening(context, root, &data[0]).await?.unwrap();
+        proofs[1] = tree.get_opening(context, root, &data[1]).await?.unwrap();
+        proofs[2] = tree.get_opening(context, root, &data[2]).await?.unwrap();
 
         assert_eq!(proofs[0].opening.len(), 3);
         assert_eq!(proofs[1].opening.len(), 2);
@@ -305,12 +342,12 @@ mod tests {
         //  / \
         // 0   2
 
-        let root = tree.insert(root, context, data[3].to_vec());
+        let root = tree.insert(root, context, data[3].to_vec()).await?;
 
-        proofs[0] = tree.get_opening(context, root, &data[0]).unwrap();
-        proofs[1] = tree.get_opening(context, root, &data[1]).unwrap();
-        proofs[2] = tree.get_opening(context, root, &data[2]).unwrap();
-        proofs[3] = tree.get_opening(context, root, &data[3]).unwrap();
+        proofs[0] = tree.get_opening(context, root, &data[0]).await?.unwrap();
+        proofs[1] = tree.get_opening(context, root, &data[1]).await?.unwrap();
+        proofs[2] = tree.get_opening(context, root, &data[2]).await?.unwrap();
+        proofs[3] = tree.get_opening(context, root, &data[3]).await?.unwrap();
 
         assert!(MemorySmt::verify(context, &root, &proofs[0]));
         assert!(MemorySmt::verify(context, &root, &proofs[1]));
@@ -321,10 +358,12 @@ mod tests {
         assert_eq!(&proofs[1].data, &data[1]);
         assert_eq!(&proofs[2].data, &data[2]);
         assert_eq!(&proofs[3].data, &data[3]);
+
+        Ok(())
     }
 
-    #[test]
-    fn deep_opening() {
+    #[tokio::test]
+    async fn deep_opening() -> anyhow::Result<()> {
         let n = [1778514084u32, 252724253, 45104643];
 
         let ctx = "property";
@@ -333,9 +372,12 @@ mod tests {
 
         // R = 0
 
-        let root = tree.insert(root, ctx, n[0].to_le_bytes().to_vec());
+        let root = tree.insert(root, ctx, n[0].to_le_bytes().to_vec()).await?;
 
-        let p0 = tree.get_opening(ctx, root, &n[0].to_le_bytes()).unwrap();
+        let p0 = tree
+            .get_opening(ctx, root, &n[0].to_le_bytes())
+            .await?
+            .unwrap();
 
         assert_eq!(&p0.data, &n[0].to_le_bytes());
 
@@ -345,10 +387,16 @@ mod tests {
         //  / \
         // 1   0
 
-        let root = tree.insert(root, ctx, n[1].to_le_bytes().to_vec());
+        let root = tree.insert(root, ctx, n[1].to_le_bytes().to_vec()).await?;
 
-        let p0 = tree.get_opening(ctx, root, &n[0].to_le_bytes()).unwrap();
-        let p1 = tree.get_opening(ctx, root, &n[1].to_le_bytes()).unwrap();
+        let p0 = tree
+            .get_opening(ctx, root, &n[0].to_le_bytes())
+            .await?
+            .unwrap();
+        let p1 = tree
+            .get_opening(ctx, root, &n[1].to_le_bytes())
+            .await?
+            .unwrap();
 
         assert_eq!(&p0.data, &n[0].to_le_bytes());
         assert_eq!(&p1.data, &n[1].to_le_bytes());
@@ -366,11 +414,20 @@ mod tests {
         //  / \
         // 0   2
 
-        let root = tree.insert(root, ctx, n[2].to_le_bytes().to_vec());
+        let root = tree.insert(root, ctx, n[2].to_le_bytes().to_vec()).await?;
 
-        let p0 = tree.get_opening(ctx, root, &n[0].to_le_bytes()).unwrap();
-        let p1 = tree.get_opening(ctx, root, &n[1].to_le_bytes()).unwrap();
-        let p2 = tree.get_opening(ctx, root, &n[2].to_le_bytes()).unwrap();
+        let p0 = tree
+            .get_opening(ctx, root, &n[0].to_le_bytes())
+            .await?
+            .unwrap();
+        let p1 = tree
+            .get_opening(ctx, root, &n[1].to_le_bytes())
+            .await?
+            .unwrap();
+        let p2 = tree
+            .get_opening(ctx, root, &n[2].to_le_bytes())
+            .await?
+            .unwrap();
 
         assert_eq!(&p0.data, &n[0].to_le_bytes());
         assert_eq!(&p1.data, &n[1].to_le_bytes());
@@ -379,6 +436,8 @@ mod tests {
         assert_eq!(p0.opening.len(), 4);
         assert_eq!(p1.opening.len(), 1);
         assert_eq!(p2.opening.len(), 4);
+
+        Ok(())
     }
 
     proptest! {
@@ -389,24 +448,28 @@ mod tests {
             let mut root = MemorySmt::empty_tree_root();
             let mut values = Vec::with_capacity(numbers.len());
 
-            for n in numbers {
-                let data = n.to_le_bytes();
+            let rt = Runtime::new().unwrap();
 
-                values.push(data);
+            rt.block_on(async {
+                for n in numbers {
+                    let data = n.to_le_bytes();
 
-                root = tree.insert(root, context, data.to_vec());
+                    values.push(data);
 
-                let proof = tree.get_opening(context, root, &data).unwrap();
+                    root = tree.insert(root, context, data.to_vec()).await.unwrap();
 
-                assert!(MemorySmt::verify(context, &root, &proof));
-            }
+                    let proof = tree.get_opening(context, root, &data).await.unwrap().unwrap();
 
-            for v in values {
-                let proof = tree.get_opening(context, root, &v).unwrap();
+                    assert!(MemorySmt::verify(context, &root, &proof));
+                }
 
-                assert!(MemorySmt::verify(context, &root, &proof));
-                assert_eq!(&v, proof.data.as_slice());
-            }
+                for v in values {
+                    let proof = tree.get_opening(context, root, &v).await.unwrap().unwrap();
+
+                    assert!(MemorySmt::verify(context, &root, &proof));
+                    assert_eq!(&v, proof.data.as_slice());
+                }
+            });
         }
     }
 }
