@@ -12,4 +12,3 @@ repository = "https://github.com/timewave-computer/valence-coprocessor"
 [workspace.dependencies]
 anyhow = { version = "=1.0.97", default-features = false }
 hashbrown = "=0.15.2"
-tokio = "=1.44.1"
