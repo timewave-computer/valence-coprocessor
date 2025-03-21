@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 
 use alloc::vec::Vec;
 use valence_coprocessor_core::{ExecutionContext, Hash, Hasher, HASH_LEN};
+use zerocopy::IntoBytes as _;
 
 use crate::TreeBackend;
 
@@ -75,7 +76,19 @@ where
 }
 
 /// A children tuple of a parent node in the sparse Merkle tree.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    zerocopy::TryFromBytes,
+    zerocopy::IntoBytes,
+    zerocopy::Immutable,
+)]
 pub struct SmtChildren {
     /// The left child associated with `0` in the key traversal.
     pub left: Hash,
@@ -87,6 +100,12 @@ impl SmtChildren {
     /// Computes the parent node in a sparse Merkle tree, given the children tuple.
     pub fn parent<C: ExecutionContext>(&self) -> Hash {
         <C as ExecutionContext>::Hasher::merge(&self.left, &self.right)
+    }
+}
+
+impl AsRef<[u8]> for SmtChildren {
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
     }
 }
 
@@ -123,6 +142,16 @@ where
             b: self.b.clone(),
             c: PhantomData,
         }
+    }
+}
+
+impl<B, C> From<B> for Smt<B, C>
+where
+    B: TreeBackend,
+    C: ExecutionContext,
+{
+    fn from(b: B) -> Self {
+        Self { b, c: PhantomData }
     }
 }
 
