@@ -17,7 +17,7 @@ proptest = "=1.6.0"
 tempfile = "=3.19.1"
 
 [features]
-default = ["memory", "rocksdb", "std"]
+default = ["memory", "std"]
 std = ["anyhow/std", "valence-coprocessor-core/std", "zerocopy/std"]
 memory = ["valence-coprocessor-core/blake3"]
 rocksdb = ["dep:rocksdb", "std"]
