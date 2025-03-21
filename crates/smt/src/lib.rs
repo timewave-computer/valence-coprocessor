@@ -1,21 +1,22 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
 
 use alloc::vec::Vec;
 use valence_coprocessor_core::Hash;
 
+mod smt;
+
 #[cfg(feature = "memory")]
 mod memory;
 
-#[cfg(feature = "memory")]
-pub use memory::*;
+#[cfg(feature = "rocksdb")]
+mod rocksdb;
 
-mod smt;
-
-pub use smt::*;
+#[cfg(test)]
+mod tests;
 
 /// A data backend for sparse Merkle tree implementations.
 ///
@@ -59,3 +60,11 @@ pub trait TreeBackend {
     /// Removes a leaf key data association, returning it.
     fn remove_key_data(&mut self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>>;
 }
+
+pub use smt::*;
+
+#[cfg(feature = "memory")]
+pub use memory::*;
+
+#[cfg(feature = "rocksdb")]
+pub use rocksdb::*;

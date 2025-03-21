@@ -8,12 +8,16 @@ description = "Sparse Merkle tree implementation for the Valence protocol"
 [dependencies]
 anyhow = { workspace = true }
 hashbrown = { workspace = true }
+rocksdb = { workspace = true, optional = true }
 valence-coprocessor-core = { path = "../core", default-features = false }
+zerocopy = { version = "=0.8.23", features = ["alloc", "derive"] }
 
 [dev-dependencies]
 proptest = "=1.6.0"
+tempfile = "=3.19.1"
 
 [features]
-std = ["anyhow/std", "valence-coprocessor-core/std"]
-default = ["memory", "std"]
+default = ["memory", "rocksdb", "std"]
+std = ["anyhow/std", "valence-coprocessor-core/std", "zerocopy/std"]
 memory = ["valence-coprocessor-core/blake3"]
+rocksdb = ["dep:rocksdb", "std"]
