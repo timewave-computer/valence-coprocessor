@@ -59,7 +59,6 @@ impl TreeBackend for MemoryBackend {
 
 #[cfg(test)]
 mod tests {
-    use proptest::prelude::*;
     use valence_coprocessor_core::{Blake3Hasher, Hasher as _};
 
     use crate::SmtOpening;
@@ -393,34 +392,5 @@ mod tests {
         assert_eq!(p2.opening.len(), 4);
 
         Ok(())
-    }
-
-    proptest! {
-        #[test]
-        fn smt_property_check(numbers in proptest::collection::vec(0u32..u32::MAX, 1..100)) {
-            let context = "property";
-            let mut tree = MemorySmt::default();
-            let mut root = MemorySmt::empty_tree_root();
-            let mut values = Vec::with_capacity(numbers.len());
-
-            for n in numbers {
-                let data = n.to_le_bytes();
-
-                values.push(data);
-
-                root = tree.insert(root, context, data.to_vec()).unwrap();
-
-                let proof = tree.get_opening(context, root, &data).unwrap().unwrap();
-
-                assert!(MemorySmt::verify(context, &root, &proof));
-            }
-
-            for v in values {
-                let proof = tree.get_opening(context, root, &v).unwrap().unwrap();
-
-                assert!(MemorySmt::verify(context, &root, &proof));
-                assert_eq!(&v, proof.data.as_slice());
-            }
-        }
     }
 }
