@@ -11,6 +11,8 @@ hashbrown = { workspace = true }
 rocksdb = { workspace = true, optional = true }
 valence-coprocessor-core = { path = "../core", default-features = false }
 zerocopy = { version = "=0.8.23", features = ["alloc", "derive"] }
+borsh = { version = "1.5.7", features = ["derive"], optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]
 proptest = "=1.6.0"
@@ -21,3 +23,5 @@ default = ["memory", "std"]
 std = ["anyhow/std", "valence-coprocessor-core/std", "zerocopy/std"]
 memory = ["valence-coprocessor-core/blake3"]
 rocksdb = ["dep:rocksdb", "std"]
+borsh = ["dep:borsh"]
+serde = ["dep:serde"]

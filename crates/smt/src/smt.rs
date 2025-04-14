@@ -110,6 +110,11 @@ impl AsRef<[u8]> for SmtChildren {
 }
 
 /// A postorder traversal Merkle opening proof that opens the data to a Merkle root.
+#[cfg_attr(
+    feature = "borsh",
+    derive(borsh::BorshSerialize, borsh::BorshDeserialize)
+)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SmtOpening {
     /// Preimage of the leaf hash
