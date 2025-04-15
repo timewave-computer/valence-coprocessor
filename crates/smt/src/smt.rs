@@ -184,6 +184,11 @@ where
         Ok(())
     }
 
+    /// Returns `true` if the leaf exists on the tree.
+    pub fn leaf_exists(&self, context: &str, root: Hash, data: &[u8]) -> anyhow::Result<bool> {
+        self.get_opening(context, root, data).map(|o| o.is_some())
+    }
+
     /// Computes a Merkle opening proof for the provided leaf to the root.
     ///
     /// The leaf is defined by the combination of the context and its data.
@@ -207,6 +212,8 @@ where
             // is current node a leaf?
             if self.b.has_node_key(&leaf_node)? {
                 break;
+            } else if i == HASH_LEN {
+                anyhow::bail!("The provided key was depleted without a leaf opening.");
             }
 
             let bit = (key[i] >> (7 - j)) & 1;
@@ -237,22 +244,28 @@ where
     /// Verifies a proof obtained via [Smt::get_opening].
     pub fn verify(context: &str, root: &Hash, proof: &SmtOpening) -> bool {
         let key = C::Hasher::key(context, &proof.data);
-        let node = C::Hasher::hash(&proof.data);
+        let mut node = C::Hasher::hash(&proof.data);
         let mut depth = proof.opening.len();
 
-        let node = proof.opening.iter().fold(node, |node, sibling| {
+        for sibling in &proof.opening {
             depth -= 1;
 
             let i = depth / 8;
             let j = depth % 8;
+
+            if i == HASH_LEN {
+                // The provided key is larger than the bits context.
+                return false;
+            }
+
             let bit = (key[i] >> (7 - j)) & 1;
 
-            if bit == 0 {
+            node = if bit == 0 {
                 C::Hasher::merge(&node, sibling)
             } else {
                 C::Hasher::merge(sibling, &node)
-            }
-        });
+            };
+        }
 
         &node == root
     }
@@ -289,6 +302,11 @@ where
 
             let i = depth / 8;
             let j = depth % 8;
+
+            if key == sibling_key {
+                // key depleted; replace the value
+                return Ok(leaf);
+            }
 
             let mut node_bit = (key[i] >> (7 - j)) & 1;
             let mut sibling_bit = (sibling_key[i] >> (7 - j)) & 1;
@@ -340,6 +358,11 @@ where
         while let Some(SmtChildren { left, right }) = self.b.get_children(&node)? {
             let i = depth / 8;
             let j = depth % 8;
+
+            if i == HASH_LEN {
+                anyhow::bail!("tree collision over maximum depth");
+            }
+
             let bit = (key[i] >> (7 - j)) & 1;
             let sibling = if bit == 0 { right } else { left };
 
