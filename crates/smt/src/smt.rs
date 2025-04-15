@@ -184,7 +184,9 @@ where
         Ok(())
     }
 
-    /// Returns `true` if the leaf exists on the tree.
+    /// Checks if a leaf with the given data exists in the tree at the specified root.
+    ///
+    /// Returns `true` if the leaf exists, `false` otherwise.
     pub fn leaf_exists(&self, context: &str, root: Hash, data: &[u8]) -> anyhow::Result<bool> {
         self.get_opening(context, root, data).map(|o| o.is_some())
     }
