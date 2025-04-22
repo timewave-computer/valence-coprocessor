@@ -1,0 +1,15 @@
+[package]
+name = "valence-coprocessor-rocksdb"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Valence co-processor RocksDB data backend."
+
+[dependencies]
+anyhow.workspace = true
+valence-coprocessor = { path = "../core", features = ["std"] }
+rocksdb = "=0.23.0"
+
+[dev-dependencies]
+proptest = "=1.6.0"
+tempfile = "=3.19.1"

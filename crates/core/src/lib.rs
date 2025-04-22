@@ -1,46 +1,170 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "blake3")]
-mod blake3;
+extern crate alloc;
 
-#[cfg(feature = "blake3")]
-pub use blake3::*;
+mod data;
+mod hash;
+mod registry;
+mod smt;
 
-/// The hash output byte-length used in cryptographic primitives like the sparse Merkle tree.
-pub const HASH_LEN: usize = 32;
+pub use data::*;
+pub use hash::*;
+pub use registry::*;
+pub use smt::*;
 
-/// The hash output array used in cryptographic primitives like the sparse Merkle tree.
-pub type Hash = [u8; HASH_LEN];
+use alloc::vec::Vec;
 
-/// The hasher high-level definition.
-pub trait Hasher {
-    /// Uses the implementation of the hash function to create a key under a constant context.
-    ///
-    /// This is useful to emulate namespace within a cryptographic space.
-    fn key(context: &str, data: &[u8]) -> Hash;
+use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
+use serde_json::Value;
 
-    /// Hashes the data arguments into an array of bytes.
-    fn hash(data: &[u8]) -> Hash;
-
-    /// Merges the two hashes into a single one, extending the cryptographic properties of the
-    /// underlying hash function.
-    fn merge(a: &Hash, b: &Hash) -> Hash;
+/// Execution context for a Valence program.
+pub struct ExecutionContext<H, D, M, Z>
+where
+    H: Hasher,
+    D: DataBackend,
+    M: ModuleVM,
+    Z: ZkVM,
+{
+    registry: Registry<D>,
+    historical: Smt<D, H>,
+    module: M,
+    zkvm: Z,
+    program: Hash,
 }
 
-/// Execution context for guest programs of a zkVM.
-///
-/// This trait's implementations handle the serialization of witness data into the guest program,
-/// while also preserving an execution context. They are capable of performing a dry-run to select
-/// and send relevant data to the ZK execution environment.
-pub trait ExecutionContext {
-    /// The concrete hash implementation for the execution.
+impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
+where
+    H: Hasher,
+    D: DataBackend,
+    M: ModuleVM,
+    Z: ZkVM,
+{
+    /// Returns the program being executed.
+    pub fn program(&self) -> &Hash {
+        &self.program
+    }
+}
+
+impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
+where
+    H: Hasher,
+    D: DataBackend + Clone,
+    M: ModuleVM,
+    Z: ZkVM,
+{
+    /// Initializes a new execution context.
+    pub fn init(program: Hash, data: D, module: M, zkvm: Z) -> Self {
+        Self {
+            historical: Smt::from(data.clone()),
+            registry: Registry::from(data.clone()),
+            module,
+            zkvm,
+            program,
+        }
+    }
+
+    /// Returns a domain module program.
+    pub fn get_domain_module(&self, domain: &str) -> anyhow::Result<Option<Vec<u8>>> {
+        let domain = DomainData::identifier_from_parts(domain);
+
+        self.registry.get_module(&domain)
+    }
+
+    /// Computes a domain opening for the target root.
+    pub fn compute_domain_proof(&self, domain: &str) -> anyhow::Result<Option<SmtOpening>> {
+        let domain = DomainData::identifier_from_parts(domain);
+        let tree = match self.historical.get_key_root(&domain)? {
+            Some(t) => t,
+            None => return Ok(None),
+        };
+
+        self.historical.get_opening("historical", tree, &domain)
+    }
+
+    /// Compute the ZK proof of the provided program.
+    pub fn compute_program_proof(
+        &self,
+        program: &Hash,
+        args: Value,
+    ) -> anyhow::Result<ProvenProgram> {
+        let witnesses = self.module.execute(self, program, "get_witnesses", args)?;
+        let witnesses = serde_json::from_value(witnesses)?;
+
+        self.zkvm.prove(self, program, witnesses)
+    }
+
+    /// Computes a state proof with the provided arguments.
+    pub fn get_state_proof(&self, domain: &str, args: Value) -> anyhow::Result<Vec<u8>> {
+        let domain = DomainData::identifier_from_parts(domain);
+        let proof = self
+            .module
+            .execute(self, &domain, "get_state_proof", args)?;
+
+        let proof = proof.as_str().ok_or_else(|| {
+            anyhow::anyhow!(
+                "the domain module didn't return a valid state proof base64 representation"
+            )
+        })?;
+
+        Ok(Base64.decode(proof)?)
+    }
+
+    /// Get the program witness data for the ZK circuit.
+    pub fn get_program_witnesses(
+        &self,
+        program: &Hash,
+        args: Value,
+    ) -> anyhow::Result<Vec<Witness>> {
+        let witnesses = self.module.execute(self, program, "get_witnesses", args)?;
+
+        Ok(serde_json::from_value(witnesses)?)
+    }
+}
+
+/// A module VM definition.
+pub trait ModuleVM: Sized {
+    /// Execute a function in a module.
     ///
-    /// Note: These settings are state-dependent and cannot be altered freely. One instance
-    /// involves the sparse Merkle tree, which computes its nodes using a predetermined hash
-    /// function. Changing the hash function may cause the Merkle tree construction to fail, as the
-    /// relationships between parent and child nodes will no longer be consistent with the previous
-    /// selected hash function's computations.
-    type Hasher: Hasher;
+    /// Returns the output of the function call.
+    ///
+    /// ## Arguments
+    ///
+    /// - `ctx`: Execution context to fetch the module bytes from.
+    /// - `module`: Module unique identifier.
+    /// - `f`: Function name to be called.
+    /// - `args`: Arguments to be passed to the function call.
+    fn execute<H, D, Z>(
+        &self,
+        ctx: &ExecutionContext<H, D, Self, Z>,
+        module: &Hash,
+        f: &str,
+        args: Value,
+    ) -> anyhow::Result<Value>
+    where
+        H: Hasher,
+        D: DataBackend,
+        Z: ZkVM;
+}
+
+/// A zkVM definition.
+pub trait ZkVM: Sized {
+    /// Prove a given program.
+    ///
+    /// ## Arguments
+    ///
+    /// - `ctx`: Execution context to fetch the module bytes from.
+    /// - `program`: Program unique identifier.
+    /// - `witnesses`: Circuit arguments.
+    fn prove<H, D, M>(
+        &self,
+        ctx: &ExecutionContext<H, D, M, Self>,
+        program: &Hash,
+        witnesses: Vec<Witness>,
+    ) -> anyhow::Result<ProvenProgram>
+    where
+        H: Hasher,
+        D: DataBackend,
+        M: ModuleVM;
 }
