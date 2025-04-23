@@ -129,9 +129,9 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "msgpacker"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa0bf8eeb53188830efd001fb1a736c7832c9c0dca83489dd73ccff797a8f409"
+checksum = "db10f6b26b3a8b743c088b3a80e6ebc78ac052e0ee11ca6e261d678ad09e3b41"
 dependencies = [
  "msgpacker-derive",
 ]
