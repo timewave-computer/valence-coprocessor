@@ -106,7 +106,7 @@ impl ZkVM for Sp1ZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: ModuleVM,
+        M: ModuleVM<H, D, Sp1ZkVM>,
     {
         let program = ctx.program();
 
@@ -124,6 +124,6 @@ impl ZkVM for Sp1ZkVM {
 
                 Ok(bincode::deserialize(&zkvm)?)
             })
-            .and_then(|pk| self.client.prove(&pk, witnesses))
+            .and_then(|pk| self.client.prove(pk, witnesses))
     }
 }

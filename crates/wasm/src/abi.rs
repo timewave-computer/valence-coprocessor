@@ -56,7 +56,6 @@ pub fn get_program_storage() -> anyhow::Result<Vec<u8>> {
         let ptr = BUF.as_ptr() as u32;
         let len = host::get_program_storage(ptr) as usize;
 
-        anyhow::ensure!(0 < len, "failed to fetch program storage");
         anyhow::ensure!(len <= BUF_LEN, "program storage too large");
 
         Ok(BUF[..len].to_vec())

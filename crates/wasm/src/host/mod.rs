@@ -9,32 +9,53 @@ use crate::HOST_MODULE;
 
 pub mod valence;
 
-pub struct Runtime {
+pub struct Runtime<H, D, Z>
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
     pub args: Value,
     pub ret: Option<Value>,
-    pub storage: Option<Vec<u8>>,
+    pub ctx: ExecutionContext<H, D, ValenceWasm<H, D, Z>, Z>,
     pub panic: Option<String>,
 }
 
-impl From<Value> for Runtime {
-    fn from(args: Value) -> Self {
+impl<H, D, Z> Runtime<H, D, Z>
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
+    /// Creates a new runtime with the underlying context.
+    pub fn new(ctx: ExecutionContext<H, D, ValenceWasm<H, D, Z>, Z>, args: Value) -> Self {
         Self {
             args,
             ret: None,
-            storage: None,
+            ctx,
             panic: None,
         }
     }
 }
 
 #[derive(Debug)]
-pub struct ValenceWasm {
+pub struct ValenceWasm<H, D, Z>
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
     engine: Engine,
-    linker: Linker<Runtime>,
+    linker: Linker<Runtime<H, D, Z>>,
     modules: Arc<Mutex<LruCache<Hash, Module>>>,
 }
 
-impl ValenceWasm {
+impl<H, D, Z> ValenceWasm<H, D, Z>
+where
+    H: Hasher + 'static,
+    D: DataBackend + 'static,
+    Z: ZkVM + 'static,
+{
     /// Creates a new instance of the VM.
     pub fn new(capacity: usize) -> anyhow::Result<Self> {
         let engine = Engine::default();
@@ -67,24 +88,23 @@ impl ValenceWasm {
     }
 }
 
-impl ModuleVM for ValenceWasm {
-    fn execute<H, D, Z>(
+impl<H, D, Z> ModuleVM<H, D, Z> for ValenceWasm<H, D, Z>
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
+    fn execute(
         &self,
         ctx: &ExecutionContext<H, D, Self, Z>,
         module: &Hash,
         f: &str,
         args: Value,
-    ) -> anyhow::Result<Value>
-    where
-        H: Hasher,
-        D: DataBackend,
-        Z: ZkVM,
-    {
-        let storage = ctx.get_program_storage()?;
+    ) -> anyhow::Result<Value> {
         let runtime = Runtime {
             args,
             ret: None,
-            storage,
+            ctx: ctx.clone(),
             panic: None,
         };
 
@@ -105,11 +125,7 @@ impl ModuleVM for ValenceWasm {
             .get_typed_func::<(), ()>(&mut store, f)?
             .call(&mut store, ())?;
 
-        let Runtime { storage, ret, .. } = store.into_data();
-
-        if let Some(storage) = storage {
-            ctx.set_program_storage(&storage)?;
-        }
+        let Runtime { ret, .. } = store.into_data();
 
         Ok(ret.unwrap_or_default())
     }

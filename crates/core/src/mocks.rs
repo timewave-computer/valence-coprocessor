@@ -22,7 +22,7 @@ impl MockZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: ModuleVM,
+        M: ModuleVM<H, D, Self>,
     {
         witnesses.sort();
 
@@ -65,7 +65,7 @@ impl ZkVM for MockZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: ModuleVM,
+        M: ModuleVM<H, D, MockZkVM>,
     {
         witnesses.sort();
 
@@ -124,41 +124,23 @@ impl MockModuleVM {
     }
 }
 
-impl ModuleVM for MockModuleVM {
-    fn execute<H, D, Z>(
+impl<H, D, Z> ModuleVM<H, D, Z> for MockModuleVM
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
+    fn execute(
         &self,
         _ctx: &ExecutionContext<H, D, Self, Z>,
         module: &Hash,
         f: &str,
         args: Value,
-    ) -> anyhow::Result<Value>
-    where
-        H: Hasher,
-        D: DataBackend,
-        Z: ZkVM,
-    {
+    ) -> anyhow::Result<Value> {
         Ok(json!({
             "module": Base64.encode(module),
             "f": f,
             "args": args
         }))
-    }
-}
-
-impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
-where
-    H: Hasher,
-    D: DataBackend,
-    M: ModuleVM,
-    Z: ZkVM,
-{
-    /// Executes an arbitrary program function.
-    pub fn execute_module(&self, program: &Hash, f: &str, args: Value) -> anyhow::Result<Value> {
-        self.module.execute(self, program, f, args)
-    }
-
-    /// Computes an arbitrary program proof.
-    pub fn execute_proof(&self, witnesses: Vec<Witness>) -> anyhow::Result<ProvenProgram> {
-        self.zkvm.prove(self, witnesses)
     }
 }

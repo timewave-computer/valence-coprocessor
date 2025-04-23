@@ -1,3 +1,4 @@
+use valence_coprocessor::{DataBackend, Hasher, ZkVM};
 use wasmtime::{Caller, Extern};
 
 use super::Runtime;
@@ -12,10 +13,16 @@ pub enum ReturnCodes {
     MemoryRead = -4,
     ReturnBytes = -5,
     BufferTooLarge = -6,
+    ProgramStorage = -7,
 }
 
 /// Resolves a panic.
-pub fn panic(mut caller: Caller<'_, Runtime>, ptr: u32, len: u32) {
+pub fn panic<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32)
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
     if let Some(Extern::Memory(mem)) = caller.get_export("memory") {
         let capacity = mem.size(&caller) as usize * mem.page_size(&caller) as usize;
         if len as usize <= capacity {
@@ -40,7 +47,12 @@ pub fn panic(mut caller: Caller<'_, Runtime>, ptr: u32, len: u32) {
 /// Writes the function arguments (JSON bytes) to `ptr`.
 ///
 /// Returns an error if the maximum `capacity` of the buffer is smaller than the arguments length.
-pub fn args(mut caller: Caller<'_, Runtime>, ptr: u32) -> i32 {
+pub fn args<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
         _ => return ReturnCodes::MemoryExport as i32,
@@ -65,7 +77,12 @@ pub fn args(mut caller: Caller<'_, Runtime>, ptr: u32) -> i32 {
 }
 
 /// Reads the function return (JSON bytes) from `ptr`.
-pub fn ret(mut caller: Caller<'_, Runtime>, ptr: u32, len: u32) -> i32 {
+pub fn ret<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
         _ => return ReturnCodes::MemoryExport as i32,
@@ -96,13 +113,21 @@ pub fn ret(mut caller: Caller<'_, Runtime>, ptr: u32, len: u32) -> i32 {
 ///
 /// Returns an error if the maximum `capacity` of the buffer is smaller than the program storage
 /// length.
-pub fn get_program_storage(mut caller: Caller<'_, Runtime>, ptr: u32) -> i32 {
+pub fn get_program_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
         _ => return ReturnCodes::MemoryExport as i32,
     };
 
-    let bytes = caller.data().storage.as_deref().unwrap_or(&[]);
+    let bytes = match caller.data().ctx.get_program_storage() {
+        Ok(s) => s.unwrap_or_default(),
+        Err(_) => return ReturnCodes::ProgramStorage as i32,
+    };
     let len = bytes.len() as i32;
 
     let capacity = mem.data_size(&caller);
@@ -122,7 +147,12 @@ pub fn get_program_storage(mut caller: Caller<'_, Runtime>, ptr: u32) -> i32 {
 }
 
 /// Replace the program storage.
-pub fn set_program_storage(mut caller: Caller<'_, Runtime>, ptr: u32, len: u32) -> i32 {
+pub fn set_program_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
         _ => return ReturnCodes::MemoryExport as i32,
@@ -141,7 +171,9 @@ pub fn set_program_storage(mut caller: Caller<'_, Runtime>, ptr: u32, len: u32) 
         return ReturnCodes::MemoryRead as i32;
     }
 
-    caller.data_mut().storage.replace(bytes);
+    if caller.data_mut().ctx.set_program_storage(&bytes).is_err() {
+        return ReturnCodes::ProgramStorage as i32;
+    }
 
     ReturnCodes::Success as i32
 }

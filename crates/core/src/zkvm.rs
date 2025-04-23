@@ -19,5 +19,5 @@ pub trait ZkVM: Sized {
     where
         H: Hasher,
         D: DataBackend,
-        M: ModuleVM;
+        M: ModuleVM<H, D, Self>;
 }
