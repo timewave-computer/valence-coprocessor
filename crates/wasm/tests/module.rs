@@ -8,11 +8,12 @@ fn get_program_bytes(name: &str) -> Vec<u8> {
     let dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let dir = PathBuf::from(dir).join("contrib").join(name);
 
-    Command::new("cargo")
+    assert!(Command::new("cargo")
         .current_dir(&dir)
         .args(["build", "--target", "wasm32-unknown-unknown", "--release"])
-        .output()
-        .unwrap();
+        .status()
+        .unwrap()
+        .success());
 
     let dir = dir
         .join("target")
@@ -67,4 +68,29 @@ fn deploy_storage() {
     let storage = ctx.get_program_storage().unwrap().unwrap();
 
     assert_eq!(storage, b"Valence");
+}
+
+#[test]
+fn deploy_program() {
+    let program = get_program_bytes("program");
+    let data = MemoryBackend::default();
+    let registry = Registry::from(data.clone());
+
+    let program = ProgramData::default().with_module(program);
+    let program = registry.register_program(program).unwrap();
+
+    let capacity = 500;
+    let vm = ValenceWasm::new(capacity).unwrap();
+    let ctx = Blake3Context::init(program, data, vm, MockZkVM);
+
+    let ret: Vec<_> = ctx
+        .execute_module(&program, "program", json!({}))
+        .unwrap()
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_u64().unwrap() as u8)
+        .collect();
+
+    assert_eq!(&program, ret.as_slice());
 }

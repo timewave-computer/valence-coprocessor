@@ -3186,6 +3186,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "msgpacker"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa0bf8eeb53188830efd001fb1a736c7832c9c0dca83489dd73ccff797a8f409"
+dependencies = [
+ "msgpacker-derive",
+]
+
+[[package]]
+name = "msgpacker-derive"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e926eca5ac0d976018120667ab61ee8a1cff4afdcd202357971b610e7ff57b5a"
+dependencies = [
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6234,6 +6253,7 @@ dependencies = [
  "base64",
  "blake3",
  "hashbrown 0.15.2",
+ "msgpacker",
  "proptest",
  "serde",
  "serde_json",
@@ -6271,7 +6291,9 @@ dependencies = [
  "dlmalloc",
  "hashbrown 0.15.2",
  "lru 0.14.0",
+ "msgpacker",
  "reqwest",
+ "serde",
  "serde_json",
  "valence-coprocessor",
  "wasmtime",

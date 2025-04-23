@@ -1,12 +1,15 @@
 use alloc::vec::Vec;
 use core::{ops::Deref, slice};
+use msgpacker::MsgPacker;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{Hash, Hasher, HASH_LEN};
 
 /// A Merkle opening to a root.
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
+)]
 pub struct Opening {
     /// The Merkle path to the root.
     pub path: Vec<Hash>,
@@ -71,7 +74,9 @@ impl FromIterator<Hash> for Opening {
 }
 
 /// A postorder traversal Merkle opening proof that opens the data to a Merkle root.
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
+)]
 pub struct SmtOpening {
     /// Traversal key.
     pub key: Vec<u8>,

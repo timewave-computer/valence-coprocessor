@@ -14,17 +14,19 @@ fn get_hello_bytes() -> Vec<u8> {
         let program = dir.join("program");
         let script = dir.join("script");
 
-        Command::new("cargo")
+        assert!(Command::new("cargo")
             .current_dir(&program)
             .args(["prove", "build"])
-            .output()
-            .unwrap();
+            .status()
+            .unwrap()
+            .success());
 
-        Command::new("cargo")
+        assert!(Command::new("cargo")
             .current_dir(&script)
             .arg("run")
-            .output()
-            .unwrap();
+            .status()
+            .unwrap()
+            .success());
     }
 
     fs::read(path).unwrap()

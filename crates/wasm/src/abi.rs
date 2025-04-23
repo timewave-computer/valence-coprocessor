@@ -2,7 +2,9 @@
 
 use alloc::vec::Vec;
 
+use msgpacker::Unpackable;
 use serde_json::Value;
+use valence_coprocessor::{Hash, SmtOpening};
 
 mod host {
     #[link(wasm_import_module = "valence")]
@@ -11,6 +13,15 @@ mod host {
         pub(super) fn ret(ptr: u32, len: u32) -> i32;
         pub(super) fn get_program_storage(ptr: u32) -> i32;
         pub(super) fn set_program_storage(ptr: u32, len: u32) -> i32;
+        pub(super) fn get_program(ptr: u32) -> i32;
+        pub(super) fn get_domain_proof(domain_ptr: u32, domain_len: u32, ptr: u32) -> i32;
+        pub(super) fn get_state_proof(
+            domain_ptr: u32,
+            domain_len: u32,
+            args_ptr: u32,
+            args_len: u32,
+            ptr: u32,
+        ) -> i32;
     }
 }
 
@@ -22,12 +33,12 @@ static mut BUF: &mut [u8] = &mut [0u8; BUF_LEN];
 pub fn args() -> anyhow::Result<Value> {
     unsafe {
         let ptr = BUF.as_ptr() as u32;
-        let len = host::args(ptr) as usize;
+        let len = host::args(ptr);
 
-        anyhow::ensure!(0 < len, "failed to fetch arguments");
-        anyhow::ensure!(len <= BUF_LEN, "arguments too large");
+        anyhow::ensure!(len >= 0, "failed to fetch args");
+        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
 
-        Ok(serde_json::from_slice(&BUF[..len])?)
+        Ok(serde_json::from_slice(&BUF[..len as usize])?)
     }
 }
 
@@ -54,11 +65,12 @@ pub fn ret(value: &Value) -> anyhow::Result<()> {
 pub fn get_program_storage() -> anyhow::Result<Vec<u8>> {
     unsafe {
         let ptr = BUF.as_ptr() as u32;
-        let len = host::get_program_storage(ptr) as usize;
+        let len = host::get_program_storage(ptr);
 
-        anyhow::ensure!(len <= BUF_LEN, "program storage too large");
+        anyhow::ensure!(len >= 0, "failed to fetch program storage");
+        anyhow::ensure!(len as usize <= BUF_LEN, "program storage too large");
 
-        Ok(BUF[..len].to_vec())
+        Ok(BUF[..len as usize].to_vec())
     }
 }
 
@@ -78,6 +90,58 @@ pub fn set_program_storage(storage: &[u8]) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+/// Get the program identifier of the current context.
+pub fn get_program() -> anyhow::Result<Hash> {
+    unsafe {
+        let ptr = BUF.as_ptr() as u32;
+        let len = host::get_program(ptr);
+
+        anyhow::ensure!(len >= 0, "failed to read program id");
+        anyhow::ensure!(len as usize <= BUF_LEN, "program id too large");
+
+        Ok(Hash::try_from(&BUF[..len as usize])?)
+    }
+}
+
+/// Get the program identifier of the current context.
+pub fn get_domain_proof(domain: &str) -> anyhow::Result<Option<SmtOpening>> {
+    unsafe {
+        let domain_ptr = domain.as_ptr() as u32;
+        let domain_len = domain.len() as u32;
+        let ptr = BUF.as_ptr() as u32;
+
+        let len = host::get_domain_proof(domain_ptr, domain_len, ptr);
+
+        anyhow::ensure!(len >= 0, "failed to read domain proof");
+        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
+
+        Option::unpack(&BUF[..len as usize])
+            .map(|(_, o)| o)
+            .map_err(|e| anyhow::anyhow!("error unpacking domain proof: {e}"))
+    }
+}
+
+/// Get the program identifier of the current context.
+pub fn get_state_proof(domain: &str, args: &Value) -> anyhow::Result<Vec<u8>> {
+    unsafe {
+        let domain_ptr = domain.as_ptr() as u32;
+        let domain_len = domain.len() as u32;
+
+        let args = serde_json::to_vec(args)?;
+        let args_ptr = args.as_ptr() as u32;
+        let args_len = args.len() as u32;
+
+        let ptr = BUF.as_ptr() as u32;
+
+        let len = host::get_state_proof(domain_ptr, domain_len, args_ptr, args_len, ptr);
+
+        anyhow::ensure!(len >= 0, "failed to read state proof");
+        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
+
+        Ok(BUF[..len as usize].to_vec())
+    }
 }
 
 #[cfg(feature = "abi-handlers")]
@@ -104,6 +168,6 @@ mod handlers {
 
         panic(ptr, len);
 
-        unreachable!()
+        panic!("{msg}")
     }
 }

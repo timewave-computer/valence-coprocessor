@@ -74,6 +74,9 @@ where
             "set_program_storage",
             valence::set_program_storage,
         )?;
+        linker.func_wrap(HOST_MODULE, "get_program", valence::get_program)?;
+        linker.func_wrap(HOST_MODULE, "get_domain_proof", valence::get_domain_proof)?;
+        linker.func_wrap(HOST_MODULE, "get_state_proof", valence::get_state_proof)?;
 
         let capacity = std::num::NonZeroUsize::new(capacity)
             .ok_or_else(|| anyhow::anyhow!("invalid capacity"))?;

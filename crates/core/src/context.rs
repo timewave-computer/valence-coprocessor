@@ -81,7 +81,7 @@ where
     }
 
     /// Computes a domain opening for the target root.
-    pub fn compute_domain_proof(&self, domain: &str) -> anyhow::Result<Option<SmtOpening>> {
+    pub fn get_domain_proof(&self, domain: &str) -> anyhow::Result<Option<SmtOpening>> {
         let domain = DomainData::identifier_from_parts(domain);
         let tree = match self.inner.historical.get_key_root(&domain)? {
             Some(t) => t,
@@ -94,7 +94,7 @@ where
     }
 
     /// Compute the ZK proof of the provided program.
-    pub fn compute_program_proof(&self, args: Value) -> anyhow::Result<ProvenProgram> {
+    pub fn get_program_proof(&self, args: Value) -> anyhow::Result<ProvenProgram> {
         let program = self.program();
         let witnesses = self
             .inner
@@ -125,15 +125,11 @@ where
     }
 
     /// Get the program witness data for the ZK circuit.
-    pub fn get_program_witnesses(
-        &self,
-        program: &Hash,
-        args: Value,
-    ) -> anyhow::Result<Vec<Witness>> {
-        let witnesses = self
-            .inner
-            .module
-            .execute(self, program, "get_witnesses", args)?;
+    pub fn get_program_witnesses(&self, args: Value) -> anyhow::Result<Vec<Witness>> {
+        let witnesses =
+            self.inner
+                .module
+                .execute(self, &self.inner.program, "get_witnesses", args)?;
 
         Ok(serde_json::from_value(witnesses)?)
     }
