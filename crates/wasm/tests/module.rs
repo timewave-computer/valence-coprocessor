@@ -1,4 +1,4 @@
-use std::{env, fs, path::PathBuf, process::Command};
+use std::{env, fs, path::PathBuf, process::Command, thread};
 
 use serde_json::json;
 use valence_coprocessor::{mocks::MockZkVM, Blake3Context, MemoryBackend, ProgramData, Registry};
@@ -93,4 +93,51 @@ fn deploy_program() {
         .collect();
 
     assert_eq!(&program, ret.as_slice());
+}
+
+#[test]
+fn deploy_http() {
+    let server = tiny_http::Server::http("127.0.0.1:0").unwrap();
+    let port = server.server_addr().to_ip().unwrap().port();
+
+    thread::spawn(move || {
+        for r in server.incoming_requests() {
+            let name = r.url().split_once('=').unwrap().1;
+
+            let res = format!("Hello, {name}!");
+            let res = tiny_http::Response::from_string(res);
+
+            r.respond(res).unwrap();
+        }
+    });
+
+    let program = get_program_bytes("http");
+    let data = MemoryBackend::default();
+    let registry = Registry::from(data.clone());
+
+    let program = ProgramData::default().with_module(program);
+    let program = registry.register_program(program).unwrap();
+
+    let capacity = 500;
+    let vm = ValenceWasm::new(capacity).unwrap();
+    let ctx = Blake3Context::init(program, data, vm, MockZkVM);
+
+    let ret = ctx
+        .execute_module(
+            &program,
+            "http",
+            json!({
+                "url": format!("http://127.0.0.1:{port}"),
+                "method": "get",
+                "query": {
+                    "name": "Valence"
+                }
+            }),
+        )
+        .unwrap();
+
+    let body = serde_json::from_value(ret["body"].clone()).unwrap();
+    let body = String::from_utf8(body).unwrap();
+
+    assert_eq!("Hello, Valence!", body.as_str());
 }

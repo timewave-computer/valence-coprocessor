@@ -22,6 +22,7 @@ mod host {
             args_len: u32,
             ptr: u32,
         ) -> i32;
+        pub(super) fn http(args_ptr: u32, args_len: u32, ptr: u32) -> i32;
     }
 }
 
@@ -141,6 +142,24 @@ pub fn get_state_proof(domain: &str, args: &Value) -> anyhow::Result<Vec<u8>> {
         anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
 
         Ok(BUF[..len as usize].to_vec())
+    }
+}
+
+/// Performs a HTTP request.
+pub fn http(args: &Value) -> anyhow::Result<Value> {
+    unsafe {
+        let args = serde_json::to_vec(args)?;
+        let args_ptr = args.as_ptr() as u32;
+        let args_len = args.len() as u32;
+
+        let ptr = BUF.as_ptr() as u32;
+
+        let len = host::http(args_ptr, args_len, ptr);
+
+        anyhow::ensure!(len >= 0, "failed to read state proof");
+        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
+
+        Ok(serde_json::from_slice(&BUF[..len as usize])?)
     }
 }
 

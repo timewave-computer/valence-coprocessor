@@ -1,4 +1,7 @@
+use core::time;
+
 use msgpacker::Packable;
+use reqwest::blocking::Client;
 use serde_json::Value;
 use valence_coprocessor::{DataBackend, Hasher, ZkVM};
 use wasmtime::{Caller, Extern, Memory};
@@ -21,6 +24,14 @@ pub enum ReturnCodes {
     Serialization = -10,
     JsonValue = -11,
     StateProof = -12,
+    HttpMethod = -13,
+    HttpBasicAuth = -14,
+    HttpBearer = -15,
+    HttpBody = -16,
+    HttpHeader = -17,
+    HttpClient = -18,
+    HttpResponseJson = -19,
+    HttpResponse = -20,
 }
 
 /// Resolves a panic.
@@ -236,6 +247,178 @@ where
     };
 
     match write_buffer(&mut caller, &mem, ptr, &proof) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
+/// Perform a HTTP request.
+pub fn http<H, D, Z>(
+    mut caller: Caller<Runtime<H, D, Z>>,
+    args_ptr: u32,
+    args_len: u32,
+    ptr: u32,
+) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let args = match read_json(&mut caller, &mem, args_ptr, args_len) {
+        Ok(a) => a,
+        Err(e) => return e,
+    };
+
+    let url = match args.get("url").and_then(Value::as_str) {
+        Some(u) => u,
+        None => return ReturnCodes::HttpMethod as i32,
+    };
+
+    let method = match args.get("method").and_then(Value::as_str) {
+        Some(m) => m.to_lowercase(),
+        None => return ReturnCodes::HttpMethod as i32,
+    };
+
+    let mut client = match method.as_str() {
+        "delete" => Client::new().delete(url),
+        "get" => Client::new().get(url),
+        "head" => Client::new().head(url),
+        "patch" => Client::new().patch(url),
+        "post" => Client::new().post(url),
+        "put" => Client::new().put(url),
+        _ => return ReturnCodes::HttpMethod as i32,
+    };
+
+    client = client.timeout(time::Duration::from_secs(5));
+
+    if let Some(a) = args.get("basic_auth") {
+        let username = match a.get("username").and_then(Value::as_str) {
+            Some(u) => u,
+            None => return ReturnCodes::HttpBasicAuth as i32,
+        };
+
+        let password = match a.get("password") {
+            Some(Value::String(p)) => Some(p),
+            None => None,
+            _ => return ReturnCodes::HttpBasicAuth as i32,
+        };
+
+        client = client.basic_auth(username, password);
+    }
+
+    match args.get("bearer") {
+        Some(Value::String(b)) => client = client.bearer_auth(b),
+        None => (),
+        _ => return ReturnCodes::HttpBearer as i32,
+    }
+
+    match args.get("body") {
+        Some(Value::String(b)) => client = client.body(b.clone()),
+        Some(Value::Array(b)) => {
+            let b: Vec<u8> = match b
+                .iter()
+                .map(|b| {
+                    b.as_u64()
+                        .map(|b| b as u8)
+                        .ok_or(ReturnCodes::HttpBody as i32)
+                })
+                .collect::<Result<Vec<u8>, i32>>()
+            {
+                Ok(b) => b,
+                Err(e) => return e,
+            };
+
+            client = client.body(b);
+        }
+        None => (),
+        _ => return ReturnCodes::HttpBody as i32,
+    }
+
+    match args.get("headers") {
+        Some(Value::Object(h)) => {
+            for (k, v) in h.iter() {
+                match v.as_str() {
+                    Some(v) => client = client.header(k, v),
+                    None => return ReturnCodes::HttpHeader as i32,
+                }
+            }
+        }
+        None => (),
+        _ => return ReturnCodes::HttpHeader as i32,
+    }
+
+    if let Some(j) = args.get("json") {
+        client = client.json(j);
+    }
+
+    match args.get("query") {
+        Some(Value::Object(h)) => {
+            let mut q = Vec::with_capacity(h.len());
+
+            for (k, v) in h.iter() {
+                match v.as_str() {
+                    Some(v) => q.push((k, v)),
+                    None => return ReturnCodes::HttpHeader as i32,
+                }
+            }
+
+            client = client.query(&q);
+        }
+        None => (),
+        _ => return ReturnCodes::HttpHeader as i32,
+    }
+
+    let ret = match client.send() {
+        Ok(r) => r,
+        Err(_) => return ReturnCodes::HttpClient as i32,
+    };
+
+    let status = ret.status().as_u16();
+    let headers: serde_json::Map<String, Value> = ret
+        .headers()
+        .iter()
+        .filter_map(|(k, v)| v.to_str().map(|v| (k.to_string(), v.to_string())).ok())
+        .map(|(k, v)| (k, Value::String(v)))
+        .collect();
+
+    let body: Value = match args
+        .get("response")
+        .and_then(Value::as_str)
+        .map(str::to_lowercase)
+    {
+        Some(v) if v.as_str() == "json" => match ret.json() {
+            Ok(j) => j,
+            Err(_) => return ReturnCodes::HttpResponseJson as i32,
+        },
+        Some(v) if v.as_str() == "text" => match ret.text() {
+            Ok(j) => Value::String(j),
+            Err(_) => return ReturnCodes::HttpResponseJson as i32,
+        },
+        _ => match ret.bytes() {
+            Ok(b) => match serde_json::to_value(b.to_vec()) {
+                Ok(b) => b,
+                Err(_) => return ReturnCodes::HttpResponseJson as i32,
+            },
+            Err(_) => return ReturnCodes::HttpResponseJson as i32,
+        },
+    };
+
+    let ret = serde_json::json!({
+        "status": status,
+        "headers": headers,
+        "body": body,
+    });
+    let ret = match serde_json::to_vec(&ret) {
+        Ok(r) => r,
+        Err(_) => return ReturnCodes::HttpResponse as i32,
+    };
+
+    match write_buffer(&mut caller, &mem, ptr, &ret) {
         Ok(len) => len,
         Err(e) => e,
     }
