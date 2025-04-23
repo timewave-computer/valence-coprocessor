@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: ["valence-coprocessor-core", "valence-smt"]
+        package: ["valence-coprocessor"]
     steps:
       - uses: actions/checkout@v4
 
