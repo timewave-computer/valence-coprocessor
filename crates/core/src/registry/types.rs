@@ -33,6 +33,7 @@ impl DomainData {
 }
 
 /// Program data of the registry.
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ProgramData {
     /// Module module containing the witness computation functions.
     pub module: Vec<u8>,
@@ -58,6 +59,24 @@ impl ProgramData {
     /// Computes the program identifier from its parts.
     pub fn identifier_from_parts(zkvm: &[u8], nonce: u64) -> Hash {
         Blake3Hasher::digest([Self::ID_PREFIX, zkvm, &nonce.to_le_bytes()])
+    }
+
+    /// Set the module execution definition.
+    pub fn with_module(mut self, module: Vec<u8>) -> Self {
+        self.module = module;
+        self
+    }
+
+    /// Set the zkvm execution definition.
+    pub fn with_zkvm(mut self, zkvm: Vec<u8>) -> Self {
+        self.zkvm = zkvm;
+        self
+    }
+
+    /// Set the id computation nonce.
+    pub fn with_nonce(mut self, nonce: u64) -> Self {
+        self.nonce = nonce;
+        self
     }
 }
 

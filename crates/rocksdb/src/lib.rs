@@ -47,7 +47,7 @@ impl DataBackend for RocksBackend {
         Ok(self.data.get(&key)?.is_some())
     }
 
-    fn remove(&mut self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+    fn remove(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let data = self.get(prefix, key)?;
         let prefix = Self::prefix(prefix);
         let key = [&prefix, key].concat();
@@ -57,7 +57,7 @@ impl DataBackend for RocksBackend {
         Ok(data)
     }
 
-    fn set(&mut self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+    fn set(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
         let prefix = Self::prefix(prefix);
         let key = [&prefix, key].concat();
         let replaced = self.data.get(&key)?;
@@ -74,7 +74,7 @@ mod tests {
     use proptest::prelude::*;
     use valence_coprocessor::{Blake3Hasher, DataBackend, Hasher, Smt};
 
-    fn property_check<D, H>(mut tree: Smt<D, H>, numbers: Vec<u32>)
+    fn property_check<D, H>(tree: Smt<D, H>, numbers: Vec<u32>)
     where
         D: DataBackend,
         H: Hasher,

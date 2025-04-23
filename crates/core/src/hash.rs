@@ -58,6 +58,8 @@ impl Hasher for Blake3Hasher {
     fn digest<'a>(data: impl IntoIterator<Item = &'a [u8]>) -> Hash {
         let mut h = blake3::Hasher::new();
 
+        h.update(Self::DATA_PREFIX);
+
         data.into_iter().for_each(|d| {
             h.update(d);
         });

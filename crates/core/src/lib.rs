@@ -6,18 +6,28 @@ extern crate alloc;
 
 mod data;
 mod hash;
+mod module;
 mod registry;
 mod smt;
+mod zkvm;
+
+#[cfg(feature = "mocks")]
+pub mod mocks;
 
 pub use data::*;
 pub use hash::*;
+pub use module::*;
 pub use registry::*;
 pub use smt::*;
+pub use zkvm::*;
 
 use alloc::vec::Vec;
 
 use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use serde_json::Value;
+
+/// Execution context with blake3 hasher.
+pub type Blake3Context<D, M, Z> = ExecutionContext<Blake3Hasher, D, M, Z>;
 
 /// Execution context for a Valence program.
 pub struct ExecutionContext<H, D, M, Z>
@@ -27,6 +37,7 @@ where
     M: ModuleVM,
     Z: ZkVM,
 {
+    data: D,
     registry: Registry<D>,
     historical: Smt<D, H>,
     module: M,
@@ -45,24 +56,15 @@ where
     pub fn program(&self) -> &Hash {
         &self.program
     }
-}
 
-impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
-where
-    H: Hasher,
-    D: DataBackend + Clone,
-    M: ModuleVM,
-    Z: ZkVM,
-{
-    /// Initializes a new execution context.
-    pub fn init(program: Hash, data: D, module: M, zkvm: Z) -> Self {
-        Self {
-            historical: Smt::from(data.clone()),
-            registry: Registry::from(data.clone()),
-            module,
-            zkvm,
-            program,
-        }
+    /// Returns a module program.
+    pub fn get_zkvm(&self) -> anyhow::Result<Option<Vec<u8>>> {
+        self.registry.get_zkvm(&self.program)
+    }
+
+    /// Returns a module program.
+    pub fn get_module(&self, module: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
+        self.registry.get_module(module)
     }
 
     /// Returns a domain module program.
@@ -84,15 +86,12 @@ where
     }
 
     /// Compute the ZK proof of the provided program.
-    pub fn compute_program_proof(
-        &self,
-        program: &Hash,
-        args: Value,
-    ) -> anyhow::Result<ProvenProgram> {
+    pub fn compute_program_proof(&self, args: Value) -> anyhow::Result<ProvenProgram> {
+        let program = self.program();
         let witnesses = self.module.execute(self, program, "get_witnesses", args)?;
         let witnesses = serde_json::from_value(witnesses)?;
 
-        self.zkvm.prove(self, program, witnesses)
+        self.zkvm.prove(self, witnesses)
     }
 
     /// Computes a state proof with the provided arguments.
@@ -108,7 +107,9 @@ where
             )
         })?;
 
-        Ok(Base64.decode(proof)?)
+        Base64
+            .decode(proof)
+            .map_err(|e| anyhow::anyhow!("error decoding the proof bytes: {e}"))
     }
 
     /// Get the program witness data for the ZK circuit.
@@ -121,50 +122,36 @@ where
 
         Ok(serde_json::from_value(witnesses)?)
     }
+
+    /// Returns the program storage.
+    pub fn get_program_storage(&self) -> anyhow::Result<Option<Vec<u8>>> {
+        self.data.get(b"context-program", &self.program)
+    }
+
+    /// Overrides the program storage.
+    pub fn set_program_storage(&self, storage: &[u8]) -> anyhow::Result<()> {
+        self.data
+            .set(b"context-program", &self.program, storage)
+            .map(|_| ())
+    }
 }
 
-/// A module VM definition.
-pub trait ModuleVM: Sized {
-    /// Execute a function in a module.
-    ///
-    /// Returns the output of the function call.
-    ///
-    /// ## Arguments
-    ///
-    /// - `ctx`: Execution context to fetch the module bytes from.
-    /// - `module`: Module unique identifier.
-    /// - `f`: Function name to be called.
-    /// - `args`: Arguments to be passed to the function call.
-    fn execute<H, D, Z>(
-        &self,
-        ctx: &ExecutionContext<H, D, Self, Z>,
-        module: &Hash,
-        f: &str,
-        args: Value,
-    ) -> anyhow::Result<Value>
-    where
-        H: Hasher,
-        D: DataBackend,
-        Z: ZkVM;
-}
-
-/// A zkVM definition.
-pub trait ZkVM: Sized {
-    /// Prove a given program.
-    ///
-    /// ## Arguments
-    ///
-    /// - `ctx`: Execution context to fetch the module bytes from.
-    /// - `program`: Program unique identifier.
-    /// - `witnesses`: Circuit arguments.
-    fn prove<H, D, M>(
-        &self,
-        ctx: &ExecutionContext<H, D, M, Self>,
-        program: &Hash,
-        witnesses: Vec<Witness>,
-    ) -> anyhow::Result<ProvenProgram>
-    where
-        H: Hasher,
-        D: DataBackend,
-        M: ModuleVM;
+impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
+where
+    H: Hasher,
+    D: DataBackend + Clone,
+    M: ModuleVM,
+    Z: ZkVM,
+{
+    /// Initializes a new execution context.
+    pub fn init(program: Hash, data: D, module: M, zkvm: Z) -> Self {
+        Self {
+            data: data.clone(),
+            historical: Smt::from(data.clone()),
+            registry: Registry::from(data.clone()),
+            module,
+            zkvm,
+            program,
+        }
+    }
 }

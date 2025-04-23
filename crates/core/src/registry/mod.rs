@@ -1,4 +1,4 @@
-use alloc::collections::BTreeSet;
+use alloc::{collections::BTreeSet, vec::Vec};
 
 use crate::{DataBackend, Hash};
 
@@ -27,7 +27,7 @@ impl<D: DataBackend> Registry<D> {
     pub const PREFIX_ZKVM: &[u8] = b"registry-zkvm";
 
     /// Register a new program, returning its identifier.
-    pub fn register_program(&mut self, program: ProgramData) -> anyhow::Result<Hash> {
+    pub fn register_program(&self, program: ProgramData) -> anyhow::Result<Hash> {
         let id = program.identifier();
         let ProgramData { module, zkvm, .. } = program;
 
@@ -38,7 +38,7 @@ impl<D: DataBackend> Registry<D> {
     }
 
     /// Register a new domain, returning its identifier.
-    pub fn register_domain(&mut self, domain: DomainData) -> anyhow::Result<Hash> {
+    pub fn register_domain(&self, domain: DomainData) -> anyhow::Result<Hash> {
         let id = domain.identifier();
         let DomainData { module, .. } = domain;
 
@@ -48,7 +48,7 @@ impl<D: DataBackend> Registry<D> {
     }
 
     /// Returns the list of linked domains of the program.
-    pub fn get_program_domains(&mut self, program: &Hash) -> anyhow::Result<BTreeSet<Hash>> {
+    pub fn get_program_domains(&self, program: &Hash) -> anyhow::Result<BTreeSet<Hash>> {
         let domains = self
             .data
             .get(Self::PREFIX_DOMAIN, program)?
@@ -62,7 +62,7 @@ impl<D: DataBackend> Registry<D> {
     }
 
     /// Links a program to be submitted to the given domains.
-    pub fn program_link(&mut self, program: &Hash, domains: &[Hash]) -> anyhow::Result<()> {
+    pub fn program_link(&self, program: &Hash, domains: &[Hash]) -> anyhow::Result<()> {
         let mut domains_list = self.get_program_domains(program)?;
 
         domains_list.extend(domains);
@@ -76,7 +76,7 @@ impl<D: DataBackend> Registry<D> {
     }
 
     /// Unlink a program to no longer be submitted to the given domains.
-    pub fn program_unlink(&mut self, program: &Hash, domains: &[Hash]) -> anyhow::Result<()> {
+    pub fn program_unlink(&self, program: &Hash, domains: &[Hash]) -> anyhow::Result<()> {
         let mut domains_list = self.get_program_domains(program)?;
 
         for d in domains {

@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::{ops::Deref, slice};
 
 use serde::{Deserialize, Serialize};

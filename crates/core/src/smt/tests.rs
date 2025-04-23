@@ -8,7 +8,7 @@ fn single_node_opening() -> anyhow::Result<()> {
     let context = "poem";
     let data = b"Two roads diverged in a wood, and I took the one less traveled by";
 
-    let mut tree = MemorySmt::default();
+    let tree = MemorySmt::default();
 
     let root = MemorySmt::empty_tree_root();
     let root = tree.insert(root, context, data, data.to_vec())?;
@@ -34,7 +34,7 @@ fn double_node_opening() -> anyhow::Result<()> {
     // assert the first bit is not a collision
     assert_ne!(key[0] >> 7, keyp[0] >> 7);
 
-    let mut tree = MemorySmt::default();
+    let tree = MemorySmt::default();
     let root = MemorySmt::empty_tree_root();
 
     let root = tree.insert(root, context, &data[0], data[0].to_vec())?;
@@ -64,7 +64,7 @@ fn double_one_bit_collision() -> anyhow::Result<()> {
     assert_eq!(key[0] >> 7, keyp[0] >> 7);
     assert_ne!(key[0] >> 6, keyp[0] >> 6);
 
-    let mut tree = MemorySmt::default();
+    let tree = MemorySmt::default();
     let root = MemorySmt::empty_tree_root();
 
     let root = tree.insert(root, context, data, data.to_vec())?;
@@ -98,7 +98,7 @@ fn double_two_bit_collision() -> anyhow::Result<()> {
     assert_eq!(key[0] >> 6, keyp[0] >> 6);
     assert_ne!(key[0] >> 5, keyp[0] >> 5);
 
-    let mut tree = MemorySmt::default();
+    let tree = MemorySmt::default();
     let root = MemorySmt::empty_tree_root();
 
     let root = tree.insert(root, context, data, data.to_vec())?;
@@ -132,7 +132,7 @@ fn double_long_collision() -> anyhow::Result<()> {
     assert_eq!(key[1] >> 5, keyp[1] >> 5);
     assert_ne!(key[1] >> 4, keyp[1] >> 4);
 
-    let mut tree = MemorySmt::default();
+    let tree = MemorySmt::default();
     let root = MemorySmt::empty_tree_root();
 
     let root = tree.insert(root, context, data, data.to_vec())?;
@@ -176,7 +176,7 @@ fn complex_tree() -> anyhow::Result<()> {
     assert_eq!(keys[2][0] & mask, 0b10100000u8);
     assert_eq!(keys[3][0] & mask, 0b01000000u8);
 
-    let mut tree = MemorySmt::default();
+    let tree = MemorySmt::default();
     let root = MemorySmt::empty_tree_root();
 
     let mut proofs = [
@@ -278,7 +278,7 @@ fn deep_opening() -> anyhow::Result<()> {
 
     let ctx = "property";
     let root = MemorySmt::empty_tree_root();
-    let mut tree = MemorySmt::default();
+    let tree = MemorySmt::default();
 
     // R = 0
 
@@ -338,7 +338,7 @@ fn deep_opening() -> anyhow::Result<()> {
 #[test]
 fn value_replace_single() {
     let context = "value";
-    let mut smt = crate::smt::MemorySmt::default();
+    let smt = crate::smt::MemorySmt::default();
     let root = crate::smt::MemorySmt::empty_tree_root();
 
     let v = b"Nothing in life is to be feared, it is only to be understood. ";
@@ -353,7 +353,7 @@ fn value_replace_single() {
 #[test]
 fn value_replace_multiple() {
     let context = "value";
-    let mut smt = crate::smt::MemorySmt::default();
+    let smt = crate::smt::MemorySmt::default();
     let root = crate::smt::MemorySmt::empty_tree_root();
 
     let x = b"The most beautiful thing we can experience is the mysterious.";
@@ -368,7 +368,7 @@ fn value_replace_multiple() {
     }
 }
 
-fn property_check<D, H>(mut tree: Smt<D, H>, numbers: Vec<u32>)
+fn property_check<D, H>(tree: Smt<D, H>, numbers: Vec<u32>)
 where
     D: DataBackend,
     H: Hasher,

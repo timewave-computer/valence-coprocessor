@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use zerocopy::{IntoBytes as _, TryFromBytes as _};
@@ -94,7 +95,7 @@ where
     }
 
     pub(super) fn insert_children(
-        &mut self,
+        &self,
         parent: &Hash,
         children: &SmtChildren,
     ) -> anyhow::Result<Option<SmtChildren>> {
@@ -109,7 +110,7 @@ where
             .transpose()
     }
 
-    pub(super) fn remove_children(&mut self, parent: &Hash) -> anyhow::Result<Option<SmtChildren>> {
+    pub(super) fn remove_children(&self, parent: &Hash) -> anyhow::Result<Option<SmtChildren>> {
         let data = match self.d.remove(Self::PREFIX_NODE, parent)? {
             Some(d) => d,
             None => return Ok(None),
@@ -121,7 +122,7 @@ where
         Ok(Some(c))
     }
 
-    pub(super) fn remove_node_key(&mut self, node: &Hash) -> anyhow::Result<Option<Hash>> {
+    pub(super) fn remove_node_key(&self, node: &Hash) -> anyhow::Result<Option<Hash>> {
         self.d
             .remove(Self::PREFIX_KEY, node)?
             .map(Hash::try_from)
@@ -141,11 +142,7 @@ where
         self.d.has(Self::PREFIX_KEY, node)
     }
 
-    pub(super) fn insert_node_key(
-        &mut self,
-        node: &Hash,
-        key: &Hash,
-    ) -> anyhow::Result<Option<Hash>> {
+    pub(super) fn insert_node_key(&self, node: &Hash, key: &Hash) -> anyhow::Result<Option<Hash>> {
         Ok(self
             .d
             .set(Self::PREFIX_KEY, node, key)?
@@ -156,12 +153,12 @@ where
         self.d.get(Self::PREFIX_DATA, key)
     }
 
-    pub(super) fn remove_key_data(&mut self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
+    pub(super) fn remove_key_data(&self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
         self.d.remove(Self::PREFIX_DATA, key)
     }
 
     pub(super) fn insert_key_data(
-        &mut self,
+        &self,
         key: &Hash,
         data: &[u8],
     ) -> anyhow::Result<Option<Vec<u8>>> {
@@ -169,7 +166,7 @@ where
     }
 
     pub(super) fn insert_key_root(
-        &mut self,
+        &self,
         key: &Hash,
         root: &Hash,
     ) -> anyhow::Result<Option<Vec<u8>>> {

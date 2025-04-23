@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 use crate::{DataBackend, Hash, Hasher, HASH_LEN};
@@ -8,10 +9,11 @@ mod types;
 pub use merkle::*;
 pub use types::*;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests;
 
 /// An in-memory SMT implementation.
+#[cfg(feature = "std")]
 pub type MemorySmt = Smt<crate::MemoryBackend, crate::Blake3Hasher>;
 
 #[doc = include_str!("README.md")]
@@ -49,7 +51,7 @@ where
     }
 
     /// Removes an entire subtree along with its linked leaf keys and data.
-    pub fn prune(&mut self, root: &Hash) -> anyhow::Result<()> {
+    pub fn prune(&self, root: &Hash) -> anyhow::Result<()> {
         // TODO don't recurse here to not overflow the stack on very deep trees
         if let Some(SmtChildren { left, right }) = self.get_children(root)? {
             self.prune(&left)?;
@@ -157,7 +159,7 @@ where
     /// The leaf key will be computed given the context and data, and will have a collision
     /// resistance up to [HASH_LEN] bytes.
     pub fn insert(
-        &mut self,
+        &self,
         root: Hash,
         context: &str,
         key: &[u8],

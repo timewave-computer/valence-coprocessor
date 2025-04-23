@@ -79,6 +79,7 @@ sequenceDiagram
 
 ```rust
 // An ephemeral in-memory data backend
+#[cfg(feature = "std")]
 fn run() -> anyhow::Result<()> {
     use valence_coprocessor::MemorySmt;
 

@@ -19,4 +19,5 @@ proptest = "=1.6.0"
 
 [features]
 default = ["std"]
+mocks = []
 std = ["base64/std", "blake3/std", "serde/std"]
