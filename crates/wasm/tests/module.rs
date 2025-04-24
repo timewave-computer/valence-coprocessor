@@ -128,10 +128,7 @@ fn deploy_http() {
             "http",
             json!({
                 "url": format!("http://127.0.0.1:{port}"),
-                "method": "get",
-                "query": {
-                    "name": "Valence"
-                }
+                "name": "Valence"
             }),
         )
         .unwrap();
