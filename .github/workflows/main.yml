@@ -51,6 +51,6 @@ jobs:
       #    RUST_BACKTRACE: 1
 
       - name: Run all tests
-        run: cargo test --verbose -- --ignored
+        run: cargo test --verbose
         env:
           RUST_BACKTRACE: 1
