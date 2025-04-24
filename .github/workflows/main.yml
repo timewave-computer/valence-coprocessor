@@ -32,17 +32,23 @@ jobs:
       - name: Add WASM target
         run: rustup target add wasm32-unknown-unknown
 
-      - name: Install SP1 toolchain
-        run: |
-          curl -L https://sp1up.succinct.xyz | bash
-          ~/.sp1/bin/sp1up 
-          ~/.sp1/bin/cargo-prove prove --version
+      # SP1 is too expensive to run on CI
+      #- name: Install SP1 toolchain
+      #  run: |
+      #    curl -L https://sp1up.succinct.xyz | bash
+      #    ~/.sp1/bin/sp1up 
+      #    ~/.sp1/bin/cargo-prove prove --version
 
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
 
       - name: Run clippy
         run: cargo clippy --all-targets --verbose -- -D warnings
+
+      #- name: Run all tests
+      #  run: cargo test --verbose -- --ignored
+      #  env:
+      #    RUST_BACKTRACE: 1
 
       - name: Run all tests
         run: cargo test --verbose -- --ignored
