@@ -1,11 +1,12 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use rocksdb::{Options, SliceTransform, DB};
 use valence_coprocessor::{Blake3Hasher, DataBackend, Hash, Hasher as _, HASH_LEN};
 
+#[derive(Clone)]
 /// A RocksDB data backend.
 pub struct RocksBackend {
-    data: DB,
+    data: Arc<DB>,
 }
 
 impl RocksBackend {
@@ -22,6 +23,7 @@ impl RocksBackend {
         opts.create_if_missing(true);
 
         let data = DB::open(&opts, path)?;
+        let data = Arc::new(data);
 
         Ok(Self { data })
     }

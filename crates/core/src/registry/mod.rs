@@ -16,6 +16,14 @@ pub struct Registry<D: DataBackend> {
     data: D,
 }
 
+impl<D: DataBackend + Clone> Clone for Registry<D> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
+        }
+    }
+}
+
 impl<D: DataBackend> Registry<D> {
     /// Data backend prefix for domain data.
     pub const PREFIX_DOMAIN: &[u8] = b"registry-domain";

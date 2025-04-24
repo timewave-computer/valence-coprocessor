@@ -1,0 +1,31 @@
+[package]
+name = "valence-coprocessor-service"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Valence co-processor service application."
+default-run = "server"
+
+[dependencies]
+anyhow.workspace = true
+base64.workspace = true
+dirs = "6.0.0"
+serde.workspace = true
+tokio = { version = "1.44.2", features = ["full"] }
+toml = "0.8.20"
+valence-coprocessor.path = "../core"
+valence-coprocessor-rocksdb.path = "../rocksdb"
+valence-coprocessor-sp1.path = "../sp1"
+valence-coprocessor-wasm.path = "../wasm"
+tracing.workspace = true
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+poem = { version = "3.1.9", features = ["anyhow"] }
+poem-openapi = { version = "5.1.13", features = ["swagger-ui"] }
+
+[[bin]]
+name = "server"
+path = "src/bin/server/main.rs"
+
+[[bin]]
+name = "cli"
+path = "src/bin/cli/main.rs"
