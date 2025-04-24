@@ -7,6 +7,7 @@ mod host;
 #[cfg(feature = "host")]
 pub use host::*;
 
+#[derive(Debug, Clone)]
 pub struct Sp1Hasher;
 
 impl Sp1Hasher {

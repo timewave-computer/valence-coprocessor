@@ -6540,6 +6540,7 @@ dependencies = [
  "poem",
  "poem-openapi",
  "serde",
+ "serde_json",
  "tokio",
  "toml",
  "tracing",

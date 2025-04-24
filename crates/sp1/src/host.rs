@@ -24,6 +24,39 @@ enum WrappedClient {
     Network(NetworkProver),
 }
 
+impl Clone for WrappedClient {
+    fn clone(&self) -> Self {
+        let mode = Mode::from(self);
+
+        Self::from(mode)
+    }
+}
+
+impl From<&WrappedClient> for Mode {
+    fn from(client: &WrappedClient) -> Self {
+        match client {
+            WrappedClient::Mock(_) => Mode::Mock,
+            WrappedClient::Cpu(_) => Mode::Cpu,
+            WrappedClient::Gpu(_) => Mode::Gpu,
+            WrappedClient::Network(_) => Mode::Network,
+        }
+    }
+}
+
+impl TryFrom<&str> for Mode {
+    type Error = anyhow::Error;
+
+    fn try_from(mode: &str) -> anyhow::Result<Mode> {
+        match mode {
+            "mock" => Ok(Self::Mock),
+            "cpu" => Ok(Self::Mock),
+            "gpu" => Ok(Self::Mock),
+            "network" => Ok(Self::Mock),
+            _ => anyhow::bail!("invalid SP1 zkVM mode: `{mode}`"),
+        }
+    }
+}
+
 impl From<Mode> for WrappedClient {
     fn from(mode: Mode) -> Self {
         let client = ProverClient::builder();
@@ -75,6 +108,7 @@ impl WrappedClient {
     }
 }
 
+#[derive(Clone)]
 pub struct Sp1ZkVM {
     client: WrappedClient,
     keys: Arc<Mutex<LruCache<Hash, SP1ProvingKey>>>,

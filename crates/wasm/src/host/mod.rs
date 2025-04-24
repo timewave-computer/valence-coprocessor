@@ -38,7 +38,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ValenceWasm<H, D, Z>
 where
     H: Hasher,
