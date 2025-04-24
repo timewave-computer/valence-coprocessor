@@ -19,9 +19,12 @@ valence-coprocessor-rocksdb.path = "../rocksdb"
 valence-coprocessor-sp1.path = "../sp1"
 valence-coprocessor-wasm.path = "../wasm"
 tracing.workspace = true
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.19", default-features = true, features = [
+  "env-filter",
+] }
 poem = { version = "3.1.9", features = ["anyhow"] }
 poem-openapi = { version = "5.1.13", features = ["swagger-ui"] }
+hex = "0.4.3"
 
 [[bin]]
 name = "server"
@@ -30,14 +33,3 @@ path = "src/bin/server/main.rs"
 [[bin]]
 name = "cli"
 path = "src/bin/cli/main.rs"
-
-[profile.release]
-opt-level = 3
-debug = false
-strip = "symbols"
-debug-assertions = false
-overflow-checks = false
-lto = "fat"
-codegen-units = 1
-panic = "abort"
-incremental = false

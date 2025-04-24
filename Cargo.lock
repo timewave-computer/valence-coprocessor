@@ -6516,6 +6516,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
+ "tracing",
  "zerocopy 0.8.23",
 ]
 
@@ -6537,6 +6538,7 @@ dependencies = [
  "anyhow",
  "base64 0.22.1",
  "dirs 6.0.0",
+ "hex",
  "poem",
  "poem-openapi",
  "serde",
@@ -6560,6 +6562,7 @@ dependencies = [
  "lru 0.14.0",
  "sha2 0.10.8 (git+https://github.com/sp1-patches/RustCrypto-hashes?tag=patch-sha2-0.10.8-sp1-4.0.0)",
  "sp1-sdk",
+ "tracing",
  "valence-coprocessor",
 ]
 

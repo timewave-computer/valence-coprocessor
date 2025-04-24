@@ -11,6 +11,7 @@ bincode = { workspace = true, optional = true }
 lru = { workspace = true, optional = true }
 sha2-v0-10-8 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.10.8-sp1-4.0.0" }
 sp1-sdk = { version = "4.2.0", optional = true }
+tracing.workspace = true
 valence-coprocessor = { path = "../core", default-features = false }
 
 [dev-dependencies]

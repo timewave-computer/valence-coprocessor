@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use lru::LruCache;
 use sp1_sdk::{
     CpuProver, CudaProver, NetworkProver, Prover as _, ProverClient, SP1Proof, SP1ProvingKey,
-    SP1Stdin,
+    SP1Stdin, SP1VerifyingKey,
 };
 use valence_coprocessor::{
     DataBackend, ExecutionContext, Hash, Hasher, ModuleVM, ProvenProgram, Witness, ZkVM,
@@ -22,14 +22,6 @@ enum WrappedClient {
     Cpu(CpuProver),
     Gpu(CudaProver),
     Network(NetworkProver),
-}
-
-impl Clone for WrappedClient {
-    fn clone(&self) -> Self {
-        let mode = Mode::from(self);
-
-        Self::from(mode)
-    }
 }
 
 impl From<&WrappedClient> for Mode {
@@ -72,9 +64,13 @@ impl From<Mode> for WrappedClient {
 
 impl WrappedClient {
     fn prove(&self, pk: &SP1ProvingKey, witnesses: Vec<Witness>) -> anyhow::Result<ProvenProgram> {
+        tracing::debug!("prove routine initiated...");
+
         let mut stdin = SP1Stdin::new();
 
         stdin.write(&witnesses);
+
+        tracing::debug!("witnesses written to SP1 environment...");
 
         // TODO evaluate if should output groth16 at this point
 
@@ -85,10 +81,14 @@ impl WrappedClient {
             WrappedClient::Network(p) => p.prove(pk, &stdin).groth16().run()?,
         };
 
+        tracing::debug!("proof executed...");
+
         let bytes = match &proof.proof {
             SP1Proof::Core(_) | SP1Proof::Compressed(_) => bincode::serialize(&proof)?,
             SP1Proof::Plonk(_) | SP1Proof::Groth16(_) => proof.bytes(),
         };
+
+        tracing::debug!("proof generated!");
 
         Ok(ProvenProgram {
             proof: bytes,
@@ -96,27 +96,26 @@ impl WrappedClient {
         })
     }
 
-    fn setup(&self, elf: &[u8]) -> Vec<u8> {
-        let (pk, _vk) = match self {
+    fn setup(&self, elf: &[u8]) -> (SP1ProvingKey, SP1VerifyingKey) {
+        match self {
             WrappedClient::Mock(p) => p.setup(elf),
             WrappedClient::Cpu(p) => p.setup(elf),
             WrappedClient::Gpu(p) => p.setup(elf),
             WrappedClient::Network(p) => p.setup(elf),
-        };
-
-        bincode::serialize(&pk).unwrap()
+        }
     }
 }
 
 #[derive(Clone)]
 pub struct Sp1ZkVM {
-    client: WrappedClient,
-    keys: Arc<Mutex<LruCache<Hash, SP1ProvingKey>>>,
+    client: Arc<WrappedClient>,
+    keys: Arc<Mutex<LruCache<Hash, (SP1ProvingKey, SP1VerifyingKey)>>>,
 }
 
 impl Sp1ZkVM {
     pub fn new(mode: Mode, capacity: usize) -> anyhow::Result<Self> {
         let client = WrappedClient::from(mode);
+        let client = Arc::new(client);
 
         let capacity = std::num::NonZeroUsize::new(capacity)
             .ok_or_else(|| anyhow::anyhow!("invalid capacity"))?;
@@ -124,10 +123,6 @@ impl Sp1ZkVM {
         let keys = Arc::new(Mutex::new(keys));
 
         Ok(Self { client, keys })
-    }
-
-    pub fn to_zkvm(&self, elf: &[u8]) -> Vec<u8> {
-        self.client.setup(elf)
     }
 }
 
@@ -146,18 +141,54 @@ impl ZkVM for Sp1ZkVM {
 
         let mut stdin = SP1Stdin::new();
 
+        tracing::debug!("SP1 environment initialized...");
+
         stdin.write(&witnesses);
+
+        tracing::debug!("witnesses written to environment...");
 
         self.keys
             .lock()
             .map_err(|e| anyhow::anyhow!("error locking keys: {e}"))?
             .try_get_or_insert(*program, || {
-                let zkvm = ctx
+                tracing::debug!("fetching keys from context...");
+
+                let elf = ctx
                     .get_zkvm()?
                     .ok_or_else(|| anyhow::anyhow!("failed to fetch zkvm from registry"))?;
 
-                Ok(bincode::deserialize(&zkvm)?)
+                Ok(self.client.setup(&elf))
             })
-            .and_then(|pk| self.client.prove(pk, witnesses))
+            .and_then(|(pk, _vk)| {
+                tracing::debug!("proving program...");
+
+                self.client.prove(pk, witnesses)
+            })
+    }
+
+    fn verifying_key<H, D, M>(
+        &self,
+        ctx: &ExecutionContext<H, D, M, Self>,
+    ) -> anyhow::Result<Vec<u8>>
+    where
+        H: Hasher,
+        D: DataBackend,
+        M: ModuleVM<H, D, Self>,
+    {
+        let program = ctx.program();
+
+        self.keys
+            .lock()
+            .map_err(|e| anyhow::anyhow!("error locking keys: {e}"))?
+            .try_get_or_insert::<_, anyhow::Error>(*program, || {
+                tracing::debug!("fetching keys from context...");
+
+                let elf = ctx
+                    .get_zkvm()?
+                    .ok_or_else(|| anyhow::anyhow!("failed to fetch zkvm from registry"))?;
+
+                Ok(self.client.setup(&elf))
+            })
+            .and_then(|(_pk, vk)| Ok(bincode::serialize(&vk)?))
     }
 }

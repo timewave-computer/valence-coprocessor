@@ -7,7 +7,7 @@ use valence_coprocessor_sp1::Sp1ZkVM;
 
 use crate::{Context, Registry, ValenceWasm};
 
-use super::{try_slice_to_hash, Api};
+use super::{try_str_to_hash, Api};
 
 #[derive(Object, Debug)]
 pub struct RegisterProgramRequest {
@@ -24,8 +24,8 @@ pub struct RegisterProgramRequest {
 
 #[derive(Object, Debug)]
 pub struct RegisterProgramResponse {
-    /// The allocated program id as base64.
-    pub program: Base64<Vec<u8>>,
+    /// The allocated program id as hex.
+    pub program: String,
 }
 
 #[derive(Object, Debug)]
@@ -39,8 +39,8 @@ pub struct RegisterDomainRequest {
 
 #[derive(Object, Debug)]
 pub struct RegisterDomainResponse {
-    /// The allocated domain id as base64.
-    pub domain: Base64<Vec<u8>>,
+    /// The allocated domain id as hex.
+    pub domain: String,
 }
 
 #[derive(Object, Debug)]
@@ -64,12 +64,12 @@ pub struct ProgramUnlinkResponse;
 #[derive(Object, Debug)]
 pub struct ProgramDomainsResponse {
     /// Domains associated with the program
-    pub domains: Vec<Base64<Vec<u8>>>,
+    pub domains: Vec<String>,
 }
 
 #[derive(Object, Debug)]
 pub struct ProgramStorageResponse {
-    /// Storage data associated with the program.
+    /// Storage data associated with the program as base64.
     pub data: Base64<Vec<u8>>,
 }
 
@@ -81,11 +81,23 @@ pub struct ProgramProveRequest {
 
 #[derive(Object, Debug)]
 pub struct ProgramProveResponse {
-    /// The target ZK proof.
+    /// The target ZK proof as base64.
     pub proof: Base64<Vec<u8>>,
 
-    /// The output arguments.
+    /// The output arguments as base64.
     pub outputs: Base64<Vec<u8>>,
+}
+
+#[derive(Object, Debug)]
+pub struct ProgramVkResponse {
+    /// The verifying key in base64.
+    pub base64: Base64<Vec<u8>>,
+}
+
+#[derive(Object, Debug)]
+pub struct ProgramEntrypointRequest {
+    /// Arguments of the Valence program.
+    pub args: Value,
 }
 
 #[OpenApi]
@@ -105,7 +117,7 @@ impl Api {
 
         let program = registry.register_program(program)?;
         let program = RegisterProgramResponse {
-            program: Base64(program.to_vec()),
+            program: hex::encode(program),
         };
 
         Ok(Json(program))
@@ -125,7 +137,7 @@ impl Api {
 
         let domain = registry.register_domain(domain)?;
         let domain = RegisterDomainResponse {
-            domain: Base64(domain.to_vec()),
+            domain: hex::encode(domain),
         };
 
         Ok(Json(domain))
@@ -136,10 +148,10 @@ impl Api {
     pub async fn program_link(
         &self,
         registry: Data<&Registry>,
-        program: Path<Base64<Vec<u8>>>,
+        program: Path<String>,
         request: Json<ProgramLinkRequest>,
     ) -> poem::Result<Json<ProgramLinkResponse>> {
-        let program = try_slice_to_hash(&program.0)?;
+        let program = try_str_to_hash(&program)?;
         let domains: Vec<_> = request
             .domains
             .iter()
@@ -156,10 +168,10 @@ impl Api {
     pub async fn program_unlink(
         &self,
         registry: Data<&Registry>,
-        program: Path<Base64<Vec<u8>>>,
+        program: Path<String>,
         request: Json<ProgramUnlinkRequest>,
     ) -> poem::Result<Json<ProgramUnlinkResponse>> {
-        let program = try_slice_to_hash(&program.0)?;
+        let program = try_str_to_hash(&program)?;
         let domains: Vec<_> = request
             .domains
             .iter()
@@ -176,12 +188,12 @@ impl Api {
     pub async fn program_domains(
         &self,
         registry: Data<&Registry>,
-        program: Path<Base64<Vec<u8>>>,
+        program: Path<String>,
     ) -> poem::Result<Json<ProgramDomainsResponse>> {
-        let program = try_slice_to_hash(&program.0)?;
+        let program = try_str_to_hash(&program)?;
 
         let domains = registry.get_program_domains(&program)?;
-        let domains = domains.iter().map(|d| Base64(d.to_vec())).collect();
+        let domains = domains.iter().map(hex::encode).collect();
 
         Ok(Json(ProgramDomainsResponse { domains }))
     }
@@ -190,12 +202,12 @@ impl Api {
     #[oai(path = "/registry/program/:program/storage", method = "get")]
     pub async fn program_storage(
         &self,
-        program: Path<Base64<Vec<u8>>>,
+        program: Path<String>,
         data: Data<&RocksBackend>,
         module: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVM>,
     ) -> poem::Result<Json<ProgramStorageResponse>> {
-        let program = try_slice_to_hash(&program.0)?;
+        let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
 
         let data = ctx.get_program_storage()?.unwrap_or_default();
@@ -208,13 +220,13 @@ impl Api {
     #[oai(path = "/registry/program/:program/prove", method = "post")]
     pub async fn program_prove(
         &self,
-        program: Path<Base64<Vec<u8>>>,
+        program: Path<String>,
         data: Data<&RocksBackend>,
         module: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVM>,
         request: Json<ProgramProveRequest>,
     ) -> poem::Result<Json<ProgramProveResponse>> {
-        let program = try_slice_to_hash(&program.0)?;
+        let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
         let proof = ctx.get_program_proof(request.args.clone())?;
 
@@ -222,5 +234,38 @@ impl Api {
             proof: Base64(proof.proof),
             outputs: Base64(proof.outputs),
         }))
+    }
+
+    /// Returns the program verifying key.
+    #[oai(path = "/registry/program/:program/vk", method = "get")]
+    pub async fn program_vk(
+        &self,
+        program: Path<String>,
+        data: Data<&RocksBackend>,
+        module: Data<&ValenceWasm>,
+        zkvm: Data<&Sp1ZkVM>,
+    ) -> poem::Result<Json<ProgramVkResponse>> {
+        let program = try_str_to_hash(&program)?;
+        let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
+        let vk = ctx.get_program_verifying_key()?;
+
+        Ok(Json(ProgramVkResponse { base64: Base64(vk) }))
+    }
+
+    /// Computes the program proof.
+    #[oai(path = "/registry/program/:program/entrypoint", method = "post")]
+    pub async fn program_entrypoint(
+        &self,
+        program: Path<String>,
+        data: Data<&RocksBackend>,
+        module: Data<&ValenceWasm>,
+        zkvm: Data<&Sp1ZkVM>,
+        args: Json<Value>,
+    ) -> poem::Result<Json<Value>> {
+        let program = try_str_to_hash(&program)?;
+        let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
+        let ret = ctx.entrypoint(args.0)?;
+
+        Ok(Json(ret))
     }
 }
