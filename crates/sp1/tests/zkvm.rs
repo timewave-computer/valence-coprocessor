@@ -43,7 +43,6 @@ fn deploy_hello() {
     let mode = Mode::Mock;
     let zkvm = Sp1ZkVM::new(mode, capacity).unwrap();
 
-    let hello = zkvm.to_zkvm(&hello);
     let program = ProgramData::default().with_zkvm(hello);
     let program = registry.register_program(program).unwrap();
 

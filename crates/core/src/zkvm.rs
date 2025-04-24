@@ -20,4 +20,19 @@ pub trait ZkVM: Sized {
         H: Hasher,
         D: DataBackend,
         M: ModuleVM<H, D, Self>;
+
+    /// Returns the verifying key for the given program.
+    ///
+    /// ## Arguments
+    ///
+    /// - `ctx`: Execution context to fetch the module bytes from.
+    /// - `program`: Program unique identifier.
+    fn verifying_key<H, D, M>(
+        &self,
+        ctx: &ExecutionContext<H, D, M, Self>,
+    ) -> anyhow::Result<Vec<u8>>
+    where
+        H: Hasher,
+        D: DataBackend,
+        M: ModuleVM<H, D, Self>;
 }

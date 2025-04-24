@@ -14,6 +14,7 @@ msgpacker.workspace = true
 zerocopy = { version = "=0.8.23", features = ["alloc", "derive"] }
 serde.workspace = true
 serde_json.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 proptest = "=1.6.0"

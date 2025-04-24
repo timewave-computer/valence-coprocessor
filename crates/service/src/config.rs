@@ -52,7 +52,7 @@ impl Config {
 
         let socket = "0.0.0.0:37281".to_string();
         let module_cache_capacity = 100;
-        let zkvm_mode = String::from("cpu");
+        let zkvm_mode = String::from("mock");
         let zkvm_cache_capacity = 10;
 
         let slf = Self {

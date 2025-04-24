@@ -97,6 +97,18 @@ impl ZkVM for MockZkVM {
 
         Ok(ProvenProgram { proof, outputs })
     }
+
+    fn verifying_key<H, D, M>(
+        &self,
+        ctx: &ExecutionContext<H, D, M, Self>,
+    ) -> anyhow::Result<Vec<u8>>
+    where
+        H: Hasher,
+        D: DataBackend,
+        M: ModuleVM<H, D, Self>,
+    {
+        Ok(ctx.program().to_vec())
+    }
 }
 
 /// A mock implementation for a module VM.

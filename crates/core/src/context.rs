@@ -96,13 +96,26 @@ where
     /// Compute the ZK proof of the provided program.
     pub fn get_program_proof(&self, args: Value) -> anyhow::Result<ProvenProgram> {
         let program = self.program();
+
+        tracing::debug!("computing program proof for `{:x?}`...", program);
+
         let witnesses = self
             .inner
             .module
             .execute(self, program, "get_witnesses", args)?;
+
+        tracing::debug!("inner module executed; parsing...");
+
         let witnesses = serde_json::from_value(witnesses)?;
 
+        tracing::debug!("witnesses computed from module...");
+
         self.inner.zkvm.prove(self, witnesses)
+    }
+
+    /// Returns the program verifying key.
+    pub fn get_program_verifying_key(&self) -> anyhow::Result<Vec<u8>> {
+        self.inner.zkvm.verifying_key(self)
     }
 
     /// Computes a state proof with the provided arguments.
@@ -145,6 +158,13 @@ where
             .data
             .set(b"context-program", &self.inner.program, storage)
             .map(|_| ())
+    }
+
+    /// Calls the entrypoint of the program with the provided arguments.
+    pub fn entrypoint(&self, args: Value) -> anyhow::Result<Value> {
+        self.inner
+            .module
+            .execute(self, self.program(), "entrypoint", args)
     }
 }
 

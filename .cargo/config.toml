@@ -1,2 +1,3 @@
 [alias]
-run-service = "run -p valence-coprocessor-service --release"
+run-service = "run -p valence-coprocessor-service --profile optimized"
+run-service-release = "run -p valence-coprocessor-service --release"
