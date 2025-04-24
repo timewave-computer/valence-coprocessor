@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: ["valence-coprocessor"]
+        package: ["valence-coprocessor", "valence-coprocessor-wasm"]
     steps:
       - uses: actions/checkout@v4
 
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: ["valence-coprocessor", "valence-coprocessor-service", "valence-coprocessor-wasm"]
+        package: ["valence-coprocessor", "valence-coprocessor-wasm"]
     steps:
       - uses: actions/checkout@v4
 
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: ["valence-coprocessor", "valence-coprocessor-service", "valence-coprocessor-wasm"]
+        package: ["valence-coprocessor", "valence-coprocessor-wasm"]
     steps:
       - uses: actions/checkout@v4
 

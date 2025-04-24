@@ -23,10 +23,20 @@ jobs:
       - name: Get cargo
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
+          profile: default
+          override: true
+          default: true
+          components: llvm-tools, rustc-dev
 
       - name: Add WASM target
         run: rustup target add wasm32-unknown-unknown
+
+      - name: Install SP1 toolchain
+        run: |
+          curl -L https://sp1up.succinct.xyz | bash
+          ~/.sp1/bin/sp1up 
+          ~/.sp1/bin/cargo-prove prove --version
 
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
@@ -35,6 +45,6 @@ jobs:
         run: cargo clippy --all-targets --verbose -- -D warnings
 
       - name: Run all tests
-        run: cargo test --verbose
+        run: cargo test --verbose -- --ignored
         env:
           RUST_BACKTRACE: 1
