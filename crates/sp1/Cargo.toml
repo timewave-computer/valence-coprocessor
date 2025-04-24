@@ -1,0 +1,21 @@
+[package]
+name = "valence-coprocessor-sp1"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Valence co-processor SP1 prover backend."
+
+[dependencies]
+anyhow = { workspace = true, optional = true }
+bincode = { workspace = true, optional = true }
+lru = { workspace = true, optional = true }
+sha2-v0-10-8 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.10.8-sp1-4.0.0" }
+sp1-sdk = { version = "4.2.0", optional = true }
+valence-coprocessor = { path = "../core", default-features = false }
+
+[dev-dependencies]
+valence-coprocessor = { path = "../core", features = ["mocks", "std"] }
+
+[features]
+default = ["host"]
+host = ["anyhow", "bincode", "lru", "sp1-sdk", "valence-coprocessor/std"]

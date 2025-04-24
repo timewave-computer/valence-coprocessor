@@ -1,5 +1,11 @@
 [workspace]
-members = ["crates/core", "crates/smt"]
+members = [
+  "crates/core",
+  "crates/rocksdb",
+  "crates/service",
+  "crates/sp1",
+  "crates/wasm",
+]
 resolver = "2"
 
 [workspace.package]
@@ -11,5 +17,21 @@ repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]
 anyhow = { version = "=1.0.97", default-features = false }
+base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
+bincode = "1.3.3"
+blake3 = { version = "=1.6.1", default-features = false }
+clap = { version = "4.5.37", features = ["derive"] }
 hashbrown = "=0.15.2"
-rocksdb = "=0.23.0"
+lru = "0.14.0"
+msgpacker = { version = "0.4.7", default-features = false, features = [
+  "alloc",
+  "derive",
+] }
+serde = { version = "1.0.219", default-features = false, features = [
+  "alloc",
+  "derive",
+] }
+serde_json = { version = "1.0.140", default-features = false, features = [
+  "alloc",
+] }
+tracing = "0.1.41"

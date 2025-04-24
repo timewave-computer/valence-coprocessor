@@ -1,14 +1,24 @@
 [package]
-name = "valence-coprocessor-core"
-version = { workspace = true }
-edition = { workspace = true }
-authors = { workspace = true }
-description = "Sparse Merkle tree implementation for the Valence protocol"
+name = "valence-coprocessor"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Valence co-processor definition"
 
 [dependencies]
-blake3 = { version = "=1.6.1", optional = true, default-features = false }
+anyhow.workspace = true
+base64.workspace = true
+hashbrown.workspace = true
+blake3.workspace = true
+msgpacker.workspace = true
+zerocopy = { version = "=0.8.23", features = ["alloc", "derive"] }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+proptest = "=1.6.0"
 
 [features]
-default = ["blake3", "std"]
-blake3 = ["dep:blake3"]
-std = ["blake3?/std"]
+default = ["std"]
+mocks = []
+std = ["base64/std", "blake3/std", "serde/std"]

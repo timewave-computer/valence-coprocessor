@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: ["valence-coprocessor-core", "valence-smt"]
+        package: ["valence-coprocessor", "valence-coprocessor-wasm"]
     steps:
       - uses: actions/checkout@v4
 
@@ -39,6 +39,9 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: ["valence-coprocessor", "valence-coprocessor-wasm"]
     steps:
       - uses: actions/checkout@v4
 
@@ -52,11 +55,14 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets --verbose -- -D warnings
+        run: cargo clippy --all-targets --verbose --package ${{ matrix.package }} -- -D warnings
 
   tests:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: ["valence-coprocessor", "valence-coprocessor-wasm"]
     steps:
       - uses: actions/checkout@v4
 
@@ -65,7 +71,10 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Add WASM target
+        run: rustup target add wasm32-unknown-unknown
+
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --verbose --package ${{ matrix.package }}
         env:
           RUST_BACKTRACE: 1

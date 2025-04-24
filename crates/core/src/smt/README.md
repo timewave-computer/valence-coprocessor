@@ -4,7 +4,7 @@ A sparse Merkle tree implementation for the Valence protocol.
 
 This module utilizes the underlying `TreeBackend` to manage node relationships, encapsulating implementation logic within its own boundaries.
 
-The `ExecutionContext` offers the necessary cryptographic primitives, including a selection of hashes for use during data insertion.
+The `Hasher` offers the necessary cryptographic primitives, including a selection of hashes for use during data insertion.
 
 The design employs a binary sparse Merkle tree, with each node categorized as either a pure node, a leaf (associated with a specific leaf key), or containing the related leaf data (a raw byte vector).
 
@@ -79,12 +79,13 @@ sequenceDiagram
 
 ```rust
 // An ephemeral in-memory data backend
-#[cfg(feature = "memory")]
+#[cfg(feature = "std")]
 fn run() -> anyhow::Result<()> {
-    use valence_smt::MemorySmt;
+    use valence_coprocessor::MemorySmt;
 
     let context = "foo";
-    let data = b"bar";
+    let key = b"bar";
+    let data = b"baz";
 
     // creates a new instance of the backend
     let mut tree = MemorySmt::default();
@@ -93,7 +94,7 @@ fn run() -> anyhow::Result<()> {
     let root = MemorySmt::empty_tree_root();
 
     // appends the data into the tree, returning its new Merkle root
-    let root = tree.insert(root, context, data.to_vec())?;
+    let root = tree.insert(root, context, key, data.to_vec())?;
 
     // generates a Merkle opening proof
     let proof = tree.get_opening(context, root, data)?.unwrap();
