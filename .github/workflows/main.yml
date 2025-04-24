@@ -25,7 +25,7 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Run tests
-        run: cargo test --verbose --features rocksdb --package valence-smt
+      - name: Run all tests
+        run: cargo test --verbose
         env:
           RUST_BACKTRACE: 1

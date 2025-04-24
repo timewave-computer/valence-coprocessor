@@ -57,6 +57,9 @@ jobs:
   tests:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: ["valence-coprocessor", "valence-coprocessor-service", "valence-coprocessor-wasm"]
     steps:
       - uses: actions/checkout@v4
 
@@ -69,6 +72,6 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
 
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --verbose --package ${{ matrix.package }}
         env:
           RUST_BACKTRACE: 1
