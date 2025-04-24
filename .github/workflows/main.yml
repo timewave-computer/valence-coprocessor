@@ -15,7 +15,7 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  test-rocksdb:
+  test-all:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +24,15 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+
+      - name: Add WASM target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --verbose -- -D warnings
 
       - name: Run all tests
         run: cargo test --verbose

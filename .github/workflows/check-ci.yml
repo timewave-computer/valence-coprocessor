@@ -39,6 +39,9 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: ["valence-coprocessor", "valence-coprocessor-service", "valence-coprocessor-wasm"]
     steps:
       - uses: actions/checkout@v4
 
@@ -52,7 +55,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets --verbose -- -D warnings
+        run: cargo clippy --all-targets --verbose --package ${{ matrix.package }} -- -D warnings
 
   tests:
     needs: build
