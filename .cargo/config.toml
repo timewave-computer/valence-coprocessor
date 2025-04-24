@@ -1,0 +1,2 @@
+[alias]
+run-service = "run -p valence-coprocessor-service --release"

@@ -30,3 +30,14 @@ path = "src/bin/server/main.rs"
 [[bin]]
 name = "cli"
 path = "src/bin/cli/main.rs"
+
+[profile.release]
+opt-level = 3
+debug = false
+strip = "symbols"
+debug-assertions = false
+overflow-checks = false
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+incremental = false
