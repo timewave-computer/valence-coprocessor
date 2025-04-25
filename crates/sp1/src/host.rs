@@ -191,4 +191,13 @@ impl ZkVM for Sp1ZkVM {
             })
             .and_then(|(_pk, vk)| Ok(bincode::serialize(&vk)?))
     }
+
+    fn updated(&self, program: &Hash) {
+        match self.keys.lock() {
+            Ok(mut k) => {
+                k.pop(program);
+            }
+            Err(e) => tracing::error!("error locking keys: {e}"),
+        }
+    }
 }

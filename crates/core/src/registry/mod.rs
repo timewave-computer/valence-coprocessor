@@ -1,6 +1,6 @@
 use alloc::{collections::BTreeSet, vec::Vec};
 
-use crate::{DataBackend, Hash};
+use crate::{DataBackend, Hash, Hasher, ModuleVM, ZkVM};
 
 use zerocopy::{IntoBytes as _, TryFromBytes};
 
@@ -35,22 +35,42 @@ impl<D: DataBackend> Registry<D> {
     pub const PREFIX_ZKVM: &[u8] = b"registry-zkvm";
 
     /// Register a new program, returning its identifier.
-    pub fn register_program(&self, program: ProgramData) -> anyhow::Result<Hash> {
+    pub fn register_program<M, H, Z>(
+        &self,
+        vm: &M,
+        zk_vm: &Z,
+        program: ProgramData,
+    ) -> anyhow::Result<Hash>
+    where
+        M: ModuleVM<H, D, Z>,
+        H: Hasher,
+        Z: ZkVM,
+    {
         let id = program.identifier();
         let ProgramData { module, zkvm, .. } = program;
 
         self.data.set(Self::PREFIX_MODULE, &id, &module)?;
         self.data.set(Self::PREFIX_ZKVM, &id, &zkvm)?;
 
+        vm.updated(&id);
+        zk_vm.updated(&id);
+
         Ok(id)
     }
 
     /// Register a new domain, returning its identifier.
-    pub fn register_domain(&self, domain: DomainData) -> anyhow::Result<Hash> {
+    pub fn register_domain<M, H, Z>(&self, vm: &M, domain: DomainData) -> anyhow::Result<Hash>
+    where
+        M: ModuleVM<H, D, Z>,
+        H: Hasher,
+        Z: ZkVM,
+    {
         let id = domain.identifier();
         let DomainData { module, .. } = domain;
 
         self.data.set(Self::PREFIX_MODULE, &id, &module)?;
+
+        vm.updated(&id);
 
         Ok(id)
     }

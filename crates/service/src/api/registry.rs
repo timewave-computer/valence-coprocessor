@@ -107,6 +107,8 @@ impl Api {
     pub async fn registry_program(
         &self,
         registry: Data<&Registry>,
+        module: Data<&ValenceWasm>,
+        zkvm: Data<&Sp1ZkVM>,
         request: Json<RegisterProgramRequest>,
     ) -> poem::Result<Json<RegisterProgramResponse>> {
         let program = ProgramData {
@@ -115,7 +117,9 @@ impl Api {
             nonce: request.nonce.unwrap_or(0),
         };
 
-        let program = registry.register_program(program)?;
+        let module: &ValenceWasm = &module;
+        let zkvm: &Sp1ZkVM = &zkvm;
+        let program = registry.register_program(module, zkvm, program)?;
         let program = RegisterProgramResponse {
             program: hex::encode(program),
         };
@@ -128,6 +132,7 @@ impl Api {
     pub async fn register_domain(
         &self,
         registry: Data<&Registry>,
+        module: Data<&ValenceWasm>,
         request: Json<RegisterDomainRequest>,
     ) -> poem::Result<Json<RegisterDomainResponse>> {
         let domain = DomainData {
@@ -135,7 +140,8 @@ impl Api {
             module: request.module.to_vec(),
         };
 
-        let domain = registry.register_domain(domain)?;
+        let module: &ValenceWasm = &module;
+        let domain = registry.register_domain(module, domain)?;
         let domain = RegisterDomainResponse {
             domain: hex::encode(domain),
         };

@@ -133,4 +133,13 @@ where
 
         Ok(ret.unwrap_or_default())
     }
+
+    fn updated(&self, module: &Hash) {
+        match self.modules.lock() {
+            Ok(mut m) => {
+                m.pop(module);
+            }
+            Err(e) => tracing::error!("error locking modules: {e}"),
+        }
+    }
 }
