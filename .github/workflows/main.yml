@@ -42,8 +42,10 @@ jobs:
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
 
-      - name: Run clippy
-        run: cargo clippy --all-targets --verbose -- -D warnings
+      # Removed due to clippy bug
+      # https://github.com/timewave-computer/valence-coprocessor/actions/runs/14662473178/job/41149986950?pr=29
+      #- name: Run clippy
+      #  run: cargo clippy --all-targets --verbose -- -D warnings
 
       #- name: Run all tests
       #  run: cargo test --verbose -- --ignored
