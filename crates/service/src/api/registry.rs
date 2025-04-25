@@ -117,9 +117,7 @@ impl Api {
             nonce: request.nonce.unwrap_or(0),
         };
 
-        let module: &ValenceWasm = &module;
-        let zkvm: &Sp1ZkVM = &zkvm;
-        let program = registry.register_program(module, zkvm, program)?;
+        let program = registry.register_program(*module, *zkvm, program)?;
         let program = RegisterProgramResponse {
             program: hex::encode(program),
         };
@@ -140,8 +138,7 @@ impl Api {
             module: request.module.to_vec(),
         };
 
-        let module: &ValenceWasm = &module;
-        let domain = registry.register_domain(module, domain)?;
+        let domain = registry.register_domain(*module, domain)?;
         let domain = RegisterDomainResponse {
             domain: hex::encode(domain),
         };
