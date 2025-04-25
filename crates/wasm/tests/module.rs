@@ -30,11 +30,13 @@ fn deploy_hello() {
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
-    let program = ProgramData::default().with_module(hello);
-    let program = registry.register_program(program).unwrap();
-
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
+    let zkvm = MockZkVM;
+
+    let program = ProgramData::default().with_module(hello);
+    let program = registry.register_program(&vm, &zkvm, program).unwrap();
+
     let ctx = Blake3Context::init(program, data, vm, MockZkVM);
 
     let ret = ctx
@@ -53,11 +55,13 @@ fn deploy_storage() {
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
-    let program = ProgramData::default().with_module(storage);
-    let program = registry.register_program(program).unwrap();
-
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
+    let zkvm = MockZkVM;
+
+    let program = ProgramData::default().with_module(storage);
+    let program = registry.register_program(&vm, &zkvm, program).unwrap();
+
     let ctx = Blake3Context::init(program, data, vm, MockZkVM);
 
     assert!(ctx.get_program_storage().unwrap().is_none());
@@ -76,11 +80,13 @@ fn deploy_program() {
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
-    let program = ProgramData::default().with_module(program);
-    let program = registry.register_program(program).unwrap();
-
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
+    let zkvm = MockZkVM;
+
+    let program = ProgramData::default().with_module(program);
+    let program = registry.register_program(&vm, &zkvm, program).unwrap();
+
     let ctx = Blake3Context::init(program, data, vm, MockZkVM);
 
     let ret: Vec<_> = ctx
@@ -115,11 +121,13 @@ fn deploy_http() {
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
-    let program = ProgramData::default().with_module(program);
-    let program = registry.register_program(program).unwrap();
-
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
+    let zkvm = MockZkVM;
+
+    let program = ProgramData::default().with_module(program);
+    let program = registry.register_program(&vm, &zkvm, program).unwrap();
+
     let ctx = Blake3Context::init(program, data, vm, MockZkVM);
 
     let ret = ctx

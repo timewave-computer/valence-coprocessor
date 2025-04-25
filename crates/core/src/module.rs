@@ -26,4 +26,7 @@ where
         f: &str,
         args: Value,
     ) -> anyhow::Result<Value>;
+
+    /// A notification that the module has been updated.
+    fn updated(&self, module: &Hash);
 }

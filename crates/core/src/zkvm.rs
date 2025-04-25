@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::{DataBackend, ExecutionContext, Hasher, ModuleVM, ProvenProgram, Witness};
+use crate::{DataBackend, ExecutionContext, Hash, Hasher, ModuleVM, ProvenProgram, Witness};
 
 /// A zkVM definition.
 pub trait ZkVM: Sized {
@@ -35,4 +35,7 @@ pub trait ZkVM: Sized {
         H: Hasher,
         D: DataBackend,
         M: ModuleVM<H, D, Self>;
+
+    /// A notification that the program has been updated.
+    fn updated(&self, program: &Hash);
 }

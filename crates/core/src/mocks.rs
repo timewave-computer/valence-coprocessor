@@ -109,6 +109,8 @@ impl ZkVM for MockZkVM {
     {
         Ok(ctx.program().to_vec())
     }
+
+    fn updated(&self, _program: &Hash) {}
 }
 
 /// A mock implementation for a module VM.
@@ -155,4 +157,6 @@ where
             "args": args
         }))
     }
+
+    fn updated(&self, _module: &Hash) {}
 }
