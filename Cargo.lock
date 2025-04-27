@@ -6506,7 +6506,7 @@ checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -6522,7 +6522,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-rocksdb"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "proptest",
@@ -6533,7 +6533,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-service"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -6555,7 +6555,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-sp1"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "bincode",
@@ -6568,7 +6568,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "dlmalloc",
