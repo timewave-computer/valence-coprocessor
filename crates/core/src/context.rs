@@ -4,8 +4,8 @@ use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use serde_json::Value;
 
 use crate::{
-    Blake3Hasher, DataBackend, DomainData, Hash, Hasher, ModuleVM, ProvenProgram, Registry, Smt,
-    SmtOpening, Witness, ZkVM,
+    Blake3Hasher, DataBackend, DomainData, Hash, Hasher, ProvenProgram, Registry, Smt, SmtOpening,
+    Vm, Witness, ZkVM,
 };
 
 /// Execution context with blake3 hasher.
@@ -15,13 +15,13 @@ struct ExecutionContextInner<H, D, M, Z>
 where
     H: Hasher,
     D: DataBackend,
-    M: ModuleVM<H, D, Z>,
+    M: Vm<H, D, Z>,
     Z: ZkVM,
 {
     data: D,
     registry: Registry<D>,
     historical: Smt<D, H>,
-    module: M,
+    vm: M,
     zkvm: Z,
     program: Hash,
 
@@ -34,7 +34,7 @@ pub struct ExecutionContext<H, D, M, Z>
 where
     H: Hasher,
     D: DataBackend,
-    M: ModuleVM<H, D, Z>,
+    M: Vm<H, D, Z>,
     Z: ZkVM,
 {
     inner: Rc<ExecutionContextInner<H, D, M, Z>>,
@@ -44,7 +44,7 @@ impl<H, D, M, Z> Clone for ExecutionContext<H, D, M, Z>
 where
     H: Hasher,
     D: DataBackend,
-    M: ModuleVM<H, D, Z>,
+    M: Vm<H, D, Z>,
     Z: ZkVM,
 {
     fn clone(&self) -> Self {
@@ -58,7 +58,7 @@ impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
 where
     H: Hasher,
     D: DataBackend,
-    M: ModuleVM<H, D, Z>,
+    M: Vm<H, D, Z>,
     Z: ZkVM,
 {
     /// Returns the program being executed.
@@ -66,21 +66,21 @@ where
         &self.inner.program
     }
 
-    /// Returns a module program.
+    /// Returns a zkVM program.
     pub fn get_zkvm(&self) -> anyhow::Result<Option<Vec<u8>>> {
         self.inner.registry.get_zkvm(&self.inner.program)
     }
 
-    /// Returns a module program.
-    pub fn get_module(&self, module: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
-        self.inner.registry.get_module(module)
+    /// Returns a library.
+    pub fn get_lib(&self, lib: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
+        self.inner.registry.get_lib(lib)
     }
 
-    /// Returns a domain module program.
-    pub fn get_domain_module(&self, domain: &str) -> anyhow::Result<Option<Vec<u8>>> {
+    /// Returns a domain library.
+    pub fn get_domain_lib(&self, domain: &str) -> anyhow::Result<Option<Vec<u8>>> {
         let domain = DomainData::identifier_from_parts(domain);
 
-        self.inner.registry.get_module(&domain)
+        self.inner.registry.get_lib(&domain)
     }
 
     /// Computes a domain opening for the target root.
@@ -104,14 +104,14 @@ where
 
         let witnesses = self
             .inner
-            .module
+            .vm
             .execute(self, program, "get_witnesses", args)?;
 
-        tracing::debug!("inner module executed; parsing...");
+        tracing::debug!("inner library executed; parsing...");
 
         let witnesses = serde_json::from_value(witnesses)?;
 
-        tracing::debug!("witnesses computed from module...");
+        tracing::debug!("witnesses computed from library...");
 
         self.inner.zkvm.prove(self, witnesses)
     }
@@ -126,12 +126,12 @@ where
         let domain = DomainData::identifier_from_parts(domain);
         let proof = self
             .inner
-            .module
+            .vm
             .execute(self, &domain, "get_state_proof", args)?;
 
         let proof = proof.as_str().ok_or_else(|| {
             anyhow::anyhow!(
-                "the domain module didn't return a valid state proof base64 representation"
+                "the domain library didn't return a valid state proof base64 representation"
             )
         })?;
 
@@ -142,10 +142,10 @@ where
 
     /// Get the program witness data for the ZK circuit.
     pub fn get_program_witnesses(&self, args: Value) -> anyhow::Result<Vec<Witness>> {
-        let witnesses =
-            self.inner
-                .module
-                .execute(self, &self.inner.program, "get_witnesses", args)?;
+        let witnesses = self
+            .inner
+            .vm
+            .execute(self, &self.inner.program, "get_witnesses", args)?;
 
         Ok(serde_json::from_value(witnesses)?)
     }
@@ -191,7 +191,7 @@ where
     /// Calls the entrypoint of the program with the provided arguments.
     pub fn entrypoint(&self, args: Value) -> anyhow::Result<Value> {
         self.inner
-            .module
+            .vm
             .execute(self, self.program(), "entrypoint", args)
     }
 }
@@ -200,17 +200,17 @@ impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
 where
     H: Hasher,
     D: DataBackend + Clone,
-    M: ModuleVM<H, D, Z>,
+    M: Vm<H, D, Z>,
     Z: ZkVM,
 {
     /// Initializes a new execution context.
-    pub fn init(program: Hash, data: D, module: M, zkvm: Z) -> Self {
+    pub fn init(program: Hash, data: D, vm: M, zkvm: Z) -> Self {
         Self {
             inner: Rc::new(ExecutionContextInner {
                 data: data.clone(),
                 historical: Smt::from(data.clone()),
                 registry: Registry::from(data.clone()),
-                module,
+                vm,
                 zkvm,
                 program,
 
@@ -226,12 +226,12 @@ impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
 where
     H: Hasher,
     D: DataBackend,
-    M: ModuleVM<H, D, Z>,
+    M: Vm<H, D, Z>,
     Z: ZkVM,
 {
     /// Executes an arbitrary program function.
-    pub fn execute_module(&self, program: &Hash, f: &str, args: Value) -> anyhow::Result<Value> {
-        self.inner.module.execute(self, program, f, args)
+    pub fn execute_lib(&self, lib: &Hash, f: &str, args: Value) -> anyhow::Result<Value> {
+        self.inner.vm.execute(self, lib, f, args)
     }
 
     /// Computes an arbitrary program proof.

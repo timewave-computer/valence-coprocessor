@@ -34,13 +34,13 @@ fn deploy_hello() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVM;
 
-    let program = ProgramData::default().with_module(hello);
+    let program = ProgramData::default().with_lib(hello);
     let program = registry.register_program(&vm, &zkvm, program).unwrap();
 
     let ctx = Blake3Context::init(program, data, vm, MockZkVM);
 
     let ret = ctx
-        .execute_module(&program, "hello", json!({"name": "Valence"}))
+        .execute_lib(&program, "hello", json!({"name": "Valence"}))
         .unwrap()["message"]
         .as_str()
         .unwrap()
@@ -59,14 +59,14 @@ fn deploy_storage() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVM;
 
-    let program = ProgramData::default().with_module(storage);
+    let program = ProgramData::default().with_lib(storage);
     let program = registry.register_program(&vm, &zkvm, program).unwrap();
 
     let ctx = Blake3Context::init(program, data, vm, MockZkVM);
 
     assert!(ctx.get_program_storage().unwrap().is_none());
 
-    ctx.execute_module(&program, "storage", json!({"name": "Valence"}))
+    ctx.execute_lib(&program, "storage", json!({"name": "Valence"}))
         .unwrap();
 
     let storage = ctx.get_program_storage().unwrap().unwrap();
@@ -84,13 +84,13 @@ fn deploy_program() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVM;
 
-    let program = ProgramData::default().with_module(program);
+    let program = ProgramData::default().with_lib(program);
     let program = registry.register_program(&vm, &zkvm, program).unwrap();
 
     let ctx = Blake3Context::init(program, data, vm, MockZkVM);
 
     let ret: Vec<_> = ctx
-        .execute_module(&program, "program", json!({}))
+        .execute_lib(&program, "program", json!({}))
         .unwrap()
         .as_array()
         .unwrap()
@@ -125,13 +125,13 @@ fn deploy_http() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVM;
 
-    let program = ProgramData::default().with_module(program);
+    let program = ProgramData::default().with_lib(program);
     let program = registry.register_program(&vm, &zkvm, program).unwrap();
 
     let ctx = Blake3Context::init(program, data, vm, MockZkVM);
 
     let ret = ctx
-        .execute_module(
+        .execute_lib(
             &program,
             "http",
             json!({
@@ -157,12 +157,12 @@ fn deploy_log() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVM;
 
-    let program = ProgramData::default().with_module(hello);
+    let program = ProgramData::default().with_lib(hello);
     let program = registry.register_program(&vm, &zkvm, program).unwrap();
 
     let ctx = Blake3Context::init(program, data, vm, MockZkVM);
 
-    ctx.execute_module(&program, "log", json!({"name": "Valence"}))
+    ctx.execute_lib(&program, "log", json!({"name": "Valence"}))
         .unwrap();
 
     let mut log = ctx.get_log().unwrap();

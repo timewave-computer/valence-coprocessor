@@ -11,11 +11,11 @@ use super::{try_str_to_hash, Api};
 
 #[derive(Object, Debug)]
 pub struct RegisterProgramRequest {
-    /// A Base64 WASM encoded module.
-    pub module: Base64<Vec<u8>>,
+    /// A Base64 WASM encoded library.
+    pub lib: Base64<Vec<u8>>,
 
-    /// A Base64 zkVM encoded prover.
-    pub zkvm: Base64<Vec<u8>>,
+    /// A Base64 circuit encoded prover.
+    pub circuit: Base64<Vec<u8>>,
 
     /// Optional nonce to affect hte program id.
     #[oai(default)]
@@ -33,8 +33,8 @@ pub struct RegisterDomainRequest {
     /// Unique name identifier for the domain.
     pub name: String,
 
-    /// Base64 code for the WASM module.
-    pub module: Base64<Vec<u8>>,
+    /// Base64 code for the WASM domain library.
+    pub lib: Base64<Vec<u8>>,
 }
 
 #[derive(Object, Debug)]
@@ -125,17 +125,17 @@ impl Api {
     pub async fn registry_program(
         &self,
         registry: Data<&Registry>,
-        module: Data<&ValenceWasm>,
+        vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVM>,
         request: Json<RegisterProgramRequest>,
     ) -> poem::Result<Json<RegisterProgramResponse>> {
         let program = ProgramData {
-            module: request.module.to_vec(),
-            zkvm: request.zkvm.to_vec(),
+            lib: request.lib.to_vec(),
+            circuit: request.circuit.to_vec(),
             nonce: request.nonce.unwrap_or(0),
         };
 
-        let program = registry.register_program(*module, *zkvm, program)?;
+        let program = registry.register_program(*vm, *zkvm, program)?;
         let program = RegisterProgramResponse {
             program: hex::encode(program),
         };
@@ -148,15 +148,15 @@ impl Api {
     pub async fn register_domain(
         &self,
         registry: Data<&Registry>,
-        module: Data<&ValenceWasm>,
+        vm: Data<&ValenceWasm>,
         request: Json<RegisterDomainRequest>,
     ) -> poem::Result<Json<RegisterDomainResponse>> {
         let domain = DomainData {
             name: request.name.clone(),
-            module: request.module.to_vec(),
+            lib: request.lib.to_vec(),
         };
 
-        let domain = registry.register_domain(*module, domain)?;
+        let domain = registry.register_domain(*vm, domain)?;
         let domain = RegisterDomainResponse {
             domain: hex::encode(domain),
         };
@@ -225,11 +225,11 @@ impl Api {
         &self,
         program: Path<String>,
         data: Data<&RocksBackend>,
-        module: Data<&ValenceWasm>,
+        vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVM>,
     ) -> poem::Result<Json<ProgramStorageResponse>> {
         let program = try_str_to_hash(&program)?;
-        let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
+        let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
 
         let data = ctx.get_program_storage()?.unwrap_or_default();
         let data = Base64(data);
@@ -244,13 +244,24 @@ impl Api {
         &self,
         program: Path<String>,
         data: Data<&RocksBackend>,
-        module: Data<&ValenceWasm>,
+        vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVM>,
         request: Json<ProgramProveRequest>,
     ) -> poem::Result<Json<ProgramProveResponse>> {
         let program = try_str_to_hash(&program)?;
-        let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
-        let proof = ctx.get_program_proof(request.args.clone())?;
+        let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
+
+        let proof = match ctx.get_program_proof(request.args.clone()) {
+            Ok(p) => p,
+            Err(e) => {
+                return Ok(Json(ProgramProveResponse {
+                    proof: Base64(vec![]),
+                    outputs: Base64(vec![]),
+                    log: vec![format!("Error computing the proof: {e}")],
+                }));
+            }
+        };
+
         let log = ctx.get_log()?;
 
         Ok(Json(ProgramProveResponse {
@@ -266,11 +277,11 @@ impl Api {
         &self,
         program: Path<String>,
         data: Data<&RocksBackend>,
-        module: Data<&ValenceWasm>,
+        vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVM>,
     ) -> poem::Result<Json<ProgramVkResponse>> {
         let program = try_str_to_hash(&program)?;
-        let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
+        let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
         let vk = ctx.get_program_verifying_key()?;
         let log = ctx.get_log()?;
 
@@ -286,12 +297,12 @@ impl Api {
         &self,
         program: Path<String>,
         data: Data<&RocksBackend>,
-        module: Data<&ValenceWasm>,
+        vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVM>,
         args: Json<Value>,
     ) -> poem::Result<Json<ProgramEntrypointResponse>> {
         let program = try_str_to_hash(&program)?;
-        let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
+        let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
         let ret = ctx.entrypoint(args.0)?;
         let log = ctx.get_log()?;
 

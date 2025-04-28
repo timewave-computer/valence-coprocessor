@@ -10,8 +10,8 @@ use super::Registry;
 pub struct DomainData {
     /// Name of the domain
     pub name: String,
-    /// Module module used to compute the domain functions.
-    pub module: Vec<u8>,
+    /// Library used to compute the domain functions.
+    pub lib: Vec<u8>,
 }
 
 impl DomainData {
@@ -20,7 +20,7 @@ impl DomainData {
 
     /// Generates an unique identifier for the domain.
     ///
-    /// The module module definition can be hot swapped so it is not part of the identifier
+    /// The library definition can be hot swapped so it is not part of the identifier
     /// computation.
     pub fn identifier(&self) -> Hash {
         Self::identifier_from_parts(&self.name)
@@ -35,10 +35,10 @@ impl DomainData {
 /// Program data of the registry.
 #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ProgramData {
-    /// Module module containing the witness computation functions.
-    pub module: Vec<u8>,
-    /// ZKVM module containing the proven transition code.
-    pub zkvm: Vec<u8>,
+    /// Library containing the witness computation functions.
+    pub lib: Vec<u8>,
+    /// Circuit containing the transition function.
+    pub circuit: Vec<u8>,
     /// Deployed nonce value.
     pub nonce: u64,
 }
@@ -49,27 +49,27 @@ impl ProgramData {
 
     /// Generates an unique identifier for the program.
     ///
-    /// The module file does not extend the security properties of the zkVM program so it is
+    /// The library file does not extend the security properties of the zkVM program so it is
     /// not included within the scope of identification, as it can be freely replaced without
     /// causing breaking changes.
     pub fn identifier(&self) -> Hash {
-        Self::identifier_from_parts(&self.zkvm, self.nonce)
+        Self::identifier_from_parts(&self.circuit, self.nonce)
     }
 
     /// Computes the program identifier from its parts.
-    pub fn identifier_from_parts(zkvm: &[u8], nonce: u64) -> Hash {
-        Blake3Hasher::digest([Self::ID_PREFIX, zkvm, &nonce.to_le_bytes()])
+    pub fn identifier_from_parts(circuit: &[u8], nonce: u64) -> Hash {
+        Blake3Hasher::digest([Self::ID_PREFIX, circuit, &nonce.to_le_bytes()])
     }
 
-    /// Set the module execution definition.
-    pub fn with_module(mut self, module: Vec<u8>) -> Self {
-        self.module = module;
+    /// Set the library execution definition.
+    pub fn with_lib(mut self, lib: Vec<u8>) -> Self {
+        self.lib = lib;
         self
     }
 
     /// Set the zkvm execution definition.
-    pub fn with_zkvm(mut self, zkvm: Vec<u8>) -> Self {
-        self.zkvm = zkvm;
+    pub fn with_circuit(mut self, circuit: Vec<u8>) -> Self {
+        self.circuit = circuit;
         self
     }
 
@@ -101,6 +101,32 @@ pub enum Witness {
 
     /// Arbitrary execution data.
     Data(Vec<u8>),
+}
+
+impl Witness {
+    /// Returns the data, if the correct variation is met.
+    pub fn as_data(&self) -> Option<&[u8]> {
+        match self {
+            Witness::Data(d) => Some(d.as_slice()),
+            _ => None,
+        }
+    }
+
+    /// Returns the domain proof, if the correct variation is met.
+    pub fn as_domain_proof(&self) -> Option<&SmtOpening> {
+        match self {
+            Witness::DomainProof(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    /// Returns the state proof, if the correct variation is met.
+    pub fn as_state_proof(&self) -> Option<&[u8]> {
+        match self {
+            Witness::StateProof(p) => Some(p.as_slice()),
+            _ => None,
+        }
+    }
 }
 
 /// A ZK proven program.

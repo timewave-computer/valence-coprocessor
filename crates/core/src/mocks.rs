@@ -1,10 +1,11 @@
 //! Mocks for the interfaces of the system.
 
+use alloc::vec::Vec;
 use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use serde_json::{json, Value};
 
 use crate::{
-    DataBackend, ExecutionContext, Hash, Hasher, ModuleVM, ProvenProgram, SmtOpening, Witness, ZkVM,
+    DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, SmtOpening, Vm, Witness, ZkVM,
 };
 
 /// A mock implementation of a zkVM
@@ -22,7 +23,7 @@ impl MockZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: ModuleVM<H, D, Self>,
+        M: Vm<H, D, Self>,
     {
         witnesses.sort();
 
@@ -65,7 +66,7 @@ impl ZkVM for MockZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: ModuleVM<H, D, MockZkVM>,
+        M: Vm<H, D, MockZkVM>,
     {
         witnesses.sort();
 
@@ -105,7 +106,7 @@ impl ZkVM for MockZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: ModuleVM<H, D, Self>,
+        M: Vm<H, D, Self>,
     {
         Ok(ctx.program().to_vec())
     }
@@ -113,14 +114,14 @@ impl ZkVM for MockZkVM {
     fn updated(&self, _program: &Hash) {}
 }
 
-/// A mock implementation for a module VM.
-pub struct MockModuleVM;
+/// A mock implementation for a VM.
+pub struct MockVm;
 
-impl MockModuleVM {
-    /// Validates the execution of a module
+impl MockVm {
+    /// Validates the execution of a library
     pub fn validate<H, D, Z>(
         _ctx: &ExecutionContext<H, D, Self, Z>,
-        module: &Hash,
+        lib: &Hash,
         f: &str,
         args: Value,
         execution: Value,
@@ -131,14 +132,14 @@ impl MockModuleVM {
         Z: ZkVM,
     {
         json!({
-            "module": Base64.encode(module),
+            "lib": Base64.encode(lib),
             "f": f,
             "args": args
         }) == execution
     }
 }
 
-impl<H, D, Z> ModuleVM<H, D, Z> for MockModuleVM
+impl<H, D, Z> Vm<H, D, Z> for MockVm
 where
     H: Hasher,
     D: DataBackend,
@@ -147,16 +148,16 @@ where
     fn execute(
         &self,
         _ctx: &ExecutionContext<H, D, Self, Z>,
-        module: &Hash,
+        lib: &Hash,
         f: &str,
         args: Value,
     ) -> anyhow::Result<Value> {
         Ok(json!({
-            "module": Base64.encode(module),
+            "lib": Base64.encode(lib),
             "f": f,
             "args": args
         }))
     }
 
-    fn updated(&self, _module: &Hash) {}
+    fn updated(&self, _lib: &Hash) {}
 }

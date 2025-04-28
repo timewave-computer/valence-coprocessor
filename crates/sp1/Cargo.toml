@@ -20,3 +20,8 @@ valence-coprocessor = { path = "../core", features = ["mocks", "std"] }
 [features]
 default = ["host"]
 host = ["anyhow", "bincode", "lru", "sp1-sdk", "valence-coprocessor/std"]
+
+[[test]]
+name = "zkvm"
+path = "tests/zkvm.rs"
+required-features = ["host"]

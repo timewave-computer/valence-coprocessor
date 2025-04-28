@@ -2,11 +2,10 @@
 
 extern crate alloc;
 
-#[cfg(not(feature = "std"))]
 pub mod abi;
 
 #[cfg(feature = "std")]
 pub mod host;
 
 /// Host module identifier.
-pub const HOST_MODULE: &str = "valence";
+pub const HOST_LIB: &str = "valence";

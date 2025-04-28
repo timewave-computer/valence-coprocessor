@@ -6,7 +6,7 @@ use sp1_sdk::{
     SP1Stdin, SP1VerifyingKey,
 };
 use valence_coprocessor::{
-    DataBackend, ExecutionContext, Hash, Hasher, ModuleVM, ProvenProgram, Witness, ZkVM,
+    DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, Vm, Witness, ZkVM,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -135,7 +135,7 @@ impl ZkVM for Sp1ZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: ModuleVM<H, D, Sp1ZkVM>,
+        M: Vm<H, D, Sp1ZkVM>,
     {
         let program = ctx.program();
 
@@ -173,7 +173,7 @@ impl ZkVM for Sp1ZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: ModuleVM<H, D, Self>,
+        M: Vm<H, D, Self>,
     {
         let program = ctx.program();
 
