@@ -424,6 +424,28 @@ where
     }
 }
 
+/// Logs a string.
+pub fn log<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVM,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let log = match read_string(&mut caller, &mem, ptr, len) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    caller.data_mut().log.push(log);
+
+    ReturnCodes::Success as i32
+}
+
 fn read_buffer<H, D, Z>(
     caller: &mut Caller<Runtime<H, D, Z>>,
     mem: &Memory,

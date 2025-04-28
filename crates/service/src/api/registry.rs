@@ -71,6 +71,9 @@ pub struct ProgramDomainsResponse {
 pub struct ProgramStorageResponse {
     /// Storage data associated with the program as base64.
     pub data: Base64<Vec<u8>>,
+
+    /// Logs of the operation.
+    pub log: Vec<String>,
 }
 
 #[derive(Object, Debug)]
@@ -86,18 +89,33 @@ pub struct ProgramProveResponse {
 
     /// The output arguments as base64.
     pub outputs: Base64<Vec<u8>>,
+
+    /// Logs of the operation.
+    pub log: Vec<String>,
 }
 
 #[derive(Object, Debug)]
 pub struct ProgramVkResponse {
     /// The verifying key in base64.
     pub base64: Base64<Vec<u8>>,
+
+    /// Logs of the operation.
+    pub log: Vec<String>,
 }
 
 #[derive(Object, Debug)]
 pub struct ProgramEntrypointRequest {
     /// Arguments of the Valence program.
     pub args: Value,
+}
+
+#[derive(Object, Debug)]
+pub struct ProgramEntrypointResponse {
+    /// Return value of the entrypoint.
+    pub ret: Value,
+
+    /// Logs of the operation.
+    pub log: Vec<String>,
 }
 
 #[OpenApi]
@@ -215,8 +233,9 @@ impl Api {
 
         let data = ctx.get_program_storage()?.unwrap_or_default();
         let data = Base64(data);
+        let log = ctx.get_log()?;
 
-        Ok(Json(ProgramStorageResponse { data }))
+        Ok(Json(ProgramStorageResponse { data, log }))
     }
 
     /// Computes the program proof.
@@ -232,10 +251,12 @@ impl Api {
         let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
         let proof = ctx.get_program_proof(request.args.clone())?;
+        let log = ctx.get_log()?;
 
         Ok(Json(ProgramProveResponse {
             proof: Base64(proof.proof),
             outputs: Base64(proof.outputs),
+            log,
         }))
     }
 
@@ -251,8 +272,12 @@ impl Api {
         let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
         let vk = ctx.get_program_verifying_key()?;
+        let log = ctx.get_log()?;
 
-        Ok(Json(ProgramVkResponse { base64: Base64(vk) }))
+        Ok(Json(ProgramVkResponse {
+            base64: Base64(vk),
+            log,
+        }))
     }
 
     /// Computes the program proof.
@@ -264,11 +289,12 @@ impl Api {
         module: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVM>,
         args: Json<Value>,
-    ) -> poem::Result<Json<Value>> {
+    ) -> poem::Result<Json<ProgramEntrypointResponse>> {
         let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), module.clone(), zkvm.clone());
         let ret = ctx.entrypoint(args.0)?;
+        let log = ctx.get_log()?;
 
-        Ok(Json(ret))
+        Ok(Json(ProgramEntrypointResponse { ret, log }))
     }
 }

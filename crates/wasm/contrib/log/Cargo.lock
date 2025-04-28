@@ -276,7 +276,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "valence-coprocessor-wasm-http"
+name = "valence-coprocessor-wasm-log"
 version = "0.1.0"
 dependencies = [
  "serde_json",

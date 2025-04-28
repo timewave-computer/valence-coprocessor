@@ -146,3 +146,27 @@ fn deploy_http() {
 
     assert_eq!("Hello, Valence!", body.as_str());
 }
+
+#[test]
+fn deploy_log() {
+    let hello = get_program_bytes("log");
+    let data = MemoryBackend::default();
+    let registry = Registry::from(data.clone());
+
+    let capacity = 500;
+    let vm = ValenceWasm::new(capacity).unwrap();
+    let zkvm = MockZkVM;
+
+    let program = ProgramData::default().with_module(hello);
+    let program = registry.register_program(&vm, &zkvm, program).unwrap();
+
+    let ctx = Blake3Context::init(program, data, vm, MockZkVM);
+
+    ctx.execute_module(&program, "log", json!({"name": "Valence"}))
+        .unwrap();
+
+    let mut log = ctx.get_log().unwrap();
+
+    assert_eq!("Hello, Valence!", log.remove(0));
+    assert_eq!("Multiple entries", log.remove(0));
+}
