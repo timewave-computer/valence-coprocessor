@@ -7,11 +7,11 @@ description = "The Valence co-processor WASM module backend."
 
 [dependencies]
 anyhow.workspace = true
-dlmalloc = { version = "=0.2.8", optional = true, features = ["global"] }
+dlmalloc = { version = "0.2.8", optional = true, features = ["global"] }
 hashbrown = { workspace = true, optional = true }
 lru.workspace = true
 msgpacker.workspace = true
-reqwest = { version = "=0.12.15", optional = true, features = [
+reqwest = { version = "0.12.15", optional = true, features = [
   "blocking",
   "json",
 ] }
@@ -19,7 +19,7 @@ serde = { workspace = true, optional = true }
 serde_json.workspace = true
 tracing.workspace = true
 valence-coprocessor = { path = "../core", default-features = false }
-wasmtime = { version = "=32.0.0", optional = true }
+wasmtime = { version = "32.0.0", optional = true }
 
 [dev-dependencies]
 tiny_http = "0.12.0"
