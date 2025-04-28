@@ -6,6 +6,8 @@ use msgpacker::Unpackable;
 use serde_json::Value;
 use valence_coprocessor::{Hash, SmtOpening};
 
+pub use alloc::format;
+
 mod host {
     #[link(wasm_import_module = "valence")]
     extern "C" {
@@ -23,6 +25,7 @@ mod host {
             ptr: u32,
         ) -> i32;
         pub(super) fn http(args_ptr: u32, args_len: u32, ptr: u32) -> i32;
+        pub(super) fn log(ptr: u32, len: u32) -> i32;
     }
 }
 
@@ -160,6 +163,27 @@ pub fn http(args: &Value) -> anyhow::Result<Value> {
         anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
 
         Ok(serde_json::from_slice(&BUF[..len as usize])?)
+    }
+}
+
+/// Logs information to the host runtime.
+pub fn log(log: &str) -> anyhow::Result<()> {
+    unsafe {
+        let ptr = log.as_ptr() as u32;
+        let len = log.len() as u32;
+
+        let ret = host::log(ptr, len);
+
+        anyhow::ensure!(ret == 0, "failed to log information");
+
+        Ok(())
+    }
+}
+
+#[macro_export]
+macro_rules! log {
+    ($($arg:tt)*) => {
+        $crate::abi::log(&$crate::abi::format!($($arg)*))
     }
 }
 

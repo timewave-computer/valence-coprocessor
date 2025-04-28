@@ -18,6 +18,7 @@ where
     pub args: Value,
     pub ret: Option<Value>,
     pub ctx: ExecutionContext<H, D, ValenceWasm<H, D, Z>, Z>,
+    pub log: Vec<String>,
     pub panic: Option<String>,
 }
 
@@ -33,6 +34,7 @@ where
             args,
             ret: None,
             ctx,
+            log: Vec::with_capacity(10),
             panic: None,
         }
     }
@@ -78,6 +80,7 @@ where
         linker.func_wrap(HOST_MODULE, "get_domain_proof", valence::get_domain_proof)?;
         linker.func_wrap(HOST_MODULE, "get_state_proof", valence::get_state_proof)?;
         linker.func_wrap(HOST_MODULE, "http", valence::http)?;
+        linker.func_wrap(HOST_MODULE, "log", valence::log)?;
 
         let capacity = std::num::NonZeroUsize::new(capacity)
             .ok_or_else(|| anyhow::anyhow!("invalid capacity"))?;
@@ -109,6 +112,7 @@ where
             args,
             ret: None,
             ctx: ctx.clone(),
+            log: Vec::with_capacity(10),
             panic: None,
         };
 
@@ -129,7 +133,9 @@ where
             .get_typed_func::<(), ()>(&mut store, f)?
             .call(&mut store, ())?;
 
-        let Runtime { ret, .. } = store.into_data();
+        let Runtime { ret, log, .. } = store.into_data();
+
+        ctx.extend_log(log)?;
 
         Ok(ret.unwrap_or_default())
     }

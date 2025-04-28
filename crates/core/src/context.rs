@@ -24,6 +24,9 @@ where
     module: M,
     zkvm: Z,
     program: Hash,
+
+    #[cfg(feature = "std")]
+    log: ::std::sync::Mutex<Vec<String>>,
 }
 
 /// Execution context for a Valence program.
@@ -160,6 +163,31 @@ where
             .map(|_| ())
     }
 
+    #[cfg(feature = "std")]
+    /// Returns the internal logs of the context.
+    pub fn get_log(&self) -> anyhow::Result<Vec<String>> {
+        self.inner
+            .log
+            .lock()
+            .map_err(|e| anyhow::anyhow!("failed to lock logs: {e}"))
+            .map(|l| l.clone())
+    }
+
+    #[cfg(feature = "std")]
+    /// Replaces the internal logs of the context.
+    pub fn extend_log<I>(&self, log: I) -> anyhow::Result<()>
+    where
+        I: IntoIterator<Item = String>,
+    {
+        self.inner
+            .log
+            .lock()
+            .map_err(|e| anyhow::anyhow!("failed to lock logs: {e}"))?
+            .extend(log);
+
+        Ok(())
+    }
+
     /// Calls the entrypoint of the program with the provided arguments.
     pub fn entrypoint(&self, args: Value) -> anyhow::Result<Value> {
         self.inner
@@ -185,6 +213,9 @@ where
                 module,
                 zkvm,
                 program,
+
+                #[cfg(feature = "std")]
+                log: Vec::with_capacity(10).into(),
             }),
         }
     }
