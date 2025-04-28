@@ -2,10 +2,10 @@ use std::sync::{Arc, Mutex};
 
 use lru::LruCache;
 use serde_json::Value;
-use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Hasher, ModuleVM, ZkVM};
+use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Hasher, Vm, ZkVM};
 use wasmtime::{Engine, Linker, Module, Store};
 
-use crate::HOST_MODULE;
+use crate::HOST_LIB;
 
 pub mod valence;
 
@@ -49,7 +49,7 @@ where
 {
     engine: Engine,
     linker: Linker<Runtime<H, D, Z>>,
-    modules: Arc<Mutex<LruCache<Hash, Module>>>,
+    libs: Arc<Mutex<LruCache<Hash, Module>>>,
 }
 
 impl<H, D, Z> ValenceWasm<H, D, Z>
@@ -63,39 +63,39 @@ where
         let engine = Engine::default();
         let mut linker = Linker::new(&engine);
 
-        linker.func_wrap(HOST_MODULE, "panic", valence::panic)?;
-        linker.func_wrap(HOST_MODULE, "args", valence::args)?;
-        linker.func_wrap(HOST_MODULE, "ret", valence::ret)?;
+        linker.func_wrap(HOST_LIB, "panic", valence::panic)?;
+        linker.func_wrap(HOST_LIB, "args", valence::args)?;
+        linker.func_wrap(HOST_LIB, "ret", valence::ret)?;
         linker.func_wrap(
-            HOST_MODULE,
+            HOST_LIB,
             "get_program_storage",
             valence::get_program_storage,
         )?;
         linker.func_wrap(
-            HOST_MODULE,
+            HOST_LIB,
             "set_program_storage",
             valence::set_program_storage,
         )?;
-        linker.func_wrap(HOST_MODULE, "get_program", valence::get_program)?;
-        linker.func_wrap(HOST_MODULE, "get_domain_proof", valence::get_domain_proof)?;
-        linker.func_wrap(HOST_MODULE, "get_state_proof", valence::get_state_proof)?;
-        linker.func_wrap(HOST_MODULE, "http", valence::http)?;
-        linker.func_wrap(HOST_MODULE, "log", valence::log)?;
+        linker.func_wrap(HOST_LIB, "get_program", valence::get_program)?;
+        linker.func_wrap(HOST_LIB, "get_domain_proof", valence::get_domain_proof)?;
+        linker.func_wrap(HOST_LIB, "get_state_proof", valence::get_state_proof)?;
+        linker.func_wrap(HOST_LIB, "http", valence::http)?;
+        linker.func_wrap(HOST_LIB, "log", valence::log)?;
 
         let capacity = std::num::NonZeroUsize::new(capacity)
             .ok_or_else(|| anyhow::anyhow!("invalid capacity"))?;
-        let modules = LruCache::new(capacity);
-        let modules = Arc::new(Mutex::new(modules));
+        let libs = LruCache::new(capacity);
+        let libs = Arc::new(Mutex::new(libs));
 
         Ok(Self {
             engine,
             linker,
-            modules,
+            libs,
         })
     }
 }
 
-impl<H, D, Z> ModuleVM<H, D, Z> for ValenceWasm<H, D, Z>
+impl<H, D, Z> Vm<H, D, Z> for ValenceWasm<H, D, Z>
 where
     H: Hasher,
     D: DataBackend,
@@ -104,10 +104,15 @@ where
     fn execute(
         &self,
         ctx: &ExecutionContext<H, D, Self, Z>,
-        module: &Hash,
+        lib: &Hash,
         f: &str,
         args: Value,
     ) -> anyhow::Result<Value> {
+        tracing::debug!(
+            "executing library {lib:x?}, {f}({})",
+            serde_json::to_string(&args)?
+        );
+
         let runtime = Runtime {
             args,
             ret: None,
@@ -119,19 +124,23 @@ where
         let mut store = Store::new(&self.engine, runtime);
 
         let instance = self
-            .modules
+            .libs
             .lock()
-            .map_err(|e| anyhow::anyhow!("error locking modules: {e}"))?
-            .try_get_or_insert(*module, || {
-                ctx.get_module(module)?
-                    .ok_or_else(|| anyhow::anyhow!("module not found"))
+            .map_err(|e| anyhow::anyhow!("error locking libs: {e}"))?
+            .try_get_or_insert(*lib, || {
+                ctx.get_lib(lib)?
+                    .ok_or_else(|| anyhow::anyhow!("lib not found"))
                     .and_then(|b| Module::from_binary(&self.engine, &b))
             })
             .and_then(|i| self.linker.instantiate(&mut store, i))?;
 
+        tracing::debug!("library loaded...");
+
         instance
             .get_typed_func::<(), ()>(&mut store, f)?
             .call(&mut store, ())?;
+
+        tracing::debug!("function called...");
 
         let Runtime { ret, log, .. } = store.into_data();
 
@@ -140,12 +149,12 @@ where
         Ok(ret.unwrap_or_default())
     }
 
-    fn updated(&self, module: &Hash) {
-        match self.modules.lock() {
+    fn updated(&self, lib: &Hash) {
+        match self.libs.lock() {
             Ok(mut m) => {
-                m.pop(module);
+                m.pop(lib);
             }
-            Err(e) => tracing::error!("error locking modules: {e}"),
+            Err(e) => tracing::error!("error locking libs: {e}"),
         }
     }
 }

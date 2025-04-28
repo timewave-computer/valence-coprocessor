@@ -274,14 +274,32 @@ where
         Err(e) => return e,
     };
 
+    let ret = match http_host(&args) {
+        Ok(r) => r,
+        Err(e) => return e,
+    };
+
+    let ret = match serde_json::to_vec(&ret) {
+        Ok(r) => r,
+        Err(_) => return ReturnCodes::HttpResponse as i32,
+    };
+
+    match write_buffer(&mut caller, &mem, ptr, &ret) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
+/// Perform a HTTP request (host version).
+pub fn http_host(args: &Value) -> Result<Value, i32> {
     let url = match args.get("url").and_then(Value::as_str) {
         Some(u) => u,
-        None => return ReturnCodes::HttpMethod as i32,
+        None => return Err(ReturnCodes::HttpMethod as i32),
     };
 
     let method = match args.get("method").and_then(Value::as_str) {
         Some(m) => m.to_lowercase(),
-        None => return ReturnCodes::HttpMethod as i32,
+        None => return Err(ReturnCodes::HttpMethod as i32),
     };
 
     let mut client = match method.as_str() {
@@ -291,7 +309,7 @@ where
         "patch" => Client::new().patch(url),
         "post" => Client::new().post(url),
         "put" => Client::new().put(url),
-        _ => return ReturnCodes::HttpMethod as i32,
+        _ => return Err(ReturnCodes::HttpMethod as i32),
     };
 
     client = client.timeout(time::Duration::from_secs(5));
@@ -299,13 +317,13 @@ where
     if let Some(a) = args.get("basic_auth") {
         let username = match a.get("username").and_then(Value::as_str) {
             Some(u) => u,
-            None => return ReturnCodes::HttpBasicAuth as i32,
+            None => return Err(ReturnCodes::HttpBasicAuth as i32),
         };
 
         let password = match a.get("password") {
             Some(Value::String(p)) => Some(p),
             None => None,
-            _ => return ReturnCodes::HttpBasicAuth as i32,
+            _ => return Err(ReturnCodes::HttpBasicAuth as i32),
         };
 
         client = client.basic_auth(username, password);
@@ -314,29 +332,25 @@ where
     match args.get("bearer") {
         Some(Value::String(b)) => client = client.bearer_auth(b),
         None => (),
-        _ => return ReturnCodes::HttpBearer as i32,
+        _ => return Err(ReturnCodes::HttpBearer as i32),
     }
 
     match args.get("body") {
         Some(Value::String(b)) => client = client.body(b.clone()),
         Some(Value::Array(b)) => {
-            let b: Vec<u8> = match b
+            let b: Vec<u8> = b
                 .iter()
                 .map(|b| {
                     b.as_u64()
                         .map(|b| b as u8)
                         .ok_or(ReturnCodes::HttpBody as i32)
                 })
-                .collect::<Result<Vec<u8>, i32>>()
-            {
-                Ok(b) => b,
-                Err(e) => return e,
-            };
+                .collect::<Result<Vec<u8>, i32>>()?;
 
             client = client.body(b);
         }
         None => (),
-        _ => return ReturnCodes::HttpBody as i32,
+        _ => return Err(ReturnCodes::HttpBody as i32),
     }
 
     match args.get("headers") {
@@ -344,12 +358,12 @@ where
             for (k, v) in h.iter() {
                 match v.as_str() {
                     Some(v) => client = client.header(k, v),
-                    None => return ReturnCodes::HttpHeader as i32,
+                    None => return Err(ReturnCodes::HttpHeader as i32),
                 }
             }
         }
         None => (),
-        _ => return ReturnCodes::HttpHeader as i32,
+        _ => return Err(ReturnCodes::HttpHeader as i32),
     }
 
     if let Some(j) = args.get("json") {
@@ -363,19 +377,19 @@ where
             for (k, v) in h.iter() {
                 match v.as_str() {
                     Some(v) => q.push((k, v)),
-                    None => return ReturnCodes::HttpHeader as i32,
+                    None => return Err(ReturnCodes::HttpHeader as i32),
                 }
             }
 
             client = client.query(&q);
         }
         None => (),
-        _ => return ReturnCodes::HttpHeader as i32,
+        _ => return Err(ReturnCodes::HttpHeader as i32),
     }
 
     let ret = match client.send() {
         Ok(r) => r,
-        Err(_) => return ReturnCodes::HttpClient as i32,
+        Err(_) => return Err(ReturnCodes::HttpClient as i32),
     };
 
     let status = ret.status().as_u16();
@@ -393,35 +407,26 @@ where
     {
         Some(v) if v.as_str() == "json" => match ret.json() {
             Ok(j) => j,
-            Err(_) => return ReturnCodes::HttpResponseJson as i32,
+            Err(_) => return Err(ReturnCodes::HttpResponseJson as i32),
         },
         Some(v) if v.as_str() == "text" => match ret.text() {
             Ok(j) => Value::String(j),
-            Err(_) => return ReturnCodes::HttpResponseJson as i32,
+            Err(_) => return Err(ReturnCodes::HttpResponseJson as i32),
         },
         _ => match ret.bytes() {
             Ok(b) => match serde_json::to_value(b.to_vec()) {
                 Ok(b) => b,
-                Err(_) => return ReturnCodes::HttpResponseJson as i32,
+                Err(_) => return Err(ReturnCodes::HttpResponseJson as i32),
             },
-            Err(_) => return ReturnCodes::HttpResponseJson as i32,
+            Err(_) => return Err(ReturnCodes::HttpResponseJson as i32),
         },
     };
 
-    let ret = serde_json::json!({
+    Ok(serde_json::json!({
         "status": status,
         "headers": headers,
         "body": body,
-    });
-    let ret = match serde_json::to_vec(&ret) {
-        Ok(r) => r,
-        Err(_) => return ReturnCodes::HttpResponse as i32,
-    };
-
-    match write_buffer(&mut caller, &mem, ptr, &ret) {
-        Ok(len) => len,
-        Err(e) => e,
-    }
+    }))
 }
 
 /// Logs a string.

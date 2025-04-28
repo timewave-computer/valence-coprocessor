@@ -1,6 +1,6 @@
 #![no_std]
 
-use valence_coprocessor_wasm::{abi, log};
+use valence_coprocessor_wasm::abi;
 
 extern crate alloc;
 
@@ -10,6 +10,6 @@ pub extern "C" fn log() {
 
     let name = args["name"].as_str().unwrap();
 
-    log!("Hello, {name}!").unwrap();
-    log!("Multiple entries").unwrap();
+    abi::log!("Hello, {name}!").unwrap();
+    abi::log!("Multiple entries").unwrap();
 }

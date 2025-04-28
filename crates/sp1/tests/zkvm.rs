@@ -1,7 +1,7 @@
 use std::{env, fs, path::PathBuf, process::Command};
 
 use valence_coprocessor::{
-    mocks::MockModuleVM, Blake3Context, Blake3Hasher, MemoryBackend, ProgramData, Registry, Witness,
+    mocks::MockVm, Blake3Context, Blake3Hasher, MemoryBackend, ProgramData, Registry, Witness,
 };
 use valence_coprocessor_sp1::{Mode, Sp1ZkVM};
 
@@ -41,15 +41,15 @@ fn deploy_hello() {
 
     let capacity = 10;
     let mode = Mode::Mock;
-    let vm = MockModuleVM;
+    let vm = MockVm;
     let zkvm = Sp1ZkVM::new(mode, capacity).unwrap();
 
-    let program = ProgramData::default().with_zkvm(hello);
+    let program = ProgramData::default().with_circuit(hello);
     let program = registry
         .register_program::<_, Blake3Hasher, _>(&vm, &zkvm, program)
         .unwrap();
 
-    let ctx = Blake3Context::init(program, data, MockModuleVM, zkvm);
+    let ctx = Blake3Context::init(program, data, MockVm, zkvm);
 
     let witnesses = vec![Witness::Data(b"Valence".to_vec())];
     let proof = ctx.execute_proof(witnesses).unwrap();

@@ -40,3 +40,9 @@ std = [
   "tracing/std",
   "wasmtime",
 ]
+tests-runtime = ["std"]
+
+[[test]]
+name = "module"
+path = "tests/module.rs"
+required-features = ["std"]

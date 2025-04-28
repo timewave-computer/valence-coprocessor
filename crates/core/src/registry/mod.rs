@@ -1,6 +1,6 @@
 use alloc::{collections::BTreeSet, vec::Vec};
 
-use crate::{DataBackend, Hash, Hasher, ModuleVM, ZkVM};
+use crate::{DataBackend, Hash, Hasher, Vm, ZkVM};
 
 use zerocopy::{IntoBytes as _, TryFromBytes};
 
@@ -28,11 +28,11 @@ impl<D: DataBackend> Registry<D> {
     /// Data backend prefix for domain data.
     pub const PREFIX_DOMAIN: &[u8] = b"registry-domain";
 
-    /// Data backend prefix for module data.
-    pub const PREFIX_MODULE: &[u8] = b"registry-module";
+    /// Data backend prefix for lib data.
+    pub const PREFIX_LIB: &[u8] = b"registry-lib";
 
     /// Data backend prefix for zkVM data.
-    pub const PREFIX_ZKVM: &[u8] = b"registry-zkvm";
+    pub const PREFIX_CIRCUIT: &[u8] = b"registry-circuit";
 
     /// Register a new program, returning its identifier.
     pub fn register_program<M, H, Z>(
@@ -42,15 +42,15 @@ impl<D: DataBackend> Registry<D> {
         program: ProgramData,
     ) -> anyhow::Result<Hash>
     where
-        M: ModuleVM<H, D, Z>,
+        M: Vm<H, D, Z>,
         H: Hasher,
         Z: ZkVM,
     {
         let id = program.identifier();
-        let ProgramData { module, zkvm, .. } = program;
+        let ProgramData { lib, circuit, .. } = program;
 
-        self.data.set(Self::PREFIX_MODULE, &id, &module)?;
-        self.data.set(Self::PREFIX_ZKVM, &id, &zkvm)?;
+        self.data.set(Self::PREFIX_LIB, &id, &lib)?;
+        self.data.set(Self::PREFIX_CIRCUIT, &id, &circuit)?;
 
         vm.updated(&id);
         zk_vm.updated(&id);
@@ -61,14 +61,14 @@ impl<D: DataBackend> Registry<D> {
     /// Register a new domain, returning its identifier.
     pub fn register_domain<M, H, Z>(&self, vm: &M, domain: DomainData) -> anyhow::Result<Hash>
     where
-        M: ModuleVM<H, D, Z>,
+        M: Vm<H, D, Z>,
         H: Hasher,
         Z: ZkVM,
     {
         let id = domain.identifier();
-        let DomainData { module, .. } = domain;
+        let DomainData { lib, .. } = domain;
 
-        self.data.set(Self::PREFIX_MODULE, &id, &module)?;
+        self.data.set(Self::PREFIX_LIB, &id, &lib)?;
 
         vm.updated(&id);
 
@@ -123,13 +123,13 @@ impl<D: DataBackend> Registry<D> {
         Ok(())
     }
 
-    /// Returns the associated module module, if present.
-    pub fn get_module(&self, id: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
-        self.data.get(Self::PREFIX_MODULE, id)
+    /// Returns the associated library, if present.
+    pub fn get_lib(&self, id: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
+        self.data.get(Self::PREFIX_LIB, id)
     }
 
-    /// Returns the associated zkVM module, if present.
+    /// Returns the associated circuit, if present.
     pub fn get_zkvm(&self, id: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
-        self.data.get(Self::PREFIX_ZKVM, id)
+        self.data.get(Self::PREFIX_CIRCUIT, id)
     }
 }
