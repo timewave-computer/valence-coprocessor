@@ -4,7 +4,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt
 use valence_coprocessor::Registry;
 use valence_coprocessor_rocksdb::RocksBackend;
 use valence_coprocessor_service::{api::Api, Config, ValenceWasm};
-use valence_coprocessor_sp1::Sp1ZkVM;
+use valence_coprocessor_sp1::Sp1ZkVm;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
     let registry = Registry::from(rocks.clone());
     let module = ValenceWasm::new(config.module_cache_capacity)?;
     let mode = valence_coprocessor_sp1::Mode::try_from(config.zkvm_mode.as_str())?;
-    let zkvm = Sp1ZkVM::new(mode, config.zkvm_cache_capacity)?;
+    let zkvm = Sp1ZkVm::new(mode, config.zkvm_cache_capacity)?;
 
     tracing::info!("registry loaded...");
 

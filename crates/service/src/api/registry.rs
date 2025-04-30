@@ -3,7 +3,7 @@ use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::Value;
 use valence_coprocessor::{DomainData, ProgramData};
 use valence_coprocessor_rocksdb::RocksBackend;
-use valence_coprocessor_sp1::Sp1ZkVM;
+use valence_coprocessor_sp1::Sp1ZkVm;
 
 use crate::{Context, Registry, ValenceWasm};
 
@@ -126,7 +126,7 @@ impl Api {
         &self,
         registry: Data<&Registry>,
         vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVM>,
+        zkvm: Data<&Sp1ZkVm>,
         request: Json<RegisterProgramRequest>,
     ) -> poem::Result<Json<RegisterProgramResponse>> {
         let program = ProgramData {
@@ -226,7 +226,7 @@ impl Api {
         program: Path<String>,
         data: Data<&RocksBackend>,
         vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVM>,
+        zkvm: Data<&Sp1ZkVm>,
     ) -> poem::Result<Json<ProgramStorageResponse>> {
         let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
@@ -245,7 +245,7 @@ impl Api {
         program: Path<String>,
         data: Data<&RocksBackend>,
         vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVM>,
+        zkvm: Data<&Sp1ZkVm>,
         request: Json<ProgramProveRequest>,
     ) -> poem::Result<Json<ProgramProveResponse>> {
         let program = try_str_to_hash(&program)?;
@@ -278,7 +278,7 @@ impl Api {
         program: Path<String>,
         data: Data<&RocksBackend>,
         vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVM>,
+        zkvm: Data<&Sp1ZkVm>,
     ) -> poem::Result<Json<ProgramVkResponse>> {
         let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
@@ -298,7 +298,7 @@ impl Api {
         program: Path<String>,
         data: Data<&RocksBackend>,
         vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVM>,
+        zkvm: Data<&Sp1ZkVm>,
         args: Json<Value>,
     ) -> poem::Result<Json<ProgramEntrypointResponse>> {
         let program = try_str_to_hash(&program)?;

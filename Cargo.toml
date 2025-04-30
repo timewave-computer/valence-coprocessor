@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/core",
+  "crates/domain",
   "crates/rocksdb",
   "crates/service",
   "crates/sp1",
@@ -12,7 +13,7 @@ resolver = "2"
 authors = ["Timewave Labs"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.1.4"
+version = "0.1.5"
 repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]
@@ -34,6 +35,7 @@ serde = { version = "1.0.219", default-features = false, features = [
 serde_json = { version = "1.0.140", default-features = false, features = [
   "alloc",
 ] }
+sp1-sdk = "4.2.0"
 tracing = { version = "0.1.41", default-features = false }
 
 [profile.optimized]

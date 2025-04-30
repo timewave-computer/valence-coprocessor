@@ -3,7 +3,7 @@ use std::{env, fs, path::PathBuf, process::Command};
 use valence_coprocessor::{
     mocks::MockVm, Blake3Context, Blake3Hasher, MemoryBackend, ProgramData, Registry, Witness,
 };
-use valence_coprocessor_sp1::{Mode, Sp1ZkVM};
+use valence_coprocessor_sp1::{Mode, Sp1ZkVm};
 
 fn get_hello_bytes() -> Vec<u8> {
     let dir = env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -42,7 +42,7 @@ fn deploy_hello() {
     let capacity = 10;
     let mode = Mode::Mock;
     let vm = MockVm;
-    let zkvm = Sp1ZkVM::new(mode, capacity).unwrap();
+    let zkvm = Sp1ZkVm::new(mode, capacity).unwrap();
 
     let program = ProgramData::default().with_circuit(hello);
     let program = registry

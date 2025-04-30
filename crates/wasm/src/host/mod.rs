@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use lru::LruCache;
 use serde_json::Value;
-use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Hasher, Vm, ZkVM};
+use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Hasher, Vm, ZkVm};
 use wasmtime::{Engine, Linker, Module, Store};
 
 use crate::HOST_LIB;
@@ -13,7 +13,7 @@ pub struct Runtime<H, D, Z>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     pub args: Value,
     pub ret: Option<Value>,
@@ -26,7 +26,7 @@ impl<H, D, Z> Runtime<H, D, Z>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     /// Creates a new runtime with the underlying context.
     pub fn new(ctx: ExecutionContext<H, D, ValenceWasm<H, D, Z>, Z>, args: Value) -> Self {
@@ -45,7 +45,7 @@ pub struct ValenceWasm<H, D, Z>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     engine: Engine,
     linker: Linker<Runtime<H, D, Z>>,
@@ -56,7 +56,7 @@ impl<H, D, Z> ValenceWasm<H, D, Z>
 where
     H: Hasher + 'static,
     D: DataBackend + 'static,
-    Z: ZkVM + 'static,
+    Z: ZkVm + 'static,
 {
     /// Creates a new instance of the VM.
     pub fn new(capacity: usize) -> anyhow::Result<Self> {
@@ -99,7 +99,7 @@ impl<H, D, Z> Vm<H, D, Z> for ValenceWasm<H, D, Z>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     fn execute(
         &self,

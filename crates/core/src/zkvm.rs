@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use crate::{DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, Vm, Witness};
 
 /// A zkVM definition.
-pub trait ZkVM: Sized {
+pub trait ZkVm: Sized {
     /// Prove a given program.
     ///
     /// ## Arguments

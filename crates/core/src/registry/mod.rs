@@ -1,6 +1,6 @@
 use alloc::{collections::BTreeSet, vec::Vec};
 
-use crate::{DataBackend, Hash, Hasher, Vm, ZkVM};
+use crate::{DataBackend, Hash, Hasher, Vm, ZkVm};
 
 use zerocopy::{IntoBytes as _, TryFromBytes};
 
@@ -44,7 +44,7 @@ impl<D: DataBackend> Registry<D> {
     where
         M: Vm<H, D, Z>,
         H: Hasher,
-        Z: ZkVM,
+        Z: ZkVm,
     {
         let id = program.identifier();
         let ProgramData { lib, circuit, .. } = program;
@@ -63,7 +63,7 @@ impl<D: DataBackend> Registry<D> {
     where
         M: Vm<H, D, Z>,
         H: Hasher,
-        Z: ZkVM,
+        Z: ZkVm,
     {
         let id = domain.identifier();
         let DomainData { lib, .. } = domain;
