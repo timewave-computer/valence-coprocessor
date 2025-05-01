@@ -6,6 +6,7 @@ extern crate alloc;
 
 mod context;
 mod data;
+mod domain;
 mod hash;
 mod registry;
 mod smt;
@@ -17,6 +18,7 @@ pub mod mocks;
 
 pub use context::*;
 pub use data::*;
+pub use domain::*;
 pub use hash::*;
 pub use registry::*;
 pub use smt::*;

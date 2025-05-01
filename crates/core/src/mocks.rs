@@ -16,7 +16,7 @@ impl MockZkVm {
     /// Verify a proof.
     pub fn verify<H, D, M>(
         _ctx: &ExecutionContext<H, D, M, Self>,
-        program: &Hash,
+        library: &Hash,
         mut witnesses: Vec<Witness>,
         proven: ProvenProgram,
     ) -> bool
@@ -27,7 +27,7 @@ impl MockZkVm {
     {
         witnesses.sort();
 
-        let mut bytes = program.to_vec();
+        let mut bytes = library.to_vec();
 
         for w in witnesses {
             match w {
@@ -70,7 +70,7 @@ impl ZkVm for MockZkVm {
     {
         witnesses.sort();
 
-        let mut bytes = ctx.program().to_vec();
+        let mut bytes = ctx.library().to_vec();
 
         for w in witnesses {
             match w {
@@ -108,10 +108,10 @@ impl ZkVm for MockZkVm {
         D: DataBackend,
         M: Vm<H, D, Self>,
     {
-        Ok(ctx.program().to_vec())
+        Ok(ctx.library().to_vec())
     }
 
-    fn updated(&self, _program: &Hash) {}
+    fn updated(&self, _library: &Hash) {}
 }
 
 /// A mock implementation for a VM.

@@ -1,0 +1,8 @@
+[package]
+version = "0.1.0"
+name = "hello-program"
+edition = "2021"
+
+[dependencies]
+valence-coprocessor = { path = "../../../../../core", default-features = false }
+sp1-zkvm = "4.2.0"

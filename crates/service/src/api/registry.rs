@@ -2,10 +2,9 @@ use poem::web::Data;
 use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::Value;
 use valence_coprocessor::{DomainData, ProgramData};
-use valence_coprocessor_rocksdb::RocksBackend;
 use valence_coprocessor_sp1::Sp1ZkVm;
 
-use crate::{Context, Registry, ValenceWasm};
+use crate::{data::ServiceBackend, Context, Registry, ValenceWasm};
 
 use super::{try_str_to_hash, Api};
 
@@ -219,19 +218,19 @@ impl Api {
         Ok(Json(ProgramDomainsResponse { domains }))
     }
 
-    /// Returns the storage data associated with the program
+    /// Returns the storage data associated with the program.
     #[oai(path = "/registry/program/:program/storage", method = "get")]
-    pub async fn program_storage(
+    pub async fn storage(
         &self,
         program: Path<String>,
-        data: Data<&RocksBackend>,
+        data: Data<&ServiceBackend>,
         vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVm>,
     ) -> poem::Result<Json<ProgramStorageResponse>> {
         let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
 
-        let data = ctx.get_program_storage()?.unwrap_or_default();
+        let data = ctx.get_storage()?.unwrap_or_default();
         let data = Base64(data);
         let log = ctx.get_log()?;
 
@@ -243,7 +242,7 @@ impl Api {
     pub async fn program_prove(
         &self,
         program: Path<String>,
-        data: Data<&RocksBackend>,
+        data: Data<&ServiceBackend>,
         vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVm>,
         request: Json<ProgramProveRequest>,
@@ -276,7 +275,7 @@ impl Api {
     pub async fn program_vk(
         &self,
         program: Path<String>,
-        data: Data<&RocksBackend>,
+        data: Data<&ServiceBackend>,
         vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVm>,
     ) -> poem::Result<Json<ProgramVkResponse>> {
@@ -296,7 +295,7 @@ impl Api {
     pub async fn program_entrypoint(
         &self,
         program: Path<String>,
-        data: Data<&RocksBackend>,
+        data: Data<&ServiceBackend>,
         vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVm>,
         args: Json<Value>,
@@ -307,5 +306,46 @@ impl Api {
         let log = ctx.get_log()?;
 
         Ok(Json(ProgramEntrypointResponse { ret, log }))
+    }
+
+    /// Get the latest proven block for the domain.
+    #[oai(path = "/registry/domain/:domain/latest", method = "get")]
+    pub async fn domain_latest(
+        &self,
+        domain: Path<String>,
+        data: Data<&ServiceBackend>,
+        vm: Data<&ValenceWasm>,
+        zkvm: Data<&Sp1ZkVm>,
+    ) -> poem::Result<Json<Value>> {
+        let id = DomainData::identifier_from_parts(&domain);
+        let ctx = Context::init(id, data.clone(), vm.clone(), zkvm.clone());
+
+        let latest = ctx.get_latest_block(&domain)?;
+        let latest = serde_json::to_value(latest)
+            .map_err(|e| anyhow::anyhow!("failed to convert latest block: {e}"))?;
+
+        Ok(Json(latest))
+    }
+
+    /// Adds a new block to the domain.
+    #[oai(path = "/registry/domain/:domain", method = "post")]
+    pub async fn domain_add_block(
+        &self,
+        domain: Path<String>,
+        data: Data<&ServiceBackend>,
+        vm: Data<&ValenceWasm>,
+        zkvm: Data<&Sp1ZkVm>,
+        args: Json<Value>,
+    ) -> poem::Result<Json<Value>> {
+        let id = DomainData::identifier_from_parts(&domain);
+        let ctx = Context::init(id, data.clone(), vm.clone(), zkvm.clone());
+
+        ctx.add_domain_block(&domain, args.0)?;
+
+        let log = ctx.get_log()?;
+
+        Ok(Json(serde_json::json!({
+            "log": log
+        })))
     }
 }

@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::{
     Blake3Hasher, DataBackend, DomainData, Hash, Hasher, ProvenProgram, Registry, Smt, SmtOpening,
-    Vm, Witness, ZkVm,
+    ValidatedBlock, Vm, Witness, ZkVm,
 };
 
 /// Execution context with blake3 hasher.
@@ -23,13 +23,13 @@ where
     historical: Smt<D, H>,
     vm: M,
     zkvm: Z,
-    program: Hash,
+    library: Hash,
 
     #[cfg(feature = "std")]
     log: ::std::sync::Mutex<Vec<String>>,
 }
 
-/// Execution context for a Valence program.
+/// Execution context for a Valence library.
 pub struct ExecutionContext<H, D, M, Z>
 where
     H: Hasher,
@@ -61,14 +61,38 @@ where
     M: Vm<H, D, Z>,
     Z: ZkVm,
 {
-    /// Returns the program being executed.
-    pub fn program(&self) -> &Hash {
-        &self.inner.program
+    /// Data backend prefix for the historical SMT.
+    pub const PREFIX_SMT: &[u8] = b"smt-historical";
+
+    /// Data backend prefix for the latest block of a domain.
+    pub const PREFIX_BLOCK: &[u8] = b"smt-domain-block";
+
+    /// Data backend prefix for historical root associated domain.
+    pub const PREFIX_SMT_ROOT: &[u8] = b"context-smt-root";
+
+    /// Data backend prefix for the context library data.
+    pub const PREFIX_LIB: &[u8] = b"context-library";
+
+    /// Library function name to get witnesses.
+    pub const LIB_GET_WITNESSES: &str = "get_witnesses";
+
+    /// Library function name to get state proofs.
+    pub const LIB_GET_STATE_PROOF: &str = "get_state_proof";
+
+    /// Library function name to validate blocks.
+    pub const LIB_VALIDATE_BLOCK: &str = "validate_block";
+
+    /// Library function name to the entrypoint.
+    pub const LIB_ENTRYPOINT: &str = "entrypoint";
+
+    /// Returns the library being executed.
+    pub fn library(&self) -> &Hash {
+        &self.inner.library
     }
 
-    /// Returns a zkVM program.
+    /// Returns a zkVM circuit.
     pub fn get_zkvm(&self) -> anyhow::Result<Option<Vec<u8>>> {
-        self.inner.registry.get_zkvm(&self.inner.program)
+        self.inner.registry.get_zkvm(&self.inner.library)
     }
 
     /// Returns a library.
@@ -98,14 +122,14 @@ where
 
     /// Compute the ZK proof of the provided program.
     pub fn get_program_proof(&self, args: Value) -> anyhow::Result<ProvenProgram> {
-        let program = self.program();
+        let library = self.library();
 
-        tracing::debug!("computing program proof for `{:x?}`...", program);
+        tracing::debug!("computing library proof for `{:x?}`...", library);
 
         let witnesses = self
             .inner
             .vm
-            .execute(self, program, "get_witnesses", args)?;
+            .execute(self, library, Self::LIB_GET_WITNESSES, args)?;
 
         tracing::debug!("inner library executed; parsing...");
 
@@ -127,7 +151,7 @@ where
         let proof = self
             .inner
             .vm
-            .execute(self, &domain, "get_state_proof", args)?;
+            .execute(self, &domain, Self::LIB_GET_STATE_PROOF, args)?;
 
         let proof = proof.as_str().ok_or_else(|| {
             anyhow::anyhow!(
@@ -142,25 +166,79 @@ where
 
     /// Get the program witness data for the ZK circuit.
     pub fn get_program_witnesses(&self, args: Value) -> anyhow::Result<Vec<Witness>> {
-        let witnesses = self
-            .inner
-            .vm
-            .execute(self, &self.inner.program, "get_witnesses", args)?;
+        let witnesses =
+            self.inner
+                .vm
+                .execute(self, &self.inner.library, Self::LIB_GET_WITNESSES, args)?;
 
         Ok(serde_json::from_value(witnesses)?)
     }
 
-    /// Returns the program storage.
-    pub fn get_program_storage(&self) -> anyhow::Result<Option<Vec<u8>>> {
-        self.inner.data.get(b"context-program", &self.inner.program)
+    /// Returns the library storage.
+    pub fn get_storage(&self) -> anyhow::Result<Option<Vec<u8>>> {
+        self.inner.data.get(Self::PREFIX_LIB, &self.inner.library)
     }
 
-    /// Overrides the program storage.
-    pub fn set_program_storage(&self, storage: &[u8]) -> anyhow::Result<()> {
+    /// Overrides the library storage.
+    pub fn set_storage(&self, storage: &[u8]) -> anyhow::Result<()> {
         self.inner
             .data
-            .set(b"context-program", &self.inner.program, storage)
+            .set(Self::PREFIX_LIB, &self.inner.library, storage)
             .map(|_| ())
+    }
+
+    /// Returns the most recent historical SMT for the provided domain.
+    pub fn get_domain_smt(&self, domain: &str) -> anyhow::Result<Hash> {
+        let domain = DomainData::identifier_from_parts(domain);
+        let smt = self.inner.data.get(Self::PREFIX_SMT_ROOT, &domain)?;
+        let smt = smt
+            .map(|b| Hash::try_from(b.as_slice()))
+            .transpose()?
+            .unwrap_or_else(|| Smt::<D, H>::empty_tree_root());
+
+        Ok(smt)
+    }
+
+    /// Returns the last included block for the provided domain.
+    pub fn get_latest_block(&self, domain: &str) -> anyhow::Result<Option<ValidatedBlock>> {
+        let domain = DomainData::identifier_from_parts(domain);
+        let block = self.inner.data.get(Self::PREFIX_BLOCK, &domain)?;
+
+        Ok(block.map(|b| serde_json::from_slice(&b)).transpose()?)
+    }
+
+    /// Adds a new block to the provided domain.
+    pub fn add_domain_block(&self, domain: &str, args: Value) -> anyhow::Result<()> {
+        let id = DomainData::identifier_from_parts(domain);
+        let block = self
+            .inner
+            .vm
+            .execute(self, &id, Self::LIB_VALIDATE_BLOCK, args)?;
+
+        let block: ValidatedBlock = serde_json::from_value(block)?;
+
+        let smt = self.get_domain_smt(domain)?;
+        let smt = self
+            .inner
+            .historical
+            .insert(smt, domain, &block.root, block.payload.clone())?;
+
+        self.inner.data.set(Self::PREFIX_SMT_ROOT, &id, &smt)?;
+
+        let latest = self.get_latest_block(domain)?;
+
+        match latest {
+            // all domains are assumed to be monotonically increasing.
+            // Solana, the common exception, has `slot`.
+            Some(b) if b.number > block.number => (),
+            _ => {
+                let block = serde_json::to_vec(&block)?;
+
+                self.inner.data.set(Self::PREFIX_BLOCK, &id, &block)?;
+            }
+        }
+
+        Ok(())
     }
 
     #[cfg(feature = "std")]
@@ -188,11 +266,11 @@ where
         Ok(())
     }
 
-    /// Calls the entrypoint of the program with the provided arguments.
+    /// Calls the entrypoint of the library with the provided arguments.
     pub fn entrypoint(&self, args: Value) -> anyhow::Result<Value> {
         self.inner
             .vm
-            .execute(self, self.program(), "entrypoint", args)
+            .execute(self, self.library(), Self::LIB_ENTRYPOINT, args)
     }
 }
 
@@ -204,7 +282,7 @@ where
     Z: ZkVm,
 {
     /// Initializes a new execution context.
-    pub fn init(program: Hash, data: D, vm: M, zkvm: Z) -> Self {
+    pub fn init(library: Hash, data: D, vm: M, zkvm: Z) -> Self {
         Self {
             inner: Rc::new(ExecutionContextInner {
                 data: data.clone(),
@@ -212,7 +290,7 @@ where
                 registry: Registry::from(data.clone()),
                 vm,
                 zkvm,
-                program,
+                library,
 
                 #[cfg(feature = "std")]
                 log: Vec::with_capacity(10).into(),
@@ -229,7 +307,7 @@ where
     M: Vm<H, D, Z>,
     Z: ZkVm,
 {
-    /// Executes an arbitrary program function.
+    /// Executes an arbitrary library function.
     pub fn execute_lib(&self, lib: &Hash, f: &str, args: Value) -> anyhow::Result<Value> {
         self.inner.vm.execute(self, lib, f, args)
     }
