@@ -5,5 +5,7 @@ edition = "2021"
 
 [dependencies]
 valence-coprocessor = { path = "../../../../../core", default-features = false }
-valence-coprocessor-ethereum = { path = "../../../", default-features = false, features = ["circuit"] }
+valence-coprocessor-ethereum = { path = "../../../", default-features = false, features = [
+  "circuit",
+] }
 sp1-zkvm = "4.2.0"

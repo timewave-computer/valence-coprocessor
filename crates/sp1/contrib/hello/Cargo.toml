@@ -1,6 +1,3 @@
 [workspace]
-members = [
-    "program",
-    "script",
-]
+members = ["program", "script"]
 resolver = "2"
