@@ -55,7 +55,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run cargo build
-        run: cargo build --all -- --check
+        run: cargo build --all
 
       - name: Run clippy
         run: cargo clippy --all-targets --verbose --package ${{ matrix.package }} -- -D warnings
