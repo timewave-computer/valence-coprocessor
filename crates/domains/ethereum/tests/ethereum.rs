@@ -2,11 +2,11 @@ use std::{env, fs, path::PathBuf, process::Command};
 
 use msgpacker::{Packable as _, Unpackable as _};
 use sp1_sdk::{SP1ProofWithPublicValues, SP1VerifyingKey};
-use valence_coprocessor::{ExecutionContext, MemoryBackend, ProgramData, Registry, Witness};
-use valence_coprocessor_domain::{
-    ethereum::{Ethereum, EthereumStateProof},
-    DomainCircuit as _, DomainLibrary,
+use valence_coprocessor::{
+    DomainCircuit as _, DomainLibrary as _, ExecutionContext, MemoryBackend, ProgramData, Registry,
+    Witness,
 };
+use valence_coprocessor_ethereum::{Ethereum, EthereumStateProof};
 use valence_coprocessor_sp1::{Mode, Sp1Hasher, Sp1ZkVm};
 use valence_coprocessor_wasm::host::ValenceWasm;
 

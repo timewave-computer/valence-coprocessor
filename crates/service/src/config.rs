@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
-    pub data_dir: PathBuf,
+    pub redis: Option<String>,
     pub socket: String,
     pub module_cache_capacity: usize,
     pub zkvm_mode: String,
@@ -30,33 +30,14 @@ impl Config {
             return Self::from_path(&config);
         }
 
-        let data_dir = dirs::data_dir()
-            .ok_or_else(|| anyhow::anyhow!("failed to compute data dir"))?
-            .join(env!("CARGO_PKG_NAME"));
-
-        let create_dir = &[&config_dir, &data_dir];
-
-        for c in create_dir {
-            anyhow::ensure!(!c.exists() || c.is_dir());
-
-            if c.exists() && c.is_dir() {
-            } else if c.exists() && !c.is_dir() {
-                anyhow::bail!(
-                    "the provided config path `{}` is not a valid directory",
-                    c.display()
-                );
-            } else {
-                fs::create_dir_all(c)?;
-            }
-        }
-
+        let redis = None;
         let socket = "0.0.0.0:37281".to_string();
         let module_cache_capacity = 100;
         let zkvm_mode = String::from("mock");
         let zkvm_cache_capacity = 10;
 
         let slf = Self {
-            data_dir,
+            redis,
             socket,
             module_cache_capacity,
             zkvm_mode,

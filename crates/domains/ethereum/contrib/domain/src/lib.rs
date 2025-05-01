@@ -1,6 +1,7 @@
 #![no_std]
 
-use valence_coprocessor_domain::{ethereum::Ethereum, DomainLibrary as _};
+use valence_coprocessor::DomainLibrary as _;
+use valence_coprocessor_ethereum::Ethereum;
 use valence_coprocessor_wasm::abi;
 
 #[no_mangle]

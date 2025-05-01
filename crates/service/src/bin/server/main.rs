@@ -2,8 +2,8 @@ use poem::{listener::TcpListener, EndpointExt as _, Route};
 use poem_openapi::OpenApiService;
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 use valence_coprocessor::Registry;
-use valence_coprocessor_rocksdb::RocksBackend;
-use valence_coprocessor_service::{api::Api, Config, ValenceWasm};
+use valence_coprocessor_redis::RedisBackend;
+use valence_coprocessor_service::{api::Api, data::ServiceBackend, Config, ValenceWasm};
 use valence_coprocessor_sp1::Sp1ZkVm;
 
 #[tokio::main]
@@ -20,11 +20,14 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("config file loaded from `{}`...", path.display());
 
-    let rocks = RocksBackend::open(&config.data_dir)?;
+    let data = match config.redis.as_ref() {
+        Some(redis) => RedisBackend::open(redis.as_str())?.into(),
+        None => ServiceBackend::Memory(Default::default()),
+    };
 
-    tracing::info!("db loaded from `{}`...", config.data_dir.display());
+    tracing::info!("service backend set to `{}`...", data);
 
-    let registry = Registry::from(rocks.clone());
+    let registry = Registry::from(data.clone());
     let module = ValenceWasm::new(config.module_cache_capacity)?;
     let mode = valence_coprocessor_sp1::Mode::try_from(config.zkvm_mode.as_str())?;
     let zkvm = Sp1ZkVm::new(mode, config.zkvm_cache_capacity)?;
@@ -38,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
         .nest("/", ui)
         .nest("/api", api_service)
         .data(registry)
-        .data(rocks)
+        .data(data)
         .data(module)
         .data(zkvm);
 

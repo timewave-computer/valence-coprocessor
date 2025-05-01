@@ -1,13 +1,14 @@
 [workspace]
 members = [
   "crates/core",
-  "crates/domain",
-  "crates/rocksdb",
+  "crates/domains/ethereum",
   "crates/service",
+  "crates/redis",
   "crates/sp1",
   "crates/wasm",
 ]
 resolver = "2"
+default-members = ["crates/core"]
 
 [workspace.package]
 authors = ["Timewave Labs"]

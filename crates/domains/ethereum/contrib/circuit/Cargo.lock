@@ -1141,7 +1141,7 @@ checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/timewave-computer/zk-merkle-proofs.git#f474311c62df0011b549b48ea515d0d45dd1a4cc"
+source = "git+https://github.com/timewave-computer/zk-merkle-proofs.git?rev=f474311c62df0011b549b48ea515d0d45dd1a4cc#f474311c62df0011b549b48ea515d0d45dd1a4cc"
 dependencies = [
  "anyhow",
  "serde",
@@ -1690,7 +1690,7 @@ dependencies = [
 [[package]]
 name = "ethereum"
 version = "0.1.0"
-source = "git+https://github.com/timewave-computer/zk-merkle-proofs.git#f474311c62df0011b549b48ea515d0d45dd1a4cc"
+source = "git+https://github.com/timewave-computer/zk-merkle-proofs.git?rev=f474311c62df0011b549b48ea515d0d45dd1a4cc#f474311c62df0011b549b48ea515d0d45dd1a4cc"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -4983,7 +4983,7 @@ version = "0.1.0"
 dependencies = [
  "sp1-zkvm",
  "valence-coprocessor",
- "valence-coprocessor-domain",
+ "valence-coprocessor-ethereum",
 ]
 
 [[package]]
@@ -5658,7 +5658,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "base64",
@@ -5672,8 +5672,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "valence-coprocessor-domain"
-version = "0.1.4"
+name = "valence-coprocessor-ethereum"
+version = "0.1.5"
 dependencies = [
  "common",
  "ethereum",

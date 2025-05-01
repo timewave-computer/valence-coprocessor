@@ -2,10 +2,9 @@ use poem::web::Data;
 use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::Value;
 use valence_coprocessor::{DomainData, ProgramData};
-use valence_coprocessor_rocksdb::RocksBackend;
 use valence_coprocessor_sp1::Sp1ZkVm;
 
-use crate::{Context, Registry, ValenceWasm};
+use crate::{data::ServiceBackend, Context, Registry, ValenceWasm};
 
 use super::{try_str_to_hash, Api};
 
@@ -224,7 +223,7 @@ impl Api {
     pub async fn program_storage(
         &self,
         program: Path<String>,
-        data: Data<&RocksBackend>,
+        data: Data<&ServiceBackend>,
         vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVm>,
     ) -> poem::Result<Json<ProgramStorageResponse>> {
@@ -243,7 +242,7 @@ impl Api {
     pub async fn program_prove(
         &self,
         program: Path<String>,
-        data: Data<&RocksBackend>,
+        data: Data<&ServiceBackend>,
         vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVm>,
         request: Json<ProgramProveRequest>,
@@ -276,7 +275,7 @@ impl Api {
     pub async fn program_vk(
         &self,
         program: Path<String>,
-        data: Data<&RocksBackend>,
+        data: Data<&ServiceBackend>,
         vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVm>,
     ) -> poem::Result<Json<ProgramVkResponse>> {
@@ -296,7 +295,7 @@ impl Api {
     pub async fn program_entrypoint(
         &self,
         program: Path<String>,
-        data: Data<&RocksBackend>,
+        data: Data<&ServiceBackend>,
         vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVm>,
         args: Json<Value>,

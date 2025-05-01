@@ -8,11 +8,11 @@ version = "0.1.0"
 serde_json = { version = "1.0.140", default-features = false, features = [
   "alloc",
 ] }
-valence-coprocessor = { path = "../../../core", default-features = false }
-valence-coprocessor-domain = { path = "../../", default-features = false, features = [
-  "ethereum-lib",
+valence-coprocessor = { path = "../../../../core", default-features = false }
+valence-coprocessor-ethereum = { path = "../../", default-features = false, features = [
+  "lib",
 ] }
-valence-coprocessor-wasm = { path = "../../../wasm", default-features = false, features = [
+valence-coprocessor-wasm = { path = "../../../../wasm", default-features = false, features = [
   "abi-handlers",
 ] }
 

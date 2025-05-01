@@ -1,8 +1,8 @@
 #![no_main]
 sp1_zkvm::entrypoint!(main);
 
-use valence_coprocessor::Witness;
-use valence_coprocessor_domain::{ethereum::Ethereum, DomainCircuit};
+use valence_coprocessor::{DomainCircuit, Witness};
+use valence_coprocessor_ethereum::Ethereum;
 
 pub fn main() {
     let w = sp1_zkvm::io::read::<Vec<Witness>>();
