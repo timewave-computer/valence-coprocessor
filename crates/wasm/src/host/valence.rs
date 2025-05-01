@@ -3,7 +3,7 @@ use core::time;
 use msgpacker::Packable;
 use reqwest::blocking::Client;
 use serde_json::Value;
-use valence_coprocessor::{DataBackend, Hasher, ZkVM};
+use valence_coprocessor::{DataBackend, Hasher, ZkVm};
 use wasmtime::{Caller, Extern, Memory};
 
 use super::Runtime;
@@ -39,7 +39,7 @@ pub fn panic<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32)
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     if let Some(Extern::Memory(mem)) = caller.get_export("memory") {
         let capacity = mem.size(&caller) as usize * mem.page_size(&caller) as usize;
@@ -69,7 +69,7 @@ pub fn args<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -89,7 +89,7 @@ pub fn ret<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) ->
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -117,7 +117,7 @@ pub fn get_program_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -140,7 +140,7 @@ pub fn set_program_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -164,7 +164,7 @@ pub fn get_program<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -189,7 +189,7 @@ pub fn get_domain_proof<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -224,7 +224,7 @@ pub fn get_state_proof<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -262,7 +262,7 @@ pub fn http<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -434,7 +434,7 @@ pub fn log<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) ->
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -460,7 +460,7 @@ fn read_buffer<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let capacity = mem.data_size(&caller);
     let capacity = capacity.saturating_sub(ptr as usize);
@@ -487,7 +487,7 @@ fn read_string<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     read_buffer(caller, mem, ptr, len)
         .and_then(|b| String::from_utf8(b).map_err(|_| ReturnCodes::StringUtf8 as i32))
@@ -502,7 +502,7 @@ fn read_json<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     read_buffer(caller, mem, ptr, len)
         .and_then(|b| serde_json::from_slice(&b).map_err(|_| ReturnCodes::JsonValue as i32))
@@ -517,7 +517,7 @@ fn write_buffer<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     let capacity = mem.data_size(&caller);
     let capacity = capacity.saturating_sub(ptr as usize);
@@ -541,7 +541,7 @@ fn serialize<H, D, Z, T>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
     T: Packable,
 {
     let bytes = msgpacker::pack_to_vec(data);

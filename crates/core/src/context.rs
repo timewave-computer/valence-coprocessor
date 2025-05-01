@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::{
     Blake3Hasher, DataBackend, DomainData, Hash, Hasher, ProvenProgram, Registry, Smt, SmtOpening,
-    Vm, Witness, ZkVM,
+    Vm, Witness, ZkVm,
 };
 
 /// Execution context with blake3 hasher.
@@ -16,7 +16,7 @@ where
     H: Hasher,
     D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     data: D,
     registry: Registry<D>,
@@ -35,7 +35,7 @@ where
     H: Hasher,
     D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     inner: Rc<ExecutionContextInner<H, D, M, Z>>,
 }
@@ -45,7 +45,7 @@ where
     H: Hasher,
     D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     fn clone(&self) -> Self {
         Self {
@@ -59,7 +59,7 @@ where
     H: Hasher,
     D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     /// Returns the program being executed.
     pub fn program(&self) -> &Hash {
@@ -201,7 +201,7 @@ where
     H: Hasher,
     D: DataBackend + Clone,
     M: Vm<H, D, Z>,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     /// Initializes a new execution context.
     pub fn init(program: Hash, data: D, vm: M, zkvm: Z) -> Self {
@@ -227,7 +227,7 @@ where
     H: Hasher,
     D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     /// Executes an arbitrary program function.
     pub fn execute_lib(&self, lib: &Hash, f: &str, args: Value) -> anyhow::Result<Value> {

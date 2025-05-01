@@ -2,11 +2,11 @@ use std::sync::{Arc, Mutex};
 
 use lru::LruCache;
 use sp1_sdk::{
-    CpuProver, CudaProver, NetworkProver, Prover as _, ProverClient, SP1Proof, SP1ProvingKey,
-    SP1Stdin, SP1VerifyingKey,
+    CpuProver, CudaProver, NetworkProver, Prover as _, ProverClient, SP1Proof,
+    SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
 };
 use valence_coprocessor::{
-    DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, Vm, Witness, ZkVM,
+    DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, Vm, Witness, ZkVm,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -104,15 +104,24 @@ impl WrappedClient {
             WrappedClient::Network(p) => p.setup(elf),
         }
     }
+
+    fn verify(&self, vk: &SP1VerifyingKey, proof: &SP1ProofWithPublicValues) -> bool {
+        match self {
+            WrappedClient::Mock(p) => p.verify(proof, vk).is_ok(),
+            WrappedClient::Cpu(p) => p.verify(proof, vk).is_ok(),
+            WrappedClient::Gpu(p) => p.verify(proof, vk).is_ok(),
+            WrappedClient::Network(p) => p.verify(proof, vk).is_ok(),
+        }
+    }
 }
 
 #[derive(Clone)]
-pub struct Sp1ZkVM {
+pub struct Sp1ZkVm {
     client: Arc<WrappedClient>,
     keys: Arc<Mutex<LruCache<Hash, (SP1ProvingKey, SP1VerifyingKey)>>>,
 }
 
-impl Sp1ZkVM {
+impl Sp1ZkVm {
     pub fn new(mode: Mode, capacity: usize) -> anyhow::Result<Self> {
         let client = WrappedClient::from(mode);
         let client = Arc::new(client);
@@ -124,9 +133,13 @@ impl Sp1ZkVM {
 
         Ok(Self { client, keys })
     }
+
+    pub fn verify(&self, vk: &SP1VerifyingKey, proof: &SP1ProofWithPublicValues) -> bool {
+        self.client.verify(vk, proof)
+    }
 }
 
-impl ZkVM for Sp1ZkVM {
+impl ZkVm for Sp1ZkVm {
     fn prove<H, D, M>(
         &self,
         ctx: &ExecutionContext<H, D, M, Self>,
@@ -135,7 +148,7 @@ impl ZkVM for Sp1ZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: Vm<H, D, Sp1ZkVM>,
+        M: Vm<H, D, Sp1ZkVm>,
     {
         let program = ctx.program();
 

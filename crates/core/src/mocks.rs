@@ -5,14 +5,14 @@ use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use serde_json::{json, Value};
 
 use crate::{
-    DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, SmtOpening, Vm, Witness, ZkVM,
+    DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, SmtOpening, Vm, Witness, ZkVm,
 };
 
 /// A mock implementation of a zkVM
 #[derive(Debug, Default)]
-pub struct MockZkVM;
+pub struct MockZkVm;
 
-impl MockZkVM {
+impl MockZkVm {
     /// Verify a proof.
     pub fn verify<H, D, M>(
         _ctx: &ExecutionContext<H, D, M, Self>,
@@ -57,7 +57,7 @@ impl MockZkVM {
     }
 }
 
-impl ZkVM for MockZkVM {
+impl ZkVm for MockZkVm {
     fn prove<H, D, M>(
         &self,
         ctx: &ExecutionContext<H, D, M, Self>,
@@ -66,7 +66,7 @@ impl ZkVM for MockZkVM {
     where
         H: Hasher,
         D: DataBackend,
-        M: Vm<H, D, MockZkVM>,
+        M: Vm<H, D, MockZkVm>,
     {
         witnesses.sort();
 
@@ -129,7 +129,7 @@ impl MockVm {
     where
         H: Hasher,
         D: DataBackend,
-        Z: ZkVM,
+        Z: ZkVm,
     {
         json!({
             "lib": Base64.encode(lib),
@@ -143,7 +143,7 @@ impl<H, D, Z> Vm<H, D, Z> for MockVm
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVM,
+    Z: ZkVm,
 {
     fn execute(
         &self,
