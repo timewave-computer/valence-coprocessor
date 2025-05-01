@@ -1,11 +1,11 @@
 [workspace]
 members = [
   "crates/core",
+  "crates/data/redis",
   "crates/domains/ethereum",
+  "crates/runtime/sp1",
+  "crates/runtime/wasm",
   "crates/service",
-  "crates/redis",
-  "crates/sp1",
-  "crates/wasm",
 ]
 resolver = "2"
 default-members = ["crates/core"]
@@ -14,7 +14,7 @@ default-members = ["crates/core"]
 authors = ["Timewave Labs"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.1.5"
+version = "0.1.6"
 repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]

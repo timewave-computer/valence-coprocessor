@@ -9,8 +9,7 @@ pub enum ServiceBackend {
     Redis(RedisBackend),
 }
 
-impl Default for ServiceBackend
-{
+impl Default for ServiceBackend {
     fn default() -> Self {
         Self::Memory(Default::default())
     }

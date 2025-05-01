@@ -12,7 +12,7 @@ valence-coprocessor = { path = "../../../../core", default-features = false }
 valence-coprocessor-ethereum = { path = "../../", default-features = false, features = [
   "lib",
 ] }
-valence-coprocessor-wasm = { path = "../../../../wasm", default-features = false, features = [
+valence-coprocessor-wasm = { path = "../../../../runtime/wasm", default-features = false, features = [
   "abi-handlers",
 ] }
 

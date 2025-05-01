@@ -218,9 +218,9 @@ impl Api {
         Ok(Json(ProgramDomainsResponse { domains }))
     }
 
-    /// Returns the storage data associated with the program
+    /// Returns the storage data associated with the program.
     #[oai(path = "/registry/program/:program/storage", method = "get")]
-    pub async fn program_storage(
+    pub async fn storage(
         &self,
         program: Path<String>,
         data: Data<&ServiceBackend>,
@@ -230,7 +230,7 @@ impl Api {
         let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
 
-        let data = ctx.get_program_storage()?.unwrap_or_default();
+        let data = ctx.get_storage()?.unwrap_or_default();
         let data = Base64(data);
         let log = ctx.get_log()?;
 
@@ -306,5 +306,46 @@ impl Api {
         let log = ctx.get_log()?;
 
         Ok(Json(ProgramEntrypointResponse { ret, log }))
+    }
+
+    /// Get the latest proven block for the domain.
+    #[oai(path = "/registry/domain/:domain/latest", method = "get")]
+    pub async fn domain_latest(
+        &self,
+        domain: Path<String>,
+        data: Data<&ServiceBackend>,
+        vm: Data<&ValenceWasm>,
+        zkvm: Data<&Sp1ZkVm>,
+    ) -> poem::Result<Json<Value>> {
+        let id = DomainData::identifier_from_parts(&domain);
+        let ctx = Context::init(id, data.clone(), vm.clone(), zkvm.clone());
+
+        let latest = ctx.get_latest_block(&domain)?;
+        let latest = serde_json::to_value(latest)
+            .map_err(|e| anyhow::anyhow!("failed to convert latest block: {e}"))?;
+
+        Ok(Json(latest))
+    }
+
+    /// Adds a new block to the domain.
+    #[oai(path = "/registry/domain/:domain", method = "post")]
+    pub async fn domain_add_block(
+        &self,
+        domain: Path<String>,
+        data: Data<&ServiceBackend>,
+        vm: Data<&ValenceWasm>,
+        zkvm: Data<&Sp1ZkVm>,
+        args: Json<Value>,
+    ) -> poem::Result<Json<Value>> {
+        let id = DomainData::identifier_from_parts(&domain);
+        let ctx = Context::init(id, data.clone(), vm.clone(), zkvm.clone());
+
+        ctx.add_domain_block(&domain, args.0)?;
+
+        let log = ctx.get_log()?;
+
+        Ok(Json(serde_json::json!({
+            "log": log
+        })))
     }
 }

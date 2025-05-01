@@ -1,4 +1,5 @@
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
+use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
 
 use crate::{Blake3Hasher, DataBackend, Hash, Hasher, SmtOpening};
@@ -17,6 +18,17 @@ pub struct DomainData {
 impl DomainData {
     /// Prefix for the domain identifier hash.
     pub const ID_PREFIX: &[u8] = b"domain";
+
+    /// Creates a new domain with the provided name a identifier.
+    pub fn new(name: String) -> Self {
+        Self { name, lib: vec![] }
+    }
+
+    /// Associates the provided library with the domain.
+    pub fn with_lib(mut self, lib: Vec<u8>) -> Self {
+        self.lib = lib;
+        self
+    }
 
     /// Generates an unique identifier for the domain.
     ///
@@ -130,12 +142,27 @@ impl Witness {
 }
 
 /// A ZK proven program.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, MsgPacker)]
 pub struct ProvenProgram {
     /// The target ZK proof.
     pub proof: Vec<u8>,
     /// The output arguments.
     pub outputs: Vec<u8>,
+}
+
+/// A domain validated block
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
+pub struct ValidatedBlock {
+    /// A block associated number.
+    ///
+    /// This is the block number of Ethereum, the slot of Solana, etc.
+    pub number: u64,
+
+    /// The hash root of the block.
+    pub root: Hash,
+
+    /// Block blob payload.
+    pub payload: Vec<u8>,
 }
 
 impl<D: DataBackend> From<D> for Registry<D> {

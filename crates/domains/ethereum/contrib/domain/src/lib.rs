@@ -12,3 +12,10 @@ pub extern "C" fn get_state_proof() {
 
     abi::ret(&proof).unwrap();
 }
+
+#[no_mangle]
+pub extern "C" fn validate_block() {
+    let args = abi::args().unwrap();
+
+    abi::ret(&args).unwrap();
+}

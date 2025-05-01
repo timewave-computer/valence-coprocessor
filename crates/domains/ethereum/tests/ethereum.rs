@@ -1,10 +1,11 @@
 use std::{env, fs, path::PathBuf, process::Command};
 
 use msgpacker::{Packable as _, Unpackable as _};
+use serde_json::json;
 use sp1_sdk::{SP1ProofWithPublicValues, SP1VerifyingKey};
 use valence_coprocessor::{
     DomainCircuit as _, DomainLibrary as _, ExecutionContext, MemoryBackend, ProgramData, Registry,
-    Witness,
+    ValidatedBlock, Witness,
 };
 use valence_coprocessor_ethereum::{Ethereum, EthereumStateProof};
 use valence_coprocessor_sp1::{Mode, Sp1Hasher, Sp1ZkVm};
@@ -104,11 +105,25 @@ fn ethereum_state_proof() {
     let program = registry.register_program(&vm, &zkvm, program).unwrap();
 
     let ctx = Context::init(program, data, vm, zkvm.clone());
-
     let proof = read_account_proof_test_vector();
-    let proof = serde_json::to_value(proof).unwrap();
-    let proven = ctx.get_program_proof(proof).unwrap();
 
+    let payload = json!({
+        "opening": proof.opening,
+        "value": proof.value,
+    });
+    let args = json!({
+        "key": proof.key.clone()
+    });
+
+    let block = json!(ValidatedBlock {
+        number: 83347,
+        root: proof.root,
+        payload: serde_json::to_vec(&payload).unwrap(),
+    });
+
+    ctx.add_domain_block(Ethereum::ID, block).unwrap();
+
+    let proven = ctx.get_program_proof(args).unwrap();
     let proof: SP1ProofWithPublicValues = bincode::deserialize(&proven.proof).unwrap();
 
     let vk = ctx.get_program_verifying_key().unwrap();
