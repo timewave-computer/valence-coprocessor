@@ -1,11 +1,10 @@
 #![allow(static_mut_refs)]
-// TODO implement std runtime
 #![allow(dead_code)]
 
 use alloc::vec::Vec;
 
 use serde_json::Value;
-use valence_coprocessor::{Hash, SmtOpening, ValidatedBlock, Witness};
+use valence_coprocessor::{FileSystem, Hash, SmtOpening, ValidatedBlock, Witness};
 
 pub use crate::__log as log;
 pub use alloc::format;
@@ -16,6 +15,10 @@ mod host {
     extern "C" {
         pub(super) fn args(ptr: u32) -> i32;
         pub(super) fn ret(ptr: u32, len: u32) -> i32;
+        pub(super) fn get_storage(ptr: u32) -> i32;
+        pub(super) fn set_storage(ptr: u32, len: u32) -> i32;
+        pub(super) fn get_storage_file(path_ptr: u32, path_len: u32, ptr: u32) -> i32;
+        pub(super) fn set_storage_file(path_ptr: u32, path_len: u32, ptr: u32, len: u32) -> i32;
         pub(super) fn get_raw_storage(ptr: u32) -> i32;
         pub(super) fn set_raw_storage(ptr: u32, len: u32) -> i32;
         pub(super) fn get_library(ptr: u32) -> i32;
@@ -36,6 +39,8 @@ mod host {
 #[cfg(feature = "std")]
 pub(crate) mod use_std {
     use std::sync::{LazyLock, Mutex};
+
+    use valence_coprocessor::File;
 
     use super::*;
 
@@ -85,6 +90,26 @@ pub(crate) mod use_std {
         RUNTIME.lock().unwrap().ret = value.clone();
 
         Ok(())
+    }
+
+    pub fn get_storage() -> anyhow::Result<FileSystem> {
+        get_raw_storage().map(FileSystem::from_raw_device_unchecked)
+    }
+
+    pub fn set_storage(fs: &FileSystem) -> anyhow::Result<()> {
+        set_raw_storage(&fs.try_to_raw_device()?)
+    }
+
+    pub fn get_storage_file(path: &str) -> anyhow::Result<Vec<u8>> {
+        Ok(get_storage()?.open(path)?.contents)
+    }
+
+    pub fn set_storage_file(path: &str, contents: &[u8]) -> anyhow::Result<()> {
+        let mut fs = get_storage()?;
+
+        fs.save(File::new(path.into(), contents.to_vec(), true))?;
+
+        set_raw_storage(&fs.try_to_raw_device()?)
     }
 
     pub fn get_raw_storage() -> anyhow::Result<Vec<u8>> {
@@ -172,6 +197,80 @@ pub fn ret(value: &Value) -> anyhow::Result<()> {
     }
 }
 
+pub fn get_storage() -> anyhow::Result<FileSystem> {
+    #[cfg(feature = "std")]
+    return use_std::get_storage();
+
+    #[cfg(not(feature = "std"))]
+    unsafe {
+        let ptr = BUF.as_ptr() as u32;
+        let len = host::get_storage(ptr);
+
+        anyhow::ensure!(len >= 0, "failed to fetch library storage");
+        anyhow::ensure!(len as usize <= BUF_LEN, "library storage too large");
+
+        let fs = FileSystem::from_raw_device_unchecked(BUF[..len as usize].to_vec());
+
+        Ok(fs)
+    }
+}
+
+pub fn set_storage(fs: &FileSystem) -> anyhow::Result<()> {
+    #[cfg(feature = "std")]
+    return use_std::set_storage(fs);
+
+    #[cfg(not(feature = "std"))]
+    unsafe {
+        let bytes = fs.try_to_raw_device()?;
+        let ptr = bytes.as_ptr() as u32;
+        let len = bytes.len() as u32;
+
+        let r = host::set_storage(ptr, len);
+
+        anyhow::ensure!(r >= 0, "failed to write library storage");
+
+        return Ok(());
+    }
+}
+
+pub fn get_storage_file(path: &str) -> anyhow::Result<Vec<u8>> {
+    #[cfg(feature = "std")]
+    return use_std::get_storage_file(path);
+
+    #[cfg(not(feature = "std"))]
+    unsafe {
+        let path_ptr = path.as_ptr() as u32;
+        let path_len = path.len() as u32;
+        let ptr = BUF.as_ptr() as u32;
+
+        let len = host::get_storage_file(path_ptr, path_len, ptr);
+
+        anyhow::ensure!(len >= 0, "failed to fetch library storage file");
+        anyhow::ensure!(len as usize <= BUF_LEN, "library storage file too large");
+
+        Ok(BUF[..len as usize].to_vec())
+    }
+}
+
+pub fn set_storage_file(path: &str, contents: &[u8]) -> anyhow::Result<()> {
+    #[cfg(feature = "std")]
+    return use_std::set_storage_file(path, contents);
+
+    #[cfg(not(feature = "std"))]
+    unsafe {
+        let path_ptr = path.as_ptr() as u32;
+        let path_len = path.len() as u32;
+        let ptr = contents.as_ptr() as u32;
+        let len = contents.len() as u32;
+
+        let r = host::set_storage_file(path_ptr, path_len, ptr, len);
+
+        anyhow::ensure!(r >= 0, "failed to write library storage file");
+
+        Ok(())
+    }
+}
+
 /// Fetch the library raw storage.
 pub fn get_raw_storage() -> anyhow::Result<Vec<u8>> {
     #[cfg(feature = "std")]
@@ -196,13 +295,9 @@ pub fn set_raw_storage(raw_storage: &[u8]) -> anyhow::Result<()> {
 
     #[cfg(not(feature = "std"))]
     unsafe {
+        let ptr = raw_storage.as_ptr() as u32;
         let len = raw_storage.len();
 
-        anyhow::ensure!(len <= BUF_LEN, "raw storage value too large");
-
-        BUF[..len].copy_from_slice(raw_storage);
-
-        let ptr = BUF.as_ptr() as u32;
         let r = host::set_raw_storage(ptr, len as u32);
 
         anyhow::ensure!(r >= 0, "failed to write library raw storage");

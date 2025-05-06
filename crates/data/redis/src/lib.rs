@@ -73,6 +73,17 @@ impl DataBackend for RedisBackend {
 
         Ok(old)
     }
+
+    // TODO split the storage
+    fn get_bulk(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        self.get(prefix, key)
+    }
+
+    fn set_bulk(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<()> {
+        self.set(prefix, key, data)?;
+
+        Ok(())
+    }
 }
 
 #[test]

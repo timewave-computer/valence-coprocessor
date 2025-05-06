@@ -55,6 +55,20 @@ impl DataBackend for ServiceBackend {
             ServiceBackend::Redis(b) => b.set(prefix, key, data),
         }
     }
+
+    fn get_bulk(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        match self {
+            ServiceBackend::Memory(b) => b.get_bulk(prefix, key),
+            ServiceBackend::Redis(b) => b.get_bulk(prefix, key),
+        }
+    }
+
+    fn set_bulk(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<()> {
+        match self {
+            ServiceBackend::Memory(b) => b.set_bulk(prefix, key, data),
+            ServiceBackend::Redis(b) => b.set_bulk(prefix, key, data),
+        }
+    }
 }
 
 impl fmt::Display for ServiceBackend {

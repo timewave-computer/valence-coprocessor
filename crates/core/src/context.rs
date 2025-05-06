@@ -8,6 +8,8 @@ use crate::{
     ValidatedBlock, Vm, Witness, ZkVm,
 };
 
+pub use buf_fs::{File, FileSystem};
+
 /// Execution context with blake3 hasher.
 pub type Blake3Context<D, M, Z> = ExecutionContext<Blake3Hasher, D, M, Z>;
 
@@ -172,6 +174,39 @@ where
                 .execute(self, &self.inner.library, Self::LIB_GET_WITNESSES, args)?;
 
         Ok(serde_json::from_value(witnesses)?)
+    }
+
+    /// Returns the library storage.
+    pub fn get_storage(&self) -> anyhow::Result<FileSystem> {
+        let raw = self.get_raw_storage()?;
+
+        match raw {
+            Some(r) => Ok(FileSystem::from_raw_device_unchecked(r)),
+            None => FileSystem::new(256 * 1024 * 1024),
+        }
+    }
+
+    /// Overrides the library storage.
+    pub fn set_storage(&self, fs: &FileSystem) -> anyhow::Result<()> {
+        let fs = fs.try_to_raw_device()?;
+
+        self.set_raw_storage(&fs)
+    }
+
+    /// Returns the library storage file from the given path.
+    pub fn get_storage_file(&self, path: &str) -> anyhow::Result<Vec<u8>> {
+        self.get_storage()
+            .and_then(|mut fs| fs.open(path))
+            .map(|f| f.contents)
+    }
+
+    /// Overrides the library storage file.
+    pub fn set_storage_file(&self, path: &str, contents: &[u8]) -> anyhow::Result<()> {
+        let mut fs = self.get_storage()?;
+
+        fs.save(File::new(path.into(), contents.to_vec(), true))?;
+
+        self.set_storage(&fs)
     }
 
     /// Returns the library raw storage.

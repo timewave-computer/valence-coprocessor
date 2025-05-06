@@ -1,5 +1,6 @@
 use std::{array, env, fs, path::PathBuf, process::Command, thread};
 
+use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use serde_json::{json, Value};
 use valence_coprocessor::{
     mocks::MockZkVm, Blake3Context, DomainData, MemoryBackend, ProgramData, Registry,
@@ -55,6 +56,57 @@ fn deploy_hello() {
 #[test]
 fn deploy_storage() {
     let storage = get_library_bytes("storage");
+    let data = MemoryBackend::default();
+    let registry = Registry::from(data.clone());
+
+    let capacity = 500;
+    let vm = ValenceWasm::new(capacity).unwrap();
+    let zkvm = MockZkVm;
+
+    let library = ProgramData::default().with_lib(storage);
+    let library = registry.register_program(&vm, &zkvm, library).unwrap();
+
+    let ctx = Blake3Context::init(library, data, vm, MockZkVm);
+
+    let path = "/var/share/foo.bin";
+    let contents = "Valence";
+
+    assert!(ctx.get_storage_file(path).is_err());
+
+    ctx.execute_lib(&library, "set", json!({"path": path, "contents": contents}))
+        .unwrap();
+
+    assert_eq!(ctx.get_storage_file(path).unwrap(), contents.as_bytes());
+
+    let ret = ctx
+        .execute_lib(&library, "get", json!({"path": path}))
+        .unwrap()["b64"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    let ret = Base64.decode(ret).unwrap();
+    let ret = String::from_utf8(ret).unwrap();
+
+    assert_eq!(ret, contents);
+
+    let path = "/var/share/bar.bin";
+    let byte = 0xfa;
+    let count = 8 * 1024 * 1024;
+
+    ctx.execute_lib(
+        &library,
+        "set_large",
+        json!({"path": path, "byte": byte, "count": count}),
+    )
+    .unwrap();
+
+    assert_eq!(ctx.get_storage_file(path).unwrap(), vec![byte; count]);
+}
+
+#[test]
+fn deploy_raw_storage() {
+    let storage = get_library_bytes("raw_storage");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 

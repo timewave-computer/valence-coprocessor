@@ -17,6 +17,12 @@ pub trait DataBackend {
     ///
     /// Returns the previous data, if existed.
     fn set(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
+
+    /// Returns the underlying bulk data from the backend.
+    fn get_bulk(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
+
+    /// Replaces the underlying bulk data from the backend.
+    fn set_bulk(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<()>;
 }
 
 #[cfg(feature = "std")]
@@ -34,6 +40,7 @@ mod use_std {
     #[derive(Debug, Clone, Default)]
     pub struct MemoryBackend {
         data: Arc<Mutex<HashMap<Hash, Vec<u8>>>>,
+        bulk: Arc<Mutex<HashMap<Hash, Vec<u8>>>>,
     }
 
     impl DataBackend for MemoryBackend {
@@ -75,6 +82,28 @@ mod use_std {
                 .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
 
             Ok(d.insert(key, data.to_vec()))
+        }
+
+        fn get_bulk(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+            let key = Blake3Hasher::digest([b"data", prefix, key]);
+            let data = self
+                .bulk
+                .lock()
+                .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
+
+            Ok(data.get(&key).cloned())
+        }
+
+        fn set_bulk(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<()> {
+            let key = Blake3Hasher::digest([b"data", prefix, key]);
+            let mut d = self
+                .bulk
+                .lock()
+                .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
+
+            d.insert(key, data.to_vec());
+
+            Ok(())
         }
     }
 }

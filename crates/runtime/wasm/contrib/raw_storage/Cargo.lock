@@ -343,7 +343,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "valence-coprocessor-wasm-hello"
+name = "valence-coprocessor-wasm-raw-storage"
 version = "0.1.0"
 dependencies = [
  "serde_json",
