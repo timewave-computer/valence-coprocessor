@@ -8,9 +8,9 @@ extern crate alloc;
 pub extern "C" fn storage() {
     let args = abi::args().unwrap();
 
-    let mut storage = abi::get_storage().unwrap();
+    let mut storage = abi::get_raw_storage().unwrap();
 
     storage.extend(args["name"].as_str().unwrap().as_bytes());
 
-    abi::set_storage(&storage).unwrap();
+    abi::set_raw_storage(&storage).unwrap();
 }

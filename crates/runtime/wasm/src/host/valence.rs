@@ -18,7 +18,7 @@ pub enum ReturnCodes {
     MemoryRead = -4,
     ReturnBytes = -5,
     BufferTooLarge = -6,
-    LibraryStorage = -7,
+    LibraryRawStorage = -7,
     StringUtf8 = -8,
     DomainProof = -9,
     Serialization = -10,
@@ -110,11 +110,11 @@ where
     ReturnCodes::Success as i32
 }
 
-/// Writes the library storage to `ptr`.
+/// Writes the library raw storage to `ptr`.
 ///
-/// Returns an error if the maximum `capacity` of the buffer is smaller than the library storage
-/// length.
-pub fn get_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
+/// Returns an error if the maximum `capacity` of the buffer is smaller than the library raw
+/// storage length.
+pub fn get_raw_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
@@ -125,9 +125,9 @@ where
         _ => return ReturnCodes::MemoryExport as i32,
     };
 
-    let bytes = match caller.data().ctx.get_storage() {
+    let bytes = match caller.data().ctx.get_raw_storage() {
         Ok(s) => s.unwrap_or_default(),
-        Err(_) => return ReturnCodes::LibraryStorage as i32,
+        Err(_) => return ReturnCodes::LibraryRawStorage as i32,
     };
 
     match write_buffer(&mut caller, &mem, ptr, &bytes) {
@@ -136,8 +136,8 @@ where
     }
 }
 
-/// Replace the library storage.
-pub fn set_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
+/// Replace the library raw storage.
+pub fn set_raw_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
@@ -153,8 +153,8 @@ where
         Err(e) => return e,
     };
 
-    if caller.data_mut().ctx.set_storage(&bytes).is_err() {
-        return ReturnCodes::LibraryStorage as i32;
+    if caller.data_mut().ctx.set_raw_storage(&bytes).is_err() {
+        return ReturnCodes::LibraryRawStorage as i32;
     }
 
     ReturnCodes::Success as i32

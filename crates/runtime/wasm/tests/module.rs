@@ -67,12 +67,12 @@ fn deploy_storage() {
 
     let ctx = Blake3Context::init(library, data, vm, MockZkVm);
 
-    assert!(ctx.get_storage().unwrap().is_none());
+    assert!(ctx.get_raw_storage().unwrap().is_none());
 
     ctx.execute_lib(&library, "storage", json!({"name": "Valence"}))
         .unwrap();
 
-    let storage = ctx.get_storage().unwrap().unwrap();
+    let storage = ctx.get_raw_storage().unwrap().unwrap();
 
     assert_eq!(storage, b"Valence");
 }

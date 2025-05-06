@@ -67,8 +67,8 @@ pub struct ProgramDomainsResponse {
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramStorageResponse {
-    /// Storage data associated with the program as base64.
+pub struct ProgramRawStorageResponse {
+    /// Raw storage associated with the program as base64.
     pub data: Base64<Vec<u8>>,
 
     /// Logs of the operation.
@@ -218,23 +218,23 @@ impl Api {
         Ok(Json(ProgramDomainsResponse { domains }))
     }
 
-    /// Returns the storage data associated with the program.
-    #[oai(path = "/registry/program/:program/storage", method = "get")]
-    pub async fn storage(
+    /// Returns the raw storage of the program.
+    #[oai(path = "/registry/program/:program/storage/raw", method = "get")]
+    pub async fn storage_raw(
         &self,
         program: Path<String>,
         data: Data<&ServiceBackend>,
         vm: Data<&ValenceWasm>,
         zkvm: Data<&Sp1ZkVm>,
-    ) -> poem::Result<Json<ProgramStorageResponse>> {
+    ) -> poem::Result<Json<ProgramRawStorageResponse>> {
         let program = try_str_to_hash(&program)?;
         let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
 
-        let data = ctx.get_storage()?.unwrap_or_default();
+        let data = ctx.get_raw_storage()?.unwrap_or_default();
         let data = Base64(data);
         let log = ctx.get_log()?;
 
-        Ok(Json(ProgramStorageResponse { data, log }))
+        Ok(Json(ProgramRawStorageResponse { data, log }))
     }
 
     /// Computes the program proof.
