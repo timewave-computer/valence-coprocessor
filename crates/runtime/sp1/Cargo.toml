@@ -7,19 +7,30 @@ description = "The Valence co-processor SP1 prover backend."
 
 [dependencies]
 anyhow = { workspace = true, optional = true }
+ark-bn254 = "0.5.0"
+ark-ec = "0.5.0"
+ark-ff = "0.5.0"
+ark-groth16 = { workspace = true, optional = true }
+ark-serialize = "0.5.0"
 bincode = { workspace = true, optional = true }
 lru = { workspace = true, optional = true }
-sha2-v0-10-8 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.10.8-sp1-4.0.0" }
+sha2-v0-10-8 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", package = "sha2", tag = "patch-sha2-0.10.8-sp1-4.0.0", default-features = false, features = [
+  "oid",
+] }
 sp1-sdk = { workspace = true, optional = true }
 tracing.workspace = true
 valence-coprocessor = { path = "../../core", default-features = false }
 
 [dev-dependencies]
+bincode.workspace = true
+sp1-verifier = { workspace = true, features = ["ark"] }
 valence-coprocessor = { path = "../../core", features = ["mocks", "std"] }
 
 [features]
-default = ["host"]
-host = ["anyhow", "bincode", "lru", "sp1-sdk", "valence-coprocessor/std"]
+default = ["ark-groth16", "host", "std"]
+ark-groth16 = ["anyhow", "dep:ark-groth16"]
+host = ["anyhow", "bincode", "lru", "sp1-sdk", "std", "valence-coprocessor/std"]
+std = ["ark-groth16?/default", "sha2-v0-10-8/std"]
 
 [[test]]
 name = "zkvm"
