@@ -64,10 +64,7 @@ pub fn verify(
     proof: &Proof<Bn254>,
     public_inputs: &[Fr],
 ) -> bool {
-    match Groth16::<Bn254>::verify_proof(pvk, proof, public_inputs) {
-        Ok(f) => f,
-        Err(_) => false,
-    }
+    Groth16::<Bn254>::verify_proof(pvk, proof, public_inputs).unwrap_or(false)
 }
 
 #[test]

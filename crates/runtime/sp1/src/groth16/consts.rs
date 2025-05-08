@@ -217,48 +217,56 @@ pub const GAMMA_ABC: &[Affine<g1::Config>] = &[
     ),
 ];
 
-// Helpers
+#[cfg(test)]
+mod debug_helpers {
+    use super::*;
 
-fn _print_g1(g1: &Affine<g1::Config>) {
-    println!("Affine::new_unchecked(Fp(BigInt([");
+    // These functions are only intended for debugging purposes
+    // and are not used in production code
 
-    for n in g1.x.0 .0 {
-        println!("{:#x},", n);
+    #[allow(dead_code)]
+    fn _print_g1(g1: &Affine<g1::Config>) {
+        println!("Affine::new_unchecked(Fp(BigInt([");
+
+        for n in g1.x.0 .0 {
+            println!("{:#x},", n);
+        }
+
+        println!("]),PhantomData,),Fp(BigInt([");
+
+        for n in g1.y.0 .0 {
+            println!("{:#x},", n);
+        }
+
+        println!("]),PhantomData,),);");
     }
 
-    println!("]),PhantomData,),Fp(BigInt([");
+    #[allow(dead_code)]
+    fn _print_g2(g2: &Affine<g2::Config>) {
+        println!("Affine::new_unchecked(QuadExtField {{ c0: Fp(BigInt([");
 
-    for n in g1.y.0 .0 {
-        println!("{:#x},", n);
+        for n in g2.x.c0.0 .0 {
+            println!("{:#x},", n);
+        }
+
+        println!("]),PhantomData,),c1: Fp(BigInt([");
+
+        for n in g2.x.c1.0 .0 {
+            println!("{:#x},", n);
+        }
+
+        println!("]),PhantomData,),}},QuadExtField {{ c0: Fp(BigInt([");
+
+        for n in g2.y.c0.0 .0 {
+            println!("{:#x},", n);
+        }
+
+        println!("]),PhantomData,),c1: Fp(BigInt([");
+
+        for n in g2.y.c1.0 .0 {
+            println!("{:#x},", n);
+        }
+
+        println!("]),PhantomData,),}},);");
     }
-
-    println!("]),PhantomData,),);");
-}
-
-fn _print_g2(g2: &Affine<g2::Config>) {
-    println!("Affine::new_unchecked(QuadExtField {{ c0: Fp(BigInt([");
-
-    for n in g2.x.c0.0 .0 {
-        println!("{:#x},", n);
-    }
-
-    println!("]),PhantomData,),c1: Fp(BigInt([");
-
-    for n in g2.x.c1.0 .0 {
-        println!("{:#x},", n);
-    }
-
-    println!("]),PhantomData,),}},QuadExtField {{ c0: Fp(BigInt([");
-
-    for n in g2.y.c0.0 .0 {
-        println!("{:#x},", n);
-    }
-
-    println!("]),PhantomData,),c1: Fp(BigInt([");
-
-    for n in g2.y.c1.0 .0 {
-        println!("{:#x},", n);
-    }
-
-    println!("]),PhantomData,),}},);");
 }

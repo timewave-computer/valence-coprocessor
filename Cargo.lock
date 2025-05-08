@@ -7036,7 +7036,7 @@ checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -7053,7 +7053,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-ethereum"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "bincode",
@@ -7070,7 +7070,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-redis"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "r2d2",
@@ -7080,7 +7080,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-service"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -7102,7 +7102,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-sp1"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "ark-bn254 0.5.0",
@@ -7121,7 +7121,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
