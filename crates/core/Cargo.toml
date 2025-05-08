@@ -16,6 +16,10 @@ serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 
+# temporarily pointing to git until relative-path releases the fix on
+# https://github.com/udoprog/relative-path/issues/63
+buf-fs = { git = "https://github.com/vlopes11/buf-fs.git", rev = "349ad8c67ee049fa249b32d37dae01e9d1cd2bcb" }
+
 [dev-dependencies]
 proptest = "1.6.0"
 

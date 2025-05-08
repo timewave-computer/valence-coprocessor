@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use sha2_v0_10_8::{Digest, Sha256};
 use valence_coprocessor::{Hash, Hasher};
 
@@ -6,6 +8,12 @@ mod host;
 
 #[cfg(feature = "host")]
 pub use host::*;
+
+#[cfg(feature = "ark-groth16")]
+mod groth16;
+
+#[cfg(feature = "ark-groth16")]
+pub use groth16::*;
 
 #[derive(Debug, Clone)]
 pub struct Sp1Hasher;

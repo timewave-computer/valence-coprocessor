@@ -1,11 +1,10 @@
 [package]
-name = "valence-coprocessor-wasm-storage"
+name = "valence-coprocessor-wasm-raw-storage"
 edition = "2021"
 license = "Apache-2.0"
 version = "0.1.0"
 
 [dependencies]
-base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0.140", default-features = false, features = [
   "alloc",
 ] }

@@ -152,13 +152,7 @@ impl ZkVm for Sp1ZkVm {
     {
         let library = ctx.library();
 
-        let mut stdin = SP1Stdin::new();
-
-        tracing::debug!("SP1 environment initialized...");
-
-        stdin.write(&witnesses);
-
-        tracing::debug!("witnesses written to environment...");
+        tracing::debug!("SP1 proving initialized...");
 
         self.keys
             .lock()

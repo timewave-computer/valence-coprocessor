@@ -3,7 +3,7 @@ use core::time;
 use msgpacker::Packable;
 use reqwest::blocking::Client;
 use serde_json::Value;
-use valence_coprocessor::{DataBackend, Hasher, ZkVm};
+use valence_coprocessor::{DataBackend, FileSystem, Hasher, ZkVm};
 use wasmtime::{Caller, Extern, Memory};
 
 use super::Runtime;
@@ -18,7 +18,7 @@ pub enum ReturnCodes {
     MemoryRead = -4,
     ReturnBytes = -5,
     BufferTooLarge = -6,
-    LibraryStorage = -7,
+    LibraryRawStorage = -7,
     StringUtf8 = -8,
     DomainProof = -9,
     Serialization = -10,
@@ -33,6 +33,7 @@ pub enum ReturnCodes {
     HttpResponseJson = -19,
     HttpResponse = -20,
     LatestBlock = -21,
+    LibraryStorage = -22,
 }
 
 /// Resolves a panic.
@@ -110,10 +111,7 @@ where
     ReturnCodes::Success as i32
 }
 
-/// Writes the library storage to `ptr`.
-///
-/// Returns an error if the maximum `capacity` of the buffer is smaller than the library storage
-/// length.
+/// Get the [`FileSystem`] storage object.
 pub fn get_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
 where
     H: Hasher,
@@ -125,8 +123,13 @@ where
         _ => return ReturnCodes::MemoryExport as i32,
     };
 
-    let bytes = match caller.data().ctx.get_storage() {
-        Ok(s) => s.unwrap_or_default(),
+    let fs = match caller.data().ctx.get_storage() {
+        Ok(s) => s,
+        Err(_) => return ReturnCodes::LibraryStorage as i32,
+    };
+
+    let bytes = match fs.try_to_raw_device() {
+        Ok(s) => s,
         Err(_) => return ReturnCodes::LibraryStorage as i32,
     };
 
@@ -136,8 +139,128 @@ where
     }
 }
 
-/// Replace the library storage.
+/// Fetch the provided file from the storage.
+pub fn get_storage_file<H, D, Z>(
+    mut caller: Caller<Runtime<H, D, Z>>,
+    path_ptr: u32,
+    path_len: u32,
+    ptr: u32,
+) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVm,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let path = match read_string(&mut caller, &mem, path_ptr, path_len) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let bytes = match caller.data().ctx.get_storage_file(&path) {
+        Ok(s) => s,
+        Err(_) => return ReturnCodes::LibraryStorage as i32,
+    };
+
+    match write_buffer(&mut caller, &mem, ptr, &bytes) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
+/// Override the [`FileSystem`] storage object.
 pub fn set_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVm,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let fs = match read_buffer(&mut caller, &mem, ptr, len) {
+        Ok(b) => FileSystem::from_raw_device_unchecked(b),
+        Err(e) => return e,
+    };
+
+    match caller.data().ctx.set_storage(&fs) {
+        Ok(_) => (),
+        Err(_) => return ReturnCodes::LibraryStorage as i32,
+    }
+
+    ReturnCodes::Success as i32
+}
+
+/// Set the provided file on the storage.
+pub fn set_storage_file<H, D, Z>(
+    mut caller: Caller<Runtime<H, D, Z>>,
+    path_ptr: u32,
+    path_len: u32,
+    ptr: u32,
+    len: u32,
+) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVm,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let path = match read_string(&mut caller, &mem, path_ptr, path_len) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let contents = match read_buffer(&mut caller, &mem, ptr, len) {
+        Ok(b) => b,
+        Err(e) => return e,
+    };
+
+    match caller.data().ctx.set_storage_file(&path, &contents) {
+        Ok(_) => (),
+        Err(_) => return ReturnCodes::LibraryStorage as i32,
+    }
+
+    ReturnCodes::Success as i32
+}
+
+/// Writes the library raw storage to `ptr`.
+///
+/// Returns an error if the maximum `capacity` of the buffer is smaller than the library raw
+/// storage length.
+pub fn get_raw_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    Z: ZkVm,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let bytes = match caller.data().ctx.get_raw_storage() {
+        Ok(s) => s.unwrap_or_default(),
+        Err(_) => return ReturnCodes::LibraryRawStorage as i32,
+    };
+
+    match write_buffer(&mut caller, &mem, ptr, &bytes) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
+/// Replace the library raw storage.
+pub fn set_raw_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
@@ -153,8 +276,8 @@ where
         Err(e) => return e,
     };
 
-    if caller.data_mut().ctx.set_storage(&bytes).is_err() {
-        return ReturnCodes::LibraryStorage as i32;
+    if caller.data_mut().ctx.set_raw_storage(&bytes).is_err() {
+        return ReturnCodes::LibraryRawStorage as i32;
     }
 
     ReturnCodes::Success as i32

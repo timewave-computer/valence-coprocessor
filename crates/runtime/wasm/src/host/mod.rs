@@ -68,6 +68,10 @@ where
         linker.func_wrap(HOST_LIB, "ret", valence::ret)?;
         linker.func_wrap(HOST_LIB, "get_storage", valence::get_storage)?;
         linker.func_wrap(HOST_LIB, "set_storage", valence::set_storage)?;
+        linker.func_wrap(HOST_LIB, "get_storage_file", valence::get_storage_file)?;
+        linker.func_wrap(HOST_LIB, "set_storage_file", valence::set_storage_file)?;
+        linker.func_wrap(HOST_LIB, "get_raw_storage", valence::get_raw_storage)?;
+        linker.func_wrap(HOST_LIB, "set_raw_storage", valence::set_raw_storage)?;
         linker.func_wrap(HOST_LIB, "get_library", valence::get_library)?;
         linker.func_wrap(HOST_LIB, "get_domain_proof", valence::get_domain_proof)?;
         linker.func_wrap(HOST_LIB, "get_latest_block", valence::get_latest_block)?;
