@@ -1,0 +1,12 @@
+[package]
+name = "valence-coprocessor-integrated-tests-domain"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Valence co-processor service integrated tests"
+
+[dependencies]
+anyhow.workspace = true
+serde_json.workspace = true
+valence-coprocessor = { path = "../../../crates/core", default-features = false }
+valence-coprocessor-sp1 = { path = "../../../crates/runtime/sp1", default-features = false }

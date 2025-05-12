@@ -1,9 +1,81 @@
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
+use msgpacker::MsgPacker;
+use serde::{Deserialize, Serialize};
 
-use crate::{DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, Vm, Witness};
+use crate::{DataBackend, ExecutionContext, Hash, Hasher, Opening, ProvenProgram, Vm, Witness};
+
+/// A domain opening co-processor witness.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
+pub struct DomainOpening {
+    /// Domain name.
+    pub domain: String,
+
+    /// Proven domain root opening argument.
+    pub root: Hash,
+
+    /// Block payload.
+    pub payload: Vec<u8>,
+
+    /// Opening proof to root.
+    pub opening: Opening,
+}
+
+/// A program witness data obtained via Valence API.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct WitnessCoprocessor {
+    /// Co-processor historical commitments root.
+    pub root: Hash,
+
+    /// Openings to the historical tree.
+    pub proofs: Vec<DomainOpening>,
+
+    /// Witness data for the program.
+    pub witnesses: Vec<Witness>,
+}
+
+impl WitnessCoprocessor {
+    /// Validates the co-processor witness, yielding verified state proofs & data for the program.
+    pub fn validate<H: Hasher>(self) -> anyhow::Result<ValidatedWitnesses> {
+        for o in &self.proofs {
+            let key = H::key(&o.domain, &o.root);
+            let value = H::hash(&o.payload);
+
+            tracing::debug!("verifying domain opening for {key:x?}, {value:x?}");
+
+            anyhow::ensure!(o.opening.verify::<H>(&self.root, &key, &value));
+        }
+
+        for w in &self.witnesses {
+            if let Witness::StateProof(s) = w {
+                anyhow::ensure!(self
+                    .proofs
+                    .iter()
+                    .any(|o| o.domain == s.domain && o.root == s.root && o.payload == s.payload));
+            }
+        }
+
+        Ok(ValidatedWitnesses {
+            root: self.root,
+            witnesses: self.witnesses,
+        })
+    }
+}
+
+/// Co-processor validated witnesses.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct ValidatedWitnesses {
+    /// Co-processor historical commitments root.
+    pub root: Hash,
+
+    /// Witness data for the program.
+    pub witnesses: Vec<Witness>,
+}
 
 /// A zkVM definition.
-pub trait ZkVm: Sized {
+pub trait ZkVm: Clone + Sized {
+    /// Friendly hasher of the zkVM.
+    type Hasher: Hasher;
+
     /// Prove a given program.
     ///
     /// ## Arguments
@@ -11,15 +83,14 @@ pub trait ZkVm: Sized {
     /// - `ctx`: Execution context to fetch the library bytes from.
     /// - `program`: Program unique identifier.
     /// - `witnesses`: Circuit arguments.
-    fn prove<H, D, M>(
+    fn prove<D, M>(
         &self,
-        ctx: &ExecutionContext<H, D, M, Self>,
-        witnesses: Vec<Witness>,
+        ctx: &ExecutionContext<Self::Hasher, D, M, Self>,
+        w: WitnessCoprocessor,
     ) -> anyhow::Result<ProvenProgram>
     where
-        H: Hasher,
         D: DataBackend,
-        M: Vm<H, D, Self>;
+        M: Vm<Self::Hasher, D, Self>;
 
     /// Returns the verifying key for the given program.
     ///
@@ -27,14 +98,13 @@ pub trait ZkVm: Sized {
     ///
     /// - `ctx`: Execution context to fetch the library bytes from.
     /// - `program`: Program unique identifier.
-    fn verifying_key<H, D, M>(
+    fn verifying_key<D, M>(
         &self,
-        ctx: &ExecutionContext<H, D, M, Self>,
+        ctx: &ExecutionContext<Self::Hasher, D, M, Self>,
     ) -> anyhow::Result<Vec<u8>>
     where
-        H: Hasher,
         D: DataBackend,
-        M: Vm<H, D, Self>;
+        M: Vm<Self::Hasher, D, Self>;
 
     /// A notification that the program has been updated.
     fn updated(&self, program: &Hash);

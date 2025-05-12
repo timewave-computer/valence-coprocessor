@@ -149,10 +149,6 @@ where
             .map(|o| o.try_into().unwrap_or_default()))
     }
 
-    pub(super) fn get_key_data(&self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
-        self.d.get(Self::PREFIX_DATA, key)
-    }
-
     pub(super) fn remove_key_data(&self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
         self.d.remove(Self::PREFIX_DATA, key)
     }
@@ -163,13 +159,5 @@ where
         data: &[u8],
     ) -> anyhow::Result<Option<Vec<u8>>> {
         self.d.set(Self::PREFIX_DATA, key, data)
-    }
-
-    pub(super) fn insert_key_root(
-        &self,
-        key: &Hash,
-        root: &Hash,
-    ) -> anyhow::Result<Option<Vec<u8>>> {
-        self.d.set(Self::PREFIX_ROOT, key, root)
     }
 }

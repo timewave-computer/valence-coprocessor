@@ -83,9 +83,8 @@ sequenceDiagram
 fn run() -> anyhow::Result<()> {
     use valence_coprocessor::MemorySmt;
 
-    let context = "foo";
     let key = b"bar";
-    let data = b"baz";
+    let data = b"baz".to_vec();
 
     // creates a new instance of the backend
     let mut tree = MemorySmt::default();
@@ -93,14 +92,17 @@ fn run() -> anyhow::Result<()> {
     // computes an empty root for inclusion
     let root = MemorySmt::empty_tree_root();
 
+    // computes the SMT key from the data
+    let key = MemorySmt::key(key);
+
     // appends the data into the tree, returning its new Merkle root
-    let root = tree.insert(root, context, key, data.to_vec())?;
+    let root = tree.insert(root, &key, &data)?;
 
     // generates a Merkle opening proof
-    let proof = tree.get_opening(context, root, data)?.unwrap();
+    let proof = tree.get_opening(root, &key)?.unwrap();
 
     // asserts that the data opens to the provided root
-    assert!(MemorySmt::verify(context, &root, &proof));
+    assert!(MemorySmt::verify(&proof, &root, &key, &data));
 
     Ok(())
 }

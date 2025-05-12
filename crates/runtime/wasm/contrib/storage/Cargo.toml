@@ -5,15 +5,9 @@ license = "Apache-2.0"
 version = "0.1.0"
 
 [dependencies]
-base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
-serde_json = { version = "1.0.140", default-features = false, features = [
-  "alloc",
-] }
-valence-coprocessor-wasm = { path = "../../", default-features = false, features = [
-  "abi-handlers",
-] }
+base64.workspace = true
+serde_json.workspace = true
+valence-coprocessor-wasm.workspace = true
 
 [lib]
 crate-type = ["cdylib"]
-
-[workspace]

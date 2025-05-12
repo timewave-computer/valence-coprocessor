@@ -5,7 +5,7 @@ pub const HASH_LEN: usize = 32;
 pub type Hash = [u8; HASH_LEN];
 
 /// The hasher high-level definition.
-pub trait Hasher {
+pub trait Hasher: Clone {
     /// Uses the implementation of the hash function to create a key under a constant context.
     ///
     /// This is useful to emulate namespace within a cryptographic space.
@@ -23,6 +23,7 @@ pub trait Hasher {
 }
 
 /// A blake3 hasher implementation for the Valence protocol.
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Blake3Hasher;
 
 impl Blake3Hasher {

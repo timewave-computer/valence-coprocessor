@@ -1,9 +1,6 @@
-use core::time;
-
 use msgpacker::Packable;
-use reqwest::blocking::Client;
 use serde_json::Value;
-use valence_coprocessor::{DataBackend, FileSystem, Hasher, ZkVm};
+use valence_coprocessor::{utils, DataBackend, FileSystem, Hasher, ZkVm};
 use wasmtime::{Caller, Extern, Memory};
 
 use super::Runtime;
@@ -24,16 +21,9 @@ pub enum ReturnCodes {
     Serialization = -10,
     JsonValue = -11,
     StateProof = -12,
-    HttpMethod = -13,
-    HttpBasicAuth = -14,
-    HttpBearer = -15,
-    HttpBody = -16,
-    HttpHeader = -17,
-    HttpClient = -18,
-    HttpResponseJson = -19,
-    HttpResponse = -20,
-    LatestBlock = -21,
-    LibraryStorage = -22,
+    Http = -13,
+    LatestBlock = -14,
+    LibraryStorage = -15,
 }
 
 /// Resolves a panic.
@@ -41,7 +31,7 @@ pub fn panic<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32)
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     if let Some(Extern::Memory(mem)) = caller.get_export("memory") {
         let capacity = mem.size(&caller) as usize * mem.page_size(&caller) as usize;
@@ -71,7 +61,7 @@ pub fn args<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -91,7 +81,7 @@ pub fn ret<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) ->
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -116,7 +106,7 @@ pub fn get_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -149,7 +139,7 @@ pub fn get_storage_file<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -177,7 +167,7 @@ pub fn set_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len:
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -208,7 +198,7 @@ pub fn set_storage_file<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -241,7 +231,7 @@ pub fn get_raw_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) 
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -264,7 +254,7 @@ pub fn set_raw_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, 
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -288,7 +278,7 @@ pub fn get_library<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -298,39 +288,6 @@ where
     let library = *caller.data().ctx.library();
 
     match write_buffer(&mut caller, &mem, ptr, &library) {
-        Ok(len) => len,
-        Err(e) => e,
-    }
-}
-
-/// Get a domain proof.
-pub fn get_domain_proof<H, D, Z>(
-    mut caller: Caller<Runtime<H, D, Z>>,
-    domain_ptr: u32,
-    domain_len: u32,
-    ptr: u32,
-) -> i32
-where
-    H: Hasher,
-    D: DataBackend,
-    Z: ZkVm,
-{
-    let mem = match caller.get_export("memory") {
-        Some(Extern::Memory(mem)) => mem,
-        _ => return ReturnCodes::MemoryExport as i32,
-    };
-
-    let domain = match read_string(&mut caller, &mem, domain_ptr, domain_len) {
-        Ok(d) => d,
-        Err(e) => return e,
-    };
-
-    let opening = match caller.data().ctx.get_domain_proof(&domain) {
-        Ok(o) => o,
-        Err(_) => return ReturnCodes::DomainProof as i32,
-    };
-
-    match serialize(&mut caller, &mem, ptr, &opening) {
         Ok(len) => len,
         Err(e) => e,
     }
@@ -346,7 +303,7 @@ pub fn get_latest_block<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -381,7 +338,7 @@ pub fn get_state_proof<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -403,7 +360,7 @@ where
         Err(_) => return ReturnCodes::StateProof as i32,
     };
 
-    match write_buffer(&mut caller, &mem, ptr, &proof) {
+    match serialize(&mut caller, &mem, ptr, &proof) {
         Ok(len) => len,
         Err(e) => e,
     }
@@ -419,7 +376,7 @@ pub fn http<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -431,14 +388,14 @@ where
         Err(e) => return e,
     };
 
-    let ret = match http_host(&args) {
+    let ret = match utils::http(&args) {
         Ok(r) => r,
-        Err(e) => return e,
+        Err(_) => return ReturnCodes::Http as i32,
     };
 
     let ret = match serde_json::to_vec(&ret) {
         Ok(r) => r,
-        Err(_) => return ReturnCodes::HttpResponse as i32,
+        Err(_) => return ReturnCodes::Http as i32,
     };
 
     match write_buffer(&mut caller, &mem, ptr, &ret) {
@@ -447,151 +404,12 @@ where
     }
 }
 
-/// Perform a HTTP request (host version).
-pub fn http_host(args: &Value) -> Result<Value, i32> {
-    let url = match args.get("url").and_then(Value::as_str) {
-        Some(u) => u,
-        None => return Err(ReturnCodes::HttpMethod as i32),
-    };
-
-    let method = match args.get("method").and_then(Value::as_str) {
-        Some(m) => m.to_lowercase(),
-        None => return Err(ReturnCodes::HttpMethod as i32),
-    };
-
-    let mut client = match method.as_str() {
-        "delete" => Client::new().delete(url),
-        "get" => Client::new().get(url),
-        "head" => Client::new().head(url),
-        "patch" => Client::new().patch(url),
-        "post" => Client::new().post(url),
-        "put" => Client::new().put(url),
-        _ => return Err(ReturnCodes::HttpMethod as i32),
-    };
-
-    client = client.timeout(time::Duration::from_secs(5));
-
-    if let Some(a) = args.get("basic_auth") {
-        let username = match a.get("username").and_then(Value::as_str) {
-            Some(u) => u,
-            None => return Err(ReturnCodes::HttpBasicAuth as i32),
-        };
-
-        let password = match a.get("password") {
-            Some(Value::String(p)) => Some(p),
-            None => None,
-            _ => return Err(ReturnCodes::HttpBasicAuth as i32),
-        };
-
-        client = client.basic_auth(username, password);
-    }
-
-    match args.get("bearer") {
-        Some(Value::String(b)) => client = client.bearer_auth(b),
-        None => (),
-        _ => return Err(ReturnCodes::HttpBearer as i32),
-    }
-
-    match args.get("body") {
-        Some(Value::String(b)) => client = client.body(b.clone()),
-        Some(Value::Array(b)) => {
-            let b: Vec<u8> = b
-                .iter()
-                .map(|b| {
-                    b.as_u64()
-                        .map(|b| b as u8)
-                        .ok_or(ReturnCodes::HttpBody as i32)
-                })
-                .collect::<Result<Vec<u8>, i32>>()?;
-
-            client = client.body(b);
-        }
-        None => (),
-        _ => return Err(ReturnCodes::HttpBody as i32),
-    }
-
-    match args.get("headers") {
-        Some(Value::Object(h)) => {
-            for (k, v) in h.iter() {
-                match v.as_str() {
-                    Some(v) => client = client.header(k, v),
-                    None => return Err(ReturnCodes::HttpHeader as i32),
-                }
-            }
-        }
-        None => (),
-        _ => return Err(ReturnCodes::HttpHeader as i32),
-    }
-
-    if let Some(j) = args.get("json") {
-        client = client.json(j);
-    }
-
-    match args.get("query") {
-        Some(Value::Object(h)) => {
-            let mut q = Vec::with_capacity(h.len());
-
-            for (k, v) in h.iter() {
-                match v.as_str() {
-                    Some(v) => q.push((k, v)),
-                    None => return Err(ReturnCodes::HttpHeader as i32),
-                }
-            }
-
-            client = client.query(&q);
-        }
-        None => (),
-        _ => return Err(ReturnCodes::HttpHeader as i32),
-    }
-
-    let ret = match client.send() {
-        Ok(r) => r,
-        Err(_) => return Err(ReturnCodes::HttpClient as i32),
-    };
-
-    let status = ret.status().as_u16();
-    let headers: serde_json::Map<String, Value> = ret
-        .headers()
-        .iter()
-        .filter_map(|(k, v)| v.to_str().map(|v| (k.to_string(), v.to_string())).ok())
-        .map(|(k, v)| (k, Value::String(v)))
-        .collect();
-
-    let body: Value = match args
-        .get("response")
-        .and_then(Value::as_str)
-        .map(str::to_lowercase)
-    {
-        Some(v) if v.as_str() == "json" => match ret.json() {
-            Ok(j) => j,
-            Err(_) => return Err(ReturnCodes::HttpResponseJson as i32),
-        },
-        Some(v) if v.as_str() == "text" => match ret.text() {
-            Ok(j) => Value::String(j),
-            Err(_) => return Err(ReturnCodes::HttpResponseJson as i32),
-        },
-        _ => match ret.bytes() {
-            Ok(b) => match serde_json::to_value(b.to_vec()) {
-                Ok(b) => b,
-                Err(_) => return Err(ReturnCodes::HttpResponseJson as i32),
-            },
-            Err(_) => return Err(ReturnCodes::HttpResponseJson as i32),
-        },
-    };
-
-    Ok(serde_json::json!({
-        "status": status,
-        "headers": headers,
-        "body": body,
-    }))
-}
-
 /// Logs a string.
 pub fn log<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -617,7 +435,7 @@ fn read_buffer<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let capacity = mem.data_size(&caller);
     let capacity = capacity.saturating_sub(ptr as usize);
@@ -644,7 +462,7 @@ fn read_string<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     read_buffer(caller, mem, ptr, len)
         .and_then(|b| String::from_utf8(b).map_err(|_| ReturnCodes::StringUtf8 as i32))
@@ -659,7 +477,7 @@ fn read_json<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     read_buffer(caller, mem, ptr, len)
         .and_then(|b| serde_json::from_slice(&b).map_err(|_| ReturnCodes::JsonValue as i32))
@@ -674,7 +492,7 @@ fn write_buffer<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     let capacity = mem.data_size(&caller);
     let capacity = capacity.saturating_sub(ptr as usize);
@@ -698,7 +516,7 @@ fn serialize<H, D, Z, T>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
     T: Packable,
 {
     let bytes = msgpacker::pack_to_vec(data);

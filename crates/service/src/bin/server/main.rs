@@ -3,8 +3,10 @@ use poem_openapi::OpenApiService;
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 use valence_coprocessor::Registry;
 use valence_coprocessor_redis::RedisBackend;
-use valence_coprocessor_service::{api::Api, data::ServiceBackend, Config, ValenceWasm};
-use valence_coprocessor_sp1::Sp1ZkVm;
+use valence_coprocessor_service::{
+    api::Api, data::ServiceBackend, worker::Pool, Config, Historical, ValenceWasm,
+};
+use valence_coprocessor_sp1::{Mode, Sp1ZkVm};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -15,6 +17,8 @@ async fn main() -> anyhow::Result<()> {
         .with(filter_layer)
         .with(fmt_layer)
         .init();
+
+    tracing::info!("loading config file...");
 
     let (path, config) = Config::create_or_read_default()?;
 
@@ -28,9 +32,17 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("service backend set to `{}`...", data);
 
     let registry = Registry::from(data.clone());
-    let module = ValenceWasm::new(config.module_cache_capacity)?;
-    let mode = valence_coprocessor_sp1::Mode::try_from(config.zkvm_mode.as_str())?;
+    let vm = ValenceWasm::new(config.module_cache_capacity)?;
+    let mode = Mode::try_from(config.zkvm_mode.as_str())?;
     let zkvm = Sp1ZkVm::new(mode, config.zkvm_cache_capacity)?;
+
+    tracing::info!("initiating historical tree...");
+
+    let historical = Historical::load(data, vm.clone(), zkvm.clone())?;
+
+    tracing::info!("initiating pool...");
+
+    let pool = Pool::new(historical.clone()).run();
 
     tracing::info!("registry loaded...");
 
@@ -41,9 +53,10 @@ async fn main() -> anyhow::Result<()> {
         .nest("/", ui)
         .nest("/api", api_service)
         .data(registry)
-        .data(data)
-        .data(module)
-        .data(zkvm);
+        .data(vm)
+        .data(zkvm)
+        .data(historical)
+        .data(pool);
 
     tracing::info!("API loaded, listening on `{}`...", &config.socket);
 

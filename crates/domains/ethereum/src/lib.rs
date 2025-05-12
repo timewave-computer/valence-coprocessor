@@ -3,7 +3,6 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use valence_coprocessor::Hash;
 
 #[cfg(feature = "circuit")]
 mod circuit;
@@ -20,9 +19,6 @@ pub struct Ethereum;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "msgpacker", derive(msgpacker::MsgPacker))]
 pub struct EthereumStateProof {
-    /// The root of the opening.
-    pub root: Hash,
-
     /// The Merkle opening to the root
     pub opening: Vec<Vec<u8>>,
 
@@ -38,10 +34,9 @@ pub struct EthereumStateProof {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "msgpacker", derive(msgpacker::MsgPacker))]
 pub struct EthereumCircuitOutput {
-    /// Root of the key-value opening.
-    pub root: Hash,
     /// Leaf key.
     pub key: Vec<u8>,
+
     /// Leaf value.
     pub value: Vec<u8>,
 }

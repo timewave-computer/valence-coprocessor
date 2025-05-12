@@ -4,7 +4,10 @@
 use alloc::vec::Vec;
 
 use serde_json::Value;
-use valence_coprocessor::{FileSystem, Hash, SmtOpening, ValidatedBlock, Witness};
+use valence_coprocessor::{FileSystem, Hash, StateProof, ValidatedDomainBlock, Witness};
+
+#[cfg(not(feature = "std"))]
+use msgpacker::Unpackable as _;
 
 pub use crate::__log as log;
 pub use alloc::format;
@@ -22,7 +25,6 @@ mod host {
         pub(super) fn get_raw_storage(ptr: u32) -> i32;
         pub(super) fn set_raw_storage(ptr: u32, len: u32) -> i32;
         pub(super) fn get_library(ptr: u32) -> i32;
-        pub(super) fn get_domain_proof(domain_ptr: u32, domain_len: u32, ptr: u32) -> i32;
         pub(super) fn get_latest_block(domain_ptr: u32, domain_len: u32, ptr: u32) -> i32;
         pub(super) fn get_state_proof(
             domain_ptr: u32,
@@ -40,7 +42,7 @@ mod host {
 pub(crate) mod use_std {
     use std::sync::{LazyLock, Mutex};
 
-    use valence_coprocessor::File;
+    use valence_coprocessor::{File, StateProof};
 
     use super::*;
 
@@ -126,21 +128,16 @@ pub(crate) mod use_std {
         Ok(RUNTIME.lock().unwrap().library)
     }
 
-    pub fn get_domain_proof(_domain: &str) -> anyhow::Result<Option<SmtOpening>> {
+    pub fn get_latest_block(_domain: &str) -> anyhow::Result<Option<ValidatedDomainBlock>> {
         todo!()
     }
 
-    pub fn get_latest_block(_domain: &str) -> anyhow::Result<Option<ValidatedBlock>> {
-        todo!()
-    }
-
-    pub fn get_state_proof(_domain: &str, _args: &Value) -> anyhow::Result<Vec<u8>> {
+    pub fn get_state_proof(_domain: &str, _args: &Value) -> anyhow::Result<StateProof> {
         todo!()
     }
 
     pub fn http(args: &Value) -> anyhow::Result<Value> {
-        crate::host::valence::http_host(args)
-            .map_err(|e| anyhow::anyhow!("error computing request: {e}"))
+        valence_coprocessor::utils::http(args)
     }
 
     pub fn __value_to_context_log(log: &str) -> anyhow::Result<()> {
@@ -323,39 +320,13 @@ pub fn get_library() -> anyhow::Result<Hash> {
     }
 }
 
-/// Get the library identifier of the current context.
-pub fn get_domain_proof(domain: &str) -> anyhow::Result<Option<SmtOpening>> {
-    #[cfg(feature = "std")]
-    return use_std::get_domain_proof(domain);
-
-    #[cfg(not(feature = "std"))]
-    unsafe {
-        use msgpacker::Unpackable as _;
-
-        let domain_ptr = domain.as_ptr() as u32;
-        let domain_len = domain.len() as u32;
-        let ptr = BUF.as_ptr() as u32;
-
-        let len = host::get_domain_proof(domain_ptr, domain_len, ptr);
-
-        anyhow::ensure!(len >= 0, "failed to read domain proof");
-        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
-
-        Option::unpack(&BUF[..len as usize])
-            .map(|(_, o)| o)
-            .map_err(|e| anyhow::anyhow!("error unpacking domain proof: {e}"))
-    }
-}
-
 /// Returns the last included block for the provided domain.
-pub fn get_latest_block(domain: &str) -> anyhow::Result<Option<ValidatedBlock>> {
+pub fn get_latest_block(domain: &str) -> anyhow::Result<Option<ValidatedDomainBlock>> {
     #[cfg(feature = "std")]
     return use_std::get_latest_block(domain);
 
     #[cfg(not(feature = "std"))]
     unsafe {
-        use msgpacker::Unpackable as _;
-
         let domain_ptr = domain.as_ptr() as u32;
         let domain_len = domain.len() as u32;
         let ptr = BUF.as_ptr() as u32;
@@ -372,7 +343,7 @@ pub fn get_latest_block(domain: &str) -> anyhow::Result<Option<ValidatedBlock>> 
 }
 
 /// Get the library identifier of the current context.
-pub fn get_state_proof(domain: &str, args: &Value) -> anyhow::Result<Vec<u8>> {
+pub fn get_state_proof(domain: &str, args: &Value) -> anyhow::Result<StateProof> {
     #[cfg(feature = "std")]
     return use_std::get_state_proof(domain, args);
 
@@ -392,7 +363,9 @@ pub fn get_state_proof(domain: &str, args: &Value) -> anyhow::Result<Vec<u8>> {
         anyhow::ensure!(len >= 0, "failed to read state proof");
         anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
 
-        Ok(BUF[..len as usize].to_vec())
+        StateProof::unpack(&BUF[..len as usize])
+            .map(|(_, o)| o)
+            .map_err(|e| anyhow::anyhow!("error unpacking state proof: {e}"))
     }
 }
 

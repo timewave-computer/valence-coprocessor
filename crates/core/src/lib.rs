@@ -13,6 +13,12 @@ mod smt;
 mod vm;
 mod zkvm;
 
+#[cfg(feature = "std")]
+mod historical;
+
+#[cfg(feature = "std")]
+pub mod utils;
+
 #[cfg(feature = "mocks")]
 pub mod mocks;
 
@@ -24,3 +30,6 @@ pub use registry::*;
 pub use smt::*;
 pub use vm::*;
 pub use zkvm::*;
+
+#[cfg(feature = "std")]
+pub use historical::*;

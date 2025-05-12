@@ -20,6 +20,8 @@ impl Config {
             .ok_or_else(|| anyhow::anyhow!("failed to compute config dir"))?
             .join(env!("CARGO_PKG_NAME"));
 
+        fs::create_dir_all(&config_dir).ok();
+
         let config = config_dir.join("config.toml");
         if config.exists() && !config.is_file() {
             anyhow::bail!(

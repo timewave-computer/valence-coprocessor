@@ -1,0 +1,27 @@
+[workspace]
+members = [
+  "domain",
+  "hello",
+  "http",
+  "log",
+  "program",
+  "raw_storage",
+  "storage",
+]
+resolver = "2"
+
+[workspace.package]
+authors = ["Timewave Labs"]
+edition = "2021"
+license = "Apache-2.0"
+version = "0.1.0"
+repository = "https://github.com/timewave-computer/valence-coprocessor"
+
+[workspace.dependencies]
+base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0.140", default-features = false, features = [
+  "alloc",
+] }
+valence-coprocessor-wasm = { path = "../", default-features = false, features = [
+  "abi-handlers",
+] }

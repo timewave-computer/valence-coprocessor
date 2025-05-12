@@ -1278,7 +1278,8 @@ dependencies = [
 [[package]]
 name = "buf-fs"
 version = "0.1.2"
-source = "git+https://github.com/vlopes11/buf-fs.git?rev=349ad8c67ee049fa249b32d37dae01e9d1cd2bcb#349ad8c67ee049fa249b32d37dae01e9d1cd2bcb"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5180c938efd7f874939eaaf27e7e7348c881c3e539938b079a995e8e50ec0a86"
 dependencies = [
  "anyhow",
  "embedded-sdmmc",
@@ -2502,6 +2503,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "flume"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da0e4dd2a88388a1f4ccc7c9ce104604dab68d9f408dc34cd45823d5a9069095"
+dependencies = [
+ "futures-core",
+ "futures-sink",
+ "nanorand",
+ "spin",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3695,6 +3708,15 @@ dependencies = [
  "spin",
  "tokio",
  "version_check",
+]
+
+[[package]]
+name = "nanorand"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a51313c5820b0b02bd422f4b44776fbf47961755c74ce64afc73bfad10226c3"
+dependencies = [
+ "getrandom 0.2.15",
 ]
 
 [[package]]
@@ -5030,8 +5052,9 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "relative-path"
-version = "1.9.3"
-source = "git+https://github.com/udoprog/relative-path.git?rev=1e16af5730d7115d4d4774d763e9956ee4036d32#1e16af5730d7115d4d4774d763e9956ee4036d32"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bca40a312222d8ba74837cb474edef44b37f561da5f773981007a10bbaa992b0"
 dependencies = [
  "serde",
 ]
@@ -6234,6 +6257,9 @@ name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+dependencies = [
+ "lock_api",
+]
 
 [[package]]
 name = "spki"
@@ -7036,7 +7062,7 @@ checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -7045,32 +7071,31 @@ dependencies = [
  "hashbrown 0.15.2",
  "msgpacker",
  "proptest",
+ "reqwest",
  "serde",
  "serde_json",
  "tracing",
+ "valence-coprocessor",
  "zerocopy 0.8.23",
 ]
 
 [[package]]
 name = "valence-coprocessor-ethereum"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
- "bincode",
  "common",
  "ethereum",
  "msgpacker",
  "serde",
  "serde_json",
- "sp1-sdk",
  "valence-coprocessor",
- "valence-coprocessor-sp1",
  "valence-coprocessor-wasm",
 ]
 
 [[package]]
 name = "valence-coprocessor-redis"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "r2d2",
@@ -7080,11 +7105,12 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-service"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
  "dirs 6.0.0",
+ "flume",
  "hex",
  "poem",
  "poem-openapi",
@@ -7102,7 +7128,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-sp1"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "ark-bn254 0.5.0",
@@ -7112,6 +7138,8 @@ dependencies = [
  "ark-serialize 0.5.0",
  "bincode",
  "lru 0.14.0",
+ "serde",
+ "serde_json",
  "sha2 0.10.8 (git+https://github.com/sp1-patches/RustCrypto-hashes?tag=patch-sha2-0.10.8-sp1-4.0.0)",
  "sp1-sdk",
  "sp1-verifier",
@@ -7121,7 +7149,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -7129,7 +7157,6 @@ dependencies = [
  "hashbrown 0.15.2",
  "lru 0.14.0",
  "msgpacker",
- "reqwest",
  "serde",
  "serde_json",
  "tiny_http",

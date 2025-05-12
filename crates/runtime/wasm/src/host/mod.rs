@@ -13,7 +13,7 @@ pub struct Runtime<H, D, Z>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     pub args: Value,
     pub ret: Option<Value>,
@@ -26,7 +26,7 @@ impl<H, D, Z> Runtime<H, D, Z>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     /// Creates a new runtime with the underlying context.
     pub fn new(ctx: ExecutionContext<H, D, ValenceWasm<H, D, Z>, Z>, args: Value) -> Self {
@@ -45,7 +45,7 @@ pub struct ValenceWasm<H, D, Z>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     engine: Engine,
     linker: Linker<Runtime<H, D, Z>>,
@@ -56,7 +56,7 @@ impl<H, D, Z> ValenceWasm<H, D, Z>
 where
     H: Hasher + 'static,
     D: DataBackend + 'static,
-    Z: ZkVm + 'static,
+    Z: ZkVm<Hasher = H> + 'static,
 {
     /// Creates a new instance of the VM.
     pub fn new(capacity: usize) -> anyhow::Result<Self> {
@@ -73,7 +73,6 @@ where
         linker.func_wrap(HOST_LIB, "get_raw_storage", valence::get_raw_storage)?;
         linker.func_wrap(HOST_LIB, "set_raw_storage", valence::set_raw_storage)?;
         linker.func_wrap(HOST_LIB, "get_library", valence::get_library)?;
-        linker.func_wrap(HOST_LIB, "get_domain_proof", valence::get_domain_proof)?;
         linker.func_wrap(HOST_LIB, "get_latest_block", valence::get_latest_block)?;
         linker.func_wrap(HOST_LIB, "get_state_proof", valence::get_state_proof)?;
         linker.func_wrap(HOST_LIB, "http", valence::http)?;
@@ -96,7 +95,7 @@ impl<H, D, Z> Vm<H, D, Z> for ValenceWasm<H, D, Z>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     fn execute(
         &self,
@@ -105,10 +104,7 @@ where
         f: &str,
         args: Value,
     ) -> anyhow::Result<Value> {
-        tracing::debug!(
-            "executing library {lib:x?}, {f}({})",
-            serde_json::to_string(&args)?
-        );
+        tracing::debug!("executing library {lib:x?}, {f}({:?})", args);
 
         let runtime = Runtime {
             args,
@@ -137,9 +133,9 @@ where
             .get_typed_func::<(), ()>(&mut store, f)?
             .call(&mut store, ())?;
 
-        tracing::debug!("function called...");
-
         let Runtime { ret, log, .. } = store.into_data();
+
+        tracing::debug!("function executed; ret `{ret:?}`...");
 
         ctx.extend_log(log)?;
 

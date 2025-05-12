@@ -1,7 +1,7 @@
 use std::{env, fs, path::PathBuf, process::Command};
 
 use valence_coprocessor::{
-    mocks::MockVm, Blake3Context, Blake3Hasher, MemoryBackend, ProgramData, Registry, Witness,
+    mocks::MockVm, Historical, MemoryBackend, ProgramData, Registry, Witness,
 };
 use valence_coprocessor_sp1::{Mode, Sp1ZkVm};
 
@@ -10,24 +10,22 @@ fn get_hello_bytes() -> Vec<u8> {
     let dir = PathBuf::from(dir).join("contrib").join("hello");
     let path = dir.join("target").join("hello.elf");
 
-    if env::var("ZKVM_REBUILD").is_ok() || !path.is_file() {
-        let program = dir.join("program");
-        let script = dir.join("script");
+    let program = dir.join("program");
+    let script = dir.join("script");
 
-        assert!(Command::new("cargo")
-            .current_dir(&program)
-            .args(["prove", "build"])
-            .status()
-            .unwrap()
-            .success());
+    assert!(Command::new("cargo")
+        .current_dir(&program)
+        .args(["prove", "build"])
+        .status()
+        .unwrap()
+        .success());
 
-        assert!(Command::new("cargo")
-            .current_dir(&script)
-            .arg("run")
-            .status()
-            .unwrap()
-            .success());
-    }
+    assert!(Command::new("cargo")
+        .current_dir(&script)
+        .arg("run")
+        .status()
+        .unwrap()
+        .success());
 
     fs::read(path).unwrap()
 }
@@ -44,16 +42,18 @@ fn deploy_hello() {
     let vm = MockVm;
     let zkvm = Sp1ZkVm::new(mode, capacity).unwrap();
 
-    let program = ProgramData::default().with_circuit(hello);
-    let program = registry
-        .register_program::<_, Blake3Hasher, _>(&vm, &zkvm, program)
-        .unwrap();
+    let library = ProgramData::default().with_circuit(hello);
+    let library = registry.register_program(&vm, &zkvm, library).unwrap();
+    let ctx = Historical::load(data, vm, zkvm.clone())
+        .unwrap()
+        .context(library);
 
-    let ctx = Blake3Context::init(program, data, MockVm, zkvm);
+    let witness = String::from("Valence");
+    let witness = Witness::Data(witness.as_bytes().to_vec());
+    let witness = serde_json::to_value(vec![witness]).unwrap();
 
-    let witnesses = vec![Witness::Data(b"Valence".to_vec())];
-    let proof = ctx.execute_proof(witnesses).unwrap();
-    let output = String::from_utf8(proof.outputs).unwrap();
+    let proof = ctx.get_program_proof(witness).unwrap();
+    let output: String = zkvm.outputs(&proof).unwrap();
 
     assert_eq!(output, "Hello, Valence!");
 }

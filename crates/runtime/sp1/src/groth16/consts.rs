@@ -229,13 +229,13 @@ mod debug_helpers {
         println!("Affine::new_unchecked(Fp(BigInt([");
 
         for n in g1.x.0 .0 {
-            println!("{:#x},", n);
+            println!("{n:#x},");
         }
 
         println!("]),PhantomData,),Fp(BigInt([");
 
         for n in g1.y.0 .0 {
-            println!("{:#x},", n);
+            println!("{n:#x},");
         }
 
         println!("]),PhantomData,),);");
@@ -246,25 +246,25 @@ mod debug_helpers {
         println!("Affine::new_unchecked(QuadExtField {{ c0: Fp(BigInt([");
 
         for n in g2.x.c0.0 .0 {
-            println!("{:#x},", n);
+            println!("{n:#x},");
         }
 
         println!("]),PhantomData,),c1: Fp(BigInt([");
 
         for n in g2.x.c1.0 .0 {
-            println!("{:#x},", n);
+            println!("{n:#x},");
         }
 
         println!("]),PhantomData,),}},QuadExtField {{ c0: Fp(BigInt([");
 
         for n in g2.y.c0.0 .0 {
-            println!("{:#x},", n);
+            println!("{n:#x},");
         }
 
         println!("]),PhantomData,),c1: Fp(BigInt([");
 
         for n in g2.y.c1.0 .0 {
-            println!("{:#x},", n);
+            println!("{n:#x},");
         }
 
         println!("]),PhantomData,),}},);");

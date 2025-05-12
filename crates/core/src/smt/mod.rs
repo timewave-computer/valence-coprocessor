@@ -40,9 +40,6 @@ where
     /// Prefix used for key nodes.
     pub const PREFIX_KEY: &[u8] = b"smt-key";
 
-    /// Prefix used for leaf roots.
-    pub const PREFIX_ROOT: &[u8] = b"smt-root";
-
     /// Returns a stateless empty root to be used for newly allocated sparse Merkle trees.
     ///
     /// This is a cryptographic stateless computation and won't touch the data backend.
@@ -68,21 +65,7 @@ where
     }
 
     /// Computes a Merkle opening proof for the provided leaf to the root.
-    ///
-    /// The leaf is defined by the combination of the context and its data.
-    pub fn get_opening(
-        &self,
-        context: &str,
-        root: Hash,
-        key: &[u8],
-    ) -> anyhow::Result<Option<SmtOpening>> {
-        let key_raw = key.to_vec();
-        let key = H::key(context, key);
-        let data = match self.get_key_data(&key)? {
-            Some(d) => d,
-            None => return Ok(None),
-        };
-
+    pub fn get_opening(&self, root: Hash, key: &Hash) -> anyhow::Result<Option<Opening>> {
         let (mut i, mut j) = (0, 0);
         let mut leaf_node = root;
         let mut opening = Vec::with_capacity(HASH_LEN * 8);
@@ -117,27 +100,7 @@ where
 
         opening.reverse();
 
-        Ok(Some(SmtOpening {
-            key: key_raw,
-            data,
-            root,
-            opening: Opening::new(opening),
-        }))
-    }
-
-    /// Checks if a leaf with the given data exists in the tree at the specified root.
-    ///
-    /// Returns `true` if the leaf exists, `false` otherwise.
-    pub fn leaf_exists(&self, context: &str, root: Hash, data: &[u8]) -> anyhow::Result<bool> {
-        self.get_opening(context, root, data).map(|o| o.is_some())
-    }
-
-    /// Verifies a proof obtained via [Smt::get_opening].
-    pub fn verify(context: &str, root: &Hash, proof: &SmtOpening) -> bool {
-        let key = H::key(context, &proof.key);
-        let node = H::hash(&proof.data);
-
-        proof.verify::<H>(root, &key, &node)
+        Ok(Some(Opening::new(opening)))
     }
 
     /// Returns `true` if the provided node is associated with a leaf key.
@@ -145,34 +108,14 @@ where
         Ok(node == &Hash::default() || self.has_node_key(node)?)
     }
 
-    /// Returns the most recent tree root associated with the provided key.
-    pub fn get_key_root(&self, key: &Hash) -> anyhow::Result<Option<Hash>> {
-        self.d
-            .get(Self::PREFIX_ROOT, key)?
-            .map(|o| o.try_into())
-            .transpose()
-            .map_err(|_| anyhow::anyhow!("error converting bytes to hash"))
-    }
-
     /// Inserts a leaf into the tree.
-    ///
-    /// The leaf key will be computed given the context and data, and will have a collision
-    /// resistance up to [HASH_LEN] bytes.
-    pub fn insert(
-        &self,
-        root: Hash,
-        context: &str,
-        key: &[u8],
-        data: Vec<u8>,
-    ) -> anyhow::Result<Hash> {
+    pub fn insert(&self, root: Hash, key: &Hash, data: &[u8]) -> anyhow::Result<Hash> {
         let mut depth = 0;
 
-        let key = H::key(context, key);
-        let leaf = H::hash(&data);
+        let leaf = H::hash(data);
 
-        self.insert_key_root(&key, &root)?;
-        self.insert_key_data(&key, &data)?;
-        self.insert_node_key(&leaf, &key)?;
+        self.insert_key_data(key, data)?;
+        self.insert_node_key(&leaf, key)?;
 
         // childless node
         if root == Hash::default() {
@@ -189,7 +132,7 @@ where
             let i = depth / 8;
             let j = depth % 8;
 
-            if key == sibling_key {
+            if key == &sibling_key {
                 // key depleted; replace the value
                 return Ok(leaf);
             }
@@ -280,7 +223,7 @@ where
 
             // create a subtree to hold both the new leaf and the old leaf
             if let Some(sibling_key) = self.get_node_key(&node)? {
-                if sibling_key == key {
+                if &sibling_key == key {
                     break;
                 }
 
@@ -338,5 +281,17 @@ where
         }
 
         Ok(node)
+    }
+
+    /// A helper to compute the key from arbitrary bytes.
+    pub fn key<K: AsRef<[u8]>>(data: K) -> Hash {
+        H::hash(data.as_ref())
+    }
+
+    /// Verifies a Merkle opening generated via [`Smt::get_opening`].
+    pub fn verify(opening: &Opening, root: &Hash, key: &Hash, data: &[u8]) -> bool {
+        let value = H::hash(data);
+
+        opening.verify::<H>(root, key, &value)
     }
 }

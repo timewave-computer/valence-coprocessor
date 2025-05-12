@@ -15,13 +15,6 @@ valence-coprocessor-wasm = { path = "../../runtime/wasm", default-features = fal
 valence-zk-proofs = { git = "https://github.com/timewave-computer/zk-merkle-proofs.git", package = "common", rev = "f474311c62df0011b549b48ea515d0d45dd1a4cc", optional = true }
 valence-zk-proofs-ethereum = { git = "https://github.com/timewave-computer/zk-merkle-proofs.git", package = "ethereum", rev = "f474311c62df0011b549b48ea515d0d45dd1a4cc", optional = true }
 
-[dev-dependencies]
-bincode.workspace = true
-valence-coprocessor = { path = "../../core", features = ["mocks"] }
-valence-coprocessor-wasm.path = "../../runtime/wasm"
-valence-coprocessor-sp1.path = "../../runtime/sp1"
-sp1-sdk.workspace = true
-
 [features]
 default = ["circuit", "lib", "serde"]
 circuit = [
