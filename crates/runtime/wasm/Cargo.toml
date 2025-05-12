@@ -11,10 +11,6 @@ dlmalloc = { version = "0.2.8", optional = true, features = ["global"] }
 hashbrown = { workspace = true, optional = true }
 lru.workspace = true
 msgpacker.workspace = true
-reqwest = { version = "0.12.15", optional = true, features = [
-  "blocking",
-  "json",
-] }
 serde = { workspace = true, optional = true }
 serde_json.workspace = true
 tracing.workspace = true
@@ -34,7 +30,6 @@ std = [
   "anyhow/std",
   "hashbrown",
   "msgpacker/std",
-  "reqwest",
   "serde",
   "serde/std",
   "serde_json/std",

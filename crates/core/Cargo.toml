@@ -7,23 +7,25 @@ description = "The Valence co-processor definition"
 
 [dependencies]
 anyhow.workspace = true
+buf-fs.workspace = true
 base64.workspace = true
 hashbrown.workspace = true
 blake3.workspace = true
 msgpacker.workspace = true
-zerocopy = { version = "0.8.23", features = ["alloc", "derive"] }
+reqwest = { version = "0.12.15", optional = true, features = [
+  "blocking",
+  "json",
+] }
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
-
-# temporarily pointing to git until relative-path releases the fix on
-# https://github.com/udoprog/relative-path/issues/63
-buf-fs = { git = "https://github.com/vlopes11/buf-fs.git", rev = "349ad8c67ee049fa249b32d37dae01e9d1cd2bcb" }
+zerocopy = { version = "0.8.23", features = ["alloc", "derive"] }
 
 [dev-dependencies]
 proptest = "1.6.0"
+valence-coprocessor = { path = ".", features = ["mocks"] }
 
 [features]
 default = ["std"]
 mocks = []
-std = ["base64/std", "blake3/std", "serde/std"]
+std = ["base64/std", "blake3/std", "serde/std", "reqwest"]

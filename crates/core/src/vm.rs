@@ -3,11 +3,11 @@ use serde_json::Value;
 use crate::{DataBackend, ExecutionContext, Hash, Hasher, ZkVm};
 
 /// A library VM definition.
-pub trait Vm<H, D, Z>: Sized
+pub trait Vm<H, D, Z>: Clone + Sized
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     /// Execute a function in a library.
     ///

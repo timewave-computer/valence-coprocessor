@@ -72,29 +72,3 @@ impl FromIterator<Hash> for Opening {
         Self::new(iter.into_iter().collect())
     }
 }
-
-/// A postorder traversal Merkle opening proof that opens the data to a Merkle root.
-#[derive(
-    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
-)]
-pub struct SmtOpening {
-    /// Traversal key.
-    pub key: Vec<u8>,
-
-    /// Preimage of the leaf hash
-    pub data: Vec<u8>,
-
-    /// Final node of the opening.
-    pub root: Hash,
-
-    /// Postorder traversal siblings from leaf to root.
-    pub opening: Opening,
-}
-
-impl Deref for SmtOpening {
-    type Target = Opening;
-
-    fn deref(&self) -> &Self::Target {
-        &self.opening
-    }
-}

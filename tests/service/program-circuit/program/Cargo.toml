@@ -1,0 +1,10 @@
+[package]
+version = "0.1.0"
+name = "program-circuit"
+edition = "2021"
+
+[dependencies]
+valence-coprocessor.workspace = true
+valence-coprocessor-integrated-tests-domain.path = "/home/vlopes/dev/timewave/valence-coprocessor/tests/service/domain"
+valence-coprocessor-sp1.workspace = true
+sp1-zkvm = "4.2.0"

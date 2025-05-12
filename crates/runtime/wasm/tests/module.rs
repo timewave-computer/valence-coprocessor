@@ -1,19 +1,19 @@
 use std::{array, env, fs, path::PathBuf, process::Command, thread};
 
 use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
-use serde_json::{json, Value};
+use serde_json::json;
 use valence_coprocessor::{
-    mocks::MockZkVm, Blake3Context, DomainData, MemoryBackend, ProgramData, Registry,
-    ValidatedBlock,
+    mocks::MockZkVm, Blake3Historical, DomainData, Hash, MemoryBackend, ProgramData, Registry,
+    ValidatedBlock, ValidatedDomainBlock,
 };
 use valence_coprocessor_wasm::host::ValenceWasm;
 
 fn get_library_bytes(name: &str) -> Vec<u8> {
     let dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let dir = PathBuf::from(dir).join("contrib").join(name);
+    let dir = PathBuf::from(dir).join("contrib");
 
     assert!(Command::new("cargo")
-        .current_dir(&dir)
+        .current_dir(dir.join(name))
         .args(["build", "--target", "wasm32-unknown-unknown", "--release"])
         .status()
         .unwrap()
@@ -36,16 +36,16 @@ fn deploy_hello() {
 
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
-    let zkvm = MockZkVm;
+    let zkvm = MockZkVm::default();
 
     let library = ProgramData::default().with_lib(hello);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Context::init(library, data, vm, MockZkVm);
+    let ctx = Blake3Historical::load(data, vm, zkvm)
+        .unwrap()
+        .context(library);
 
-    let ret = ctx
-        .execute_lib(&library, "hello", json!({"name": "Valence"}))
-        .unwrap()["message"]
+    let ret = ctx.entrypoint(json!({"name": "Valence"})).unwrap()["message"]
         .as_str()
         .unwrap()
         .to_string();
@@ -61,26 +61,26 @@ fn deploy_storage() {
 
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
-    let zkvm = MockZkVm;
+    let zkvm = MockZkVm::default();
 
     let library = ProgramData::default().with_lib(storage);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Context::init(library, data, vm, MockZkVm);
+    let ctx = Blake3Historical::load(data, vm, zkvm)
+        .unwrap()
+        .context(library);
 
     let path = "/var/share/foo.bin";
     let contents = "Valence";
 
     assert!(ctx.get_storage_file(path).is_err());
 
-    ctx.execute_lib(&library, "set", json!({"path": path, "contents": contents}))
+    ctx.entrypoint(json!({"cmd": "set", "path": path, "contents": contents}))
         .unwrap();
 
     assert_eq!(ctx.get_storage_file(path).unwrap(), contents.as_bytes());
 
-    let ret = ctx
-        .execute_lib(&library, "get", json!({"path": path}))
-        .unwrap()["b64"]
+    let ret = ctx.entrypoint(json!({"cmd": "get", "path": path})).unwrap()["b64"]
         .as_str()
         .unwrap()
         .to_string();
@@ -94,12 +94,8 @@ fn deploy_storage() {
     let byte = 0xfa;
     let count = 8 * 1024 * 1024;
 
-    ctx.execute_lib(
-        &library,
-        "set_large",
-        json!({"path": path, "byte": byte, "count": count}),
-    )
-    .unwrap();
+    ctx.entrypoint(json!({"cmd": "set_large", "path": path, "byte": byte, "count": count}))
+        .unwrap();
 
     assert_eq!(ctx.get_storage_file(path).unwrap(), vec![byte; count]);
 }
@@ -112,17 +108,18 @@ fn deploy_raw_storage() {
 
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
-    let zkvm = MockZkVm;
+    let zkvm = MockZkVm::default();
 
     let library = ProgramData::default().with_lib(storage);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Context::init(library, data, vm, MockZkVm);
+    let ctx = Blake3Historical::load(data, vm, zkvm)
+        .unwrap()
+        .context(library);
 
     assert!(ctx.get_raw_storage().unwrap().is_none());
 
-    ctx.execute_lib(&library, "storage", json!({"name": "Valence"}))
-        .unwrap();
+    ctx.entrypoint(json!({"name": "Valence"})).unwrap();
 
     let storage = ctx.get_raw_storage().unwrap().unwrap();
 
@@ -137,15 +134,17 @@ fn deploy_program() {
 
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
-    let zkvm = MockZkVm;
+    let zkvm = MockZkVm::default();
 
     let library = ProgramData::default().with_lib(library);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Context::init(library, data, vm, MockZkVm);
+    let ctx = Blake3Historical::load(data, vm, zkvm)
+        .unwrap()
+        .context(library);
 
     let ret: Vec<_> = ctx
-        .execute_lib(&library, "program", json!({}))
+        .entrypoint(json!({}))
         .unwrap()
         .as_array()
         .unwrap()
@@ -178,22 +177,20 @@ fn deploy_http() {
 
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
-    let zkvm = MockZkVm;
+    let zkvm = MockZkVm::default();
 
     let library = ProgramData::default().with_lib(library);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Context::init(library, data, vm, MockZkVm);
+    let ctx = Blake3Historical::load(data, vm, zkvm)
+        .unwrap()
+        .context(library);
 
     let ret = ctx
-        .execute_lib(
-            &library,
-            "http",
-            json!({
-                "url": format!("http://127.0.0.1:{port}"),
-                "name": "Valence"
-            }),
-        )
+        .entrypoint(json!({
+            "url": format!("http://127.0.0.1:{port}"),
+            "name": "Valence"
+        }))
         .unwrap();
 
     let body = serde_json::from_value(ret["body"].clone()).unwrap();
@@ -210,15 +207,16 @@ fn deploy_log() {
 
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
-    let zkvm = MockZkVm;
+    let zkvm = MockZkVm::default();
 
     let library = ProgramData::default().with_lib(hello);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Context::init(library, data, vm, MockZkVm);
+    let ctx = Blake3Historical::load(data, vm, zkvm)
+        .unwrap()
+        .context(library);
 
-    ctx.execute_lib(&library, "log", json!({"name": "Valence"}))
-        .unwrap();
+    ctx.entrypoint(json!({"name": "Valence"})).unwrap();
 
     let mut log = ctx.get_log().unwrap();
 
@@ -228,36 +226,72 @@ fn deploy_log() {
 
 #[test]
 fn deploy_domain() {
-    let library = get_library_bytes("domain");
+    let domain = get_library_bytes("domain");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
+    let zkvm = MockZkVm::default();
 
     let name = "valence";
-    let domain = DomainData::new(name.into()).with_lib(library);
-    let library = registry.register_domain(&vm, domain).unwrap();
+    let library = DomainData::new(name.into()).with_lib(domain);
+    let library = registry.register_domain(&vm, library).unwrap();
+    let historical = Blake3Historical::load(data, vm, zkvm).unwrap();
 
-    let block = ValidatedBlock {
-        number: 238972,
-        root: array::from_fn(|i| i as u8),
-        payload: name.as_bytes().to_vec(),
-    };
-    let block_json = serde_json::to_value(&block).unwrap();
+    let ctx = historical.context(library);
 
-    let ctx = Blake3Context::init(library, data, vm, MockZkVm);
+    let block = ctx.entrypoint(json!({"domain": name})).unwrap();
+    let block: Option<ValidatedDomainBlock> = serde_json::from_value(block).unwrap();
 
-    ctx.add_domain_block(name, block_json).unwrap();
+    assert!(block.is_none());
 
-    let latest = ctx.get_latest_block(name).unwrap().unwrap();
+    let number = 5834794;
+    let root = array::from_fn(|i| i as u8);
+    let payload = b"some block payload";
+    let block = serde_json::to_value(ValidatedBlock {
+        number,
+        root,
+        payload: payload.to_vec(),
+    })
+    .unwrap();
 
-    assert_eq!(block, latest);
+    historical.add_domain_block(name, block).unwrap();
 
-    let ret = ctx
-        .execute_lib(&library, "get_block", Value::String(name.into()))
-        .unwrap();
-    let ret: ValidatedBlock = serde_json::from_value(ret).unwrap();
+    let ret = ctx.entrypoint(json!({"domain": name})).unwrap();
+    let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
+    let ret = ret.unwrap();
 
-    assert_eq!(ret, block);
+    assert_eq!(ret.number, number);
+    assert_eq!(ret.root, root);
+
+    let block = serde_json::to_value(ValidatedBlock {
+        number: number - 1,
+        root: Hash::default(),
+        payload: payload.to_vec(),
+    })
+    .unwrap();
+
+    historical.add_domain_block(name, block).unwrap();
+
+    let ret = ctx.entrypoint(json!({"domain": name})).unwrap();
+    let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
+    let ret = ret.unwrap();
+
+    assert_eq!(ret.number, number, "older block shouldn't override latest");
+
+    let block = serde_json::to_value(ValidatedBlock {
+        number: number + 1,
+        root: Hash::default(),
+        payload: payload.to_vec(),
+    })
+    .unwrap();
+
+    historical.add_domain_block(name, block).unwrap();
+
+    let ret = ctx.entrypoint(json!({"domain": name})).unwrap();
+    let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
+    let ret = ret.unwrap();
+
+    assert_eq!(ret.number, number + 1);
 }

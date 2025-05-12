@@ -1,10 +1,11 @@
+use flume::Sender;
 use poem::web::Data;
 use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
-use serde_json::Value;
+use serde_json::{json, Value};
 use valence_coprocessor::{DomainData, ProgramData};
 use valence_coprocessor_sp1::Sp1ZkVm;
 
-use crate::{data::ServiceBackend, Context, Registry, ValenceWasm};
+use crate::{worker::Job, Historical, Registry, ValenceWasm};
 
 use super::{try_str_to_hash, Api};
 
@@ -16,7 +17,7 @@ pub struct RegisterProgramRequest {
     /// A Base64 circuit encoded prover.
     pub circuit: Base64<Vec<u8>>,
 
-    /// Optional nonce to affect hte program id.
+    /// Optional nonce to affect the program id.
     #[oai(default)]
     pub nonce: Option<u64>,
 }
@@ -43,22 +44,16 @@ pub struct RegisterDomainResponse {
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramLinkRequest {
-    /// Domains to be registered.
-    pub domains: Vec<String>,
+pub struct ProgramStorageFileRequest {
+    /// Path of the program file.
+    pub path: String,
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramLinkResponse;
-
-#[derive(Object, Debug)]
-pub struct ProgramUnlinkRequest {
-    /// Domains to be de-registered.
-    pub domains: Vec<String>,
+pub struct ProgramStorageFileResponse {
+    /// Base64 encoded contents of the file
+    pub data: Base64<Vec<u8>>,
 }
-
-#[derive(Object, Debug)]
-pub struct ProgramUnlinkResponse;
 
 #[derive(Object, Debug)]
 pub struct ProgramDomainsResponse {
@@ -79,18 +74,9 @@ pub struct ProgramRawStorageResponse {
 pub struct ProgramProveRequest {
     /// Arguments of the Valence program.
     pub args: Value,
-}
 
-#[derive(Object, Debug)]
-pub struct ProgramProveResponse {
-    /// The target ZK proof as base64.
-    pub proof: Base64<Vec<u8>>,
-
-    /// The output arguments as base64.
-    pub outputs: Base64<Vec<u8>>,
-
-    /// Logs of the operation.
-    pub log: Vec<String>,
+    /// Optional callback payload.
+    pub payload: Option<Value>,
 }
 
 #[derive(Object, Debug)]
@@ -119,6 +105,15 @@ pub struct ProgramEntrypointResponse {
 
 #[OpenApi]
 impl Api {
+    /// Service stats.
+    #[oai(path = "/stats", method = "get")]
+    pub async fn stats(&self, pool: Data<&Sender<Job>>) -> poem::Result<Json<Value>> {
+        Ok(Json(json!({
+            "workers": pool.receiver_count().saturating_sub(1),
+            "queued": pool.len(),
+        })))
+    }
+
     /// Register a new program, returning its allocated id.
     #[oai(path = "/registry/program", method = "post")]
     pub async fn registry_program(
@@ -163,72 +158,15 @@ impl Api {
         Ok(Json(domain))
     }
 
-    /// Link the program to the provided domains.
-    #[oai(path = "/registry/program/:program/link", method = "post")]
-    pub async fn program_link(
-        &self,
-        registry: Data<&Registry>,
-        program: Path<String>,
-        request: Json<ProgramLinkRequest>,
-    ) -> poem::Result<Json<ProgramLinkResponse>> {
-        let program = try_str_to_hash(&program)?;
-        let domains: Vec<_> = request
-            .domains
-            .iter()
-            .map(|d| DomainData::identifier_from_parts(d))
-            .collect();
-
-        registry.program_link(&program, &domains)?;
-
-        Ok(Json(ProgramLinkResponse))
-    }
-
-    /// Unlink the program to the provided domains.
-    #[oai(path = "/registry/program/:program/unlink", method = "post")]
-    pub async fn program_unlink(
-        &self,
-        registry: Data<&Registry>,
-        program: Path<String>,
-        request: Json<ProgramUnlinkRequest>,
-    ) -> poem::Result<Json<ProgramUnlinkResponse>> {
-        let program = try_str_to_hash(&program)?;
-        let domains: Vec<_> = request
-            .domains
-            .iter()
-            .map(|d| DomainData::identifier_from_parts(d))
-            .collect();
-
-        registry.program_unlink(&program, &domains)?;
-
-        Ok(Json(ProgramUnlinkResponse))
-    }
-
-    /// Returns the list of hashed program domains.
-    #[oai(path = "/registry/program/:program/domains", method = "get")]
-    pub async fn program_domains(
-        &self,
-        registry: Data<&Registry>,
-        program: Path<String>,
-    ) -> poem::Result<Json<ProgramDomainsResponse>> {
-        let program = try_str_to_hash(&program)?;
-
-        let domains = registry.get_program_domains(&program)?;
-        let domains = domains.iter().map(hex::encode).collect();
-
-        Ok(Json(ProgramDomainsResponse { domains }))
-    }
-
     /// Returns the raw storage of the program.
     #[oai(path = "/registry/program/:program/storage/raw", method = "get")]
     pub async fn storage_raw(
         &self,
         program: Path<String>,
-        data: Data<&ServiceBackend>,
-        vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVm>,
+        historical: Data<&Historical>,
     ) -> poem::Result<Json<ProgramRawStorageResponse>> {
         let program = try_str_to_hash(&program)?;
-        let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
+        let ctx = historical.context(program);
 
         let data = ctx.get_raw_storage()?.unwrap_or_default();
         let data = Base64(data);
@@ -237,37 +175,46 @@ impl Api {
         Ok(Json(ProgramRawStorageResponse { data, log }))
     }
 
+    /// Returns a file from the storage of the program.
+    #[oai(path = "/registry/program/:program/storage/fs", method = "post")]
+    pub async fn storage_file(
+        &self,
+        program: Path<String>,
+        historical: Data<&Historical>,
+        request: Json<ProgramStorageFileRequest>,
+    ) -> poem::Result<Json<ProgramStorageFileResponse>> {
+        let path = request.0.path;
+
+        tracing::debug!("received file request for path `{path}`...");
+
+        let program = try_str_to_hash(&program)?;
+        let ctx = historical.context(program);
+
+        let data = ctx.get_storage_file(&path)?;
+        let data = Base64(data);
+
+        Ok(Json(ProgramStorageFileResponse { data }))
+    }
+
     /// Computes the program proof.
     #[oai(path = "/registry/program/:program/prove", method = "post")]
     pub async fn program_prove(
         &self,
         program: Path<String>,
-        data: Data<&ServiceBackend>,
-        vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVm>,
+        pool: Data<&Sender<Job>>,
         request: Json<ProgramProveRequest>,
-    ) -> poem::Result<Json<ProgramProveResponse>> {
+    ) -> poem::Result<Json<Value>> {
         let program = try_str_to_hash(&program)?;
-        let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
+        let ProgramProveRequest { args, payload } = request.0;
 
-        let proof = match ctx.get_program_proof(request.args.clone()) {
-            Ok(p) => p,
-            Err(e) => {
-                return Ok(Json(ProgramProveResponse {
-                    proof: Base64(vec![]),
-                    outputs: Base64(vec![]),
-                    log: vec![format!("Error computing the proof: {e}")],
-                }));
-            }
-        };
+        pool.send(Job::Prove {
+            program,
+            args,
+            payload,
+        })
+        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))?;
 
-        let log = ctx.get_log()?;
-
-        Ok(Json(ProgramProveResponse {
-            proof: Base64(proof.proof),
-            outputs: Base64(proof.outputs),
-            log,
-        }))
+        Ok(Json(json!({"status": "received"})))
     }
 
     /// Returns the program verifying key.
@@ -275,12 +222,11 @@ impl Api {
     pub async fn program_vk(
         &self,
         program: Path<String>,
-        data: Data<&ServiceBackend>,
-        vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVm>,
+        historical: Data<&Historical>,
     ) -> poem::Result<Json<ProgramVkResponse>> {
         let program = try_str_to_hash(&program)?;
-        let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
+        let ctx = historical.context(program);
+
         let vk = ctx.get_program_verifying_key()?;
         let log = ctx.get_log()?;
 
@@ -295,13 +241,12 @@ impl Api {
     pub async fn program_entrypoint(
         &self,
         program: Path<String>,
-        data: Data<&ServiceBackend>,
-        vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVm>,
+        historical: Data<&Historical>,
         args: Json<Value>,
     ) -> poem::Result<Json<ProgramEntrypointResponse>> {
         let program = try_str_to_hash(&program)?;
-        let ctx = Context::init(program, data.clone(), vm.clone(), zkvm.clone());
+        let ctx = historical.context(program);
+
         let ret = ctx.entrypoint(args.0)?;
         let log = ctx.get_log()?;
 
@@ -313,12 +258,10 @@ impl Api {
     pub async fn domain_latest(
         &self,
         domain: Path<String>,
-        data: Data<&ServiceBackend>,
-        vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVm>,
+        historical: Data<&Historical>,
     ) -> poem::Result<Json<Value>> {
         let id = DomainData::identifier_from_parts(&domain);
-        let ctx = Context::init(id, data.clone(), vm.clone(), zkvm.clone());
+        let ctx = historical.context(id);
 
         let latest = ctx.get_latest_block(&domain)?;
         let latest = serde_json::to_value(latest)
@@ -332,17 +275,10 @@ impl Api {
     pub async fn domain_add_block(
         &self,
         domain: Path<String>,
-        data: Data<&ServiceBackend>,
-        vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVm>,
+        historical: Data<&Historical>,
         args: Json<Value>,
     ) -> poem::Result<Json<Value>> {
-        let id = DomainData::identifier_from_parts(&domain);
-        let ctx = Context::init(id, data.clone(), vm.clone(), zkvm.clone());
-
-        ctx.add_domain_block(&domain, args.0)?;
-
-        let log = ctx.get_log()?;
+        let log = historical.add_domain_block(&domain, args.0)?;
 
         Ok(Json(serde_json::json!({
             "log": log

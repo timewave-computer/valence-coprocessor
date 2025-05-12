@@ -1,13 +1,16 @@
 use std::sync::{Arc, Mutex};
 
 use lru::LruCache;
+use serde::{de::DeserializeOwned, Serialize};
 use sp1_sdk::{
     CpuProver, CudaProver, NetworkProver, Prover as _, ProverClient, SP1Proof,
     SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
 };
 use valence_coprocessor::{
-    DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, Vm, Witness, ZkVm,
+    DataBackend, ExecutionContext, Hash, ProvenProgram, Vm, WitnessCoprocessor, ZkVm,
 };
+
+use crate::Sp1Hasher;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Mode {
@@ -63,16 +66,14 @@ impl From<Mode> for WrappedClient {
 }
 
 impl WrappedClient {
-    fn prove(&self, pk: &SP1ProvingKey, witnesses: Vec<Witness>) -> anyhow::Result<ProvenProgram> {
+    fn prove(&self, pk: &SP1ProvingKey, w: WitnessCoprocessor) -> anyhow::Result<ProvenProgram> {
         tracing::debug!("prove routine initiated...");
 
         let mut stdin = SP1Stdin::new();
 
-        stdin.write(&witnesses);
+        stdin.write(&w);
 
         tracing::debug!("witnesses written to SP1 environment...");
-
-        // TODO evaluate if should output groth16 at this point
 
         let proof = match self {
             WrappedClient::Mock(p) => p.prove(pk, &stdin).run()?,
@@ -90,10 +91,7 @@ impl WrappedClient {
 
         tracing::debug!("proof generated!");
 
-        Ok(ProvenProgram {
-            proof: bytes,
-            outputs: proof.public_values.to_vec(),
-        })
+        Ok(ProvenProgram { proof: bytes })
     }
 
     fn setup(&self, elf: &[u8]) -> (SP1ProvingKey, SP1VerifyingKey) {
@@ -137,18 +135,28 @@ impl Sp1ZkVm {
     pub fn verify(&self, vk: &SP1VerifyingKey, proof: &SP1ProofWithPublicValues) -> bool {
         self.client.verify(vk, proof)
     }
+
+    pub fn outputs<T>(&self, proof: &ProvenProgram) -> anyhow::Result<T>
+    where
+        T: Serialize + DeserializeOwned,
+    {
+        let mut proof: SP1ProofWithPublicValues = bincode::deserialize(&proof.proof)?;
+
+        Ok(proof.public_values.read())
+    }
 }
 
 impl ZkVm for Sp1ZkVm {
-    fn prove<H, D, M>(
+    type Hasher = Sp1Hasher;
+
+    fn prove<D, M>(
         &self,
-        ctx: &ExecutionContext<H, D, M, Self>,
-        witnesses: Vec<Witness>,
+        ctx: &ExecutionContext<Sp1Hasher, D, M, Self>,
+        w: WitnessCoprocessor,
     ) -> anyhow::Result<ProvenProgram>
     where
-        H: Hasher,
         D: DataBackend,
-        M: Vm<H, D, Sp1ZkVm>,
+        M: Vm<Sp1Hasher, D, Sp1ZkVm>,
     {
         let library = ctx.library();
 
@@ -169,18 +177,17 @@ impl ZkVm for Sp1ZkVm {
             .and_then(|(pk, _vk)| {
                 tracing::debug!("proving program...");
 
-                self.client.prove(pk, witnesses)
+                self.client.prove(pk, w)
             })
     }
 
-    fn verifying_key<H, D, M>(
+    fn verifying_key<D, M>(
         &self,
-        ctx: &ExecutionContext<H, D, M, Self>,
+        ctx: &ExecutionContext<Sp1Hasher, D, M, Self>,
     ) -> anyhow::Result<Vec<u8>>
     where
-        H: Hasher,
         D: DataBackend,
-        M: Vm<H, D, Self>,
+        M: Vm<Sp1Hasher, D, Self>,
     {
         let library = ctx.library();
 

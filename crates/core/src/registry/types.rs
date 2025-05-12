@@ -2,7 +2,7 @@ use alloc::{string::String, vec, vec::Vec};
 use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
 
-use crate::{Blake3Hasher, DataBackend, Hash, Hasher, SmtOpening};
+use crate::{Blake3Hasher, DataBackend, Hash, Hasher};
 
 use super::Registry;
 
@@ -92,24 +92,27 @@ impl ProgramData {
     }
 }
 
-/// A structured on-chain message, tailored for a domain.
-pub struct Message {
-    /// The target domain for the message.
-    pub domain: Hash,
-    /// The transition proof.
+/// A domain-specific state proof.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
+pub struct StateProof {
+    /// Domain of the proof.
+    pub domain: String,
+
+    /// Domain root of the proof.
+    pub root: Hash,
+
+    /// An arbitrary payload for the block.
+    pub payload: Vec<u8>,
+
+    /// A serialized, domain-specific proof.
     pub proof: Vec<u8>,
-    /// The arguments of the message.
-    pub outputs: Vec<u8>,
 }
 
 /// A program witness data obtained via Valence API.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Witness {
     /// A domain opening of a state argument to its root.
-    StateProof(Vec<u8>),
-
-    /// A historical commitments opening to the root.
-    DomainProof(SmtOpening),
+    StateProof(StateProof),
 
     /// Arbitrary execution data.
     Data(Vec<u8>),
@@ -124,18 +127,10 @@ impl Witness {
         }
     }
 
-    /// Returns the domain proof, if the correct variation is met.
-    pub fn as_domain_proof(&self) -> Option<&SmtOpening> {
-        match self {
-            Witness::DomainProof(p) => Some(p),
-            _ => None,
-        }
-    }
-
     /// Returns the state proof, if the correct variation is met.
-    pub fn as_state_proof(&self) -> Option<&[u8]> {
+    pub fn as_state_proof(&self) -> Option<&StateProof> {
         match self {
-            Witness::StateProof(p) => Some(p.as_slice()),
+            Witness::StateProof(p) => Some(p),
             _ => None,
         }
     }
@@ -146,20 +141,37 @@ impl Witness {
 pub struct ProvenProgram {
     /// The target ZK proof.
     pub proof: Vec<u8>,
-    /// The output arguments.
-    pub outputs: Vec<u8>,
 }
 
 /// A domain validated block
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
 pub struct ValidatedBlock {
     /// A block associated number.
-    ///
-    /// This is the block number of Ethereum, the slot of Solana, etc.
     pub number: u64,
 
     /// The hash root of the block.
     pub root: Hash,
+
+    /// Block blob payload.
+    pub payload: Vec<u8>,
+}
+
+/// A domain validated block
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
+)]
+pub struct ValidatedDomainBlock {
+    /// The domain associated with the block.
+    pub domain: Hash,
+
+    /// A block associated number.
+    pub number: u64,
+
+    /// The hash root of the block.
+    pub root: Hash,
+
+    /// SMT key to index the payload.
+    pub key: Hash,
 
     /// Block blob payload.
     pub payload: Vec<u8>,

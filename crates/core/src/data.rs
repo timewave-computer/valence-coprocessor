@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
 /// A generic data backend to support multiple contexts.
-pub trait DataBackend {
+pub trait DataBackend: Clone {
     /// Returns the underlying data from the backend.
     fn get(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
 

@@ -1,11 +1,11 @@
 use alloc::{rc::Rc, vec::Vec};
 
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
+use msgpacker::Unpackable as _;
 use serde_json::Value;
 
 use crate::{
-    Blake3Hasher, DataBackend, DomainData, Hash, Hasher, ProvenProgram, Registry, Smt, SmtOpening,
-    ValidatedBlock, Vm, Witness, ZkVm,
+    Blake3Hasher, DataBackend, DomainData, DomainOpening, Hash, Hasher, ProvenProgram, Registry,
+    Smt, StateProof, ValidatedDomainBlock, Vm, Witness, WitnessCoprocessor, ZkVm,
 };
 
 pub use buf_fs::{File, FileSystem};
@@ -18,11 +18,12 @@ where
     H: Hasher,
     D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     data: D,
     registry: Registry<D>,
     historical: Smt<D, H>,
+    historical_root: Hash,
     vm: M,
     zkvm: Z,
     library: Hash,
@@ -37,7 +38,7 @@ where
     H: Hasher,
     D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     inner: Rc<ExecutionContextInner<H, D, M, Z>>,
 }
@@ -47,7 +48,7 @@ where
     H: Hasher,
     D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     fn clone(&self) -> Self {
         Self {
@@ -61,16 +62,13 @@ where
     H: Hasher,
     D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     /// Data backend prefix for the historical SMT.
     pub const PREFIX_SMT: &[u8] = b"smt-historical";
 
     /// Data backend prefix for the latest block of a domain.
     pub const PREFIX_BLOCK: &[u8] = b"smt-domain-block";
-
-    /// Data backend prefix for historical root associated domain.
-    pub const PREFIX_SMT_ROOT: &[u8] = b"context-smt-root";
 
     /// Data backend prefix for the context library data.
     pub const PREFIX_LIB: &[u8] = b"context-library";
@@ -109,19 +107,6 @@ where
         self.inner.registry.get_lib(&domain)
     }
 
-    /// Computes a domain opening for the target root.
-    pub fn get_domain_proof(&self, domain: &str) -> anyhow::Result<Option<SmtOpening>> {
-        let domain = DomainData::identifier_from_parts(domain);
-        let tree = match self.inner.historical.get_key_root(&domain)? {
-            Some(t) => t,
-            None => return Ok(None),
-        };
-
-        self.inner
-            .historical
-            .get_opening("historical", tree, &domain)
-    }
-
     /// Compute the ZK proof of the provided program.
     pub fn get_program_proof(&self, args: Value) -> anyhow::Result<ProvenProgram> {
         let library = self.library();
@@ -135,11 +120,42 @@ where
 
         tracing::debug!("inner library executed; parsing...");
 
-        let witnesses = serde_json::from_value(witnesses)?;
+        let witnesses: Vec<Witness> = serde_json::from_value(witnesses)?;
 
         tracing::debug!("witnesses computed from library...");
 
-        self.inner.zkvm.prove(self, witnesses)
+        let root = self.inner.historical_root;
+        let proofs = witnesses
+            .iter()
+            .filter_map(|w| match w {
+                Witness::StateProof(p) => Some(p),
+                _ => None,
+            })
+            .map(|p| {
+                let key = H::key(&p.domain, &p.root);
+
+                self.inner
+                    .historical
+                    .get_opening(root, &key)?
+                    .map(|opening| DomainOpening {
+                        domain: p.domain.clone(),
+                        root: p.root,
+                        payload: p.payload.clone(),
+                        opening,
+                    })
+                    .ok_or_else(|| anyhow::anyhow!("failed to compute the domain proof"))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+
+        let witness = WitnessCoprocessor {
+            root,
+            proofs,
+            witnesses,
+        };
+
+        tracing::debug!("co-processor witnesses computed...");
+
+        self.inner.zkvm.prove(self, witness)
     }
 
     /// Returns the program verifying key.
@@ -148,22 +164,18 @@ where
     }
 
     /// Computes a state proof with the provided arguments.
-    pub fn get_state_proof(&self, domain: &str, args: Value) -> anyhow::Result<Vec<u8>> {
+    pub fn get_state_proof(&self, domain: &str, args: Value) -> anyhow::Result<StateProof> {
+        tracing::debug!("fetching state proof for `{domain}` with {args:?}...");
+
         let domain = DomainData::identifier_from_parts(domain);
         let proof = self
             .inner
             .vm
             .execute(self, &domain, Self::LIB_GET_STATE_PROOF, args)?;
 
-        let proof = proof.as_str().ok_or_else(|| {
-            anyhow::anyhow!(
-                "the domain library didn't return a valid state proof base64 representation"
-            )
-        })?;
+        tracing::debug!("state proof fetched from domain.");
 
-        Base64
-            .decode(proof)
-            .map_err(|e| anyhow::anyhow!("error decoding the proof bytes: {e}"))
+        Ok(serde_json::from_value(proof)?)
     }
 
     /// Get the program witness data for the ZK circuit.
@@ -204,7 +216,11 @@ where
     pub fn set_storage_file(&self, path: &str, contents: &[u8]) -> anyhow::Result<()> {
         let mut fs = self.get_storage()?;
 
-        fs.save(File::new(path.into(), contents.to_vec(), true))?;
+        tracing::debug!("saving storage file to path `{path}`");
+
+        if let Err(e) = fs.save(File::new(path.into(), contents.to_vec(), true)) {
+            tracing::debug!("error saving storage file to path `{path}`: {e}");
+        }
 
         self.set_storage(&fs)
     }
@@ -224,58 +240,16 @@ where
             .map(|_| ())
     }
 
-    /// Returns the most recent historical SMT for the provided domain.
-    pub fn get_domain_smt(&self, domain: &str) -> anyhow::Result<Hash> {
-        let domain = DomainData::identifier_from_parts(domain);
-        let smt = self.inner.data.get(Self::PREFIX_SMT_ROOT, &domain)?;
-        let smt = smt
-            .map(|b| Hash::try_from(b.as_slice()))
-            .transpose()?
-            .unwrap_or_else(|| Smt::<D, H>::empty_tree_root());
-
-        Ok(smt)
-    }
-
     /// Returns the last included block for the provided domain.
-    pub fn get_latest_block(&self, domain: &str) -> anyhow::Result<Option<ValidatedBlock>> {
+    pub fn get_latest_block(&self, domain: &str) -> anyhow::Result<Option<ValidatedDomainBlock>> {
         let domain = DomainData::identifier_from_parts(domain);
         let block = self.inner.data.get(Self::PREFIX_BLOCK, &domain)?;
+        let block = block
+            .map(|b| ValidatedDomainBlock::unpack(&b).map(|(_, b)| b))
+            .transpose()
+            .map_err(|e| anyhow::anyhow!("failed to parse validated block: {e}"))?;
 
-        Ok(block.map(|b| serde_json::from_slice(&b)).transpose()?)
-    }
-
-    /// Adds a new block to the provided domain.
-    pub fn add_domain_block(&self, domain: &str, args: Value) -> anyhow::Result<()> {
-        let id = DomainData::identifier_from_parts(domain);
-        let block = self
-            .inner
-            .vm
-            .execute(self, &id, Self::LIB_VALIDATE_BLOCK, args)?;
-
-        let block: ValidatedBlock = serde_json::from_value(block)?;
-
-        let smt = self.get_domain_smt(domain)?;
-        let smt = self
-            .inner
-            .historical
-            .insert(smt, domain, &block.root, block.payload.clone())?;
-
-        self.inner.data.set(Self::PREFIX_SMT_ROOT, &id, &smt)?;
-
-        let latest = self.get_latest_block(domain)?;
-
-        match latest {
-            // all domains are assumed to be monotonically increasing.
-            // Solana, the common exception, has `slot`.
-            Some(b) if b.number > block.number => (),
-            _ => {
-                let block = serde_json::to_vec(&block)?;
-
-                self.inner.data.set(Self::PREFIX_BLOCK, &id, &block)?;
-            }
-        }
-
-        Ok(())
+        Ok(block)
     }
 
     #[cfg(feature = "std")]
@@ -314,16 +288,18 @@ where
 impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
 where
     H: Hasher,
-    D: DataBackend + Clone,
+    D: DataBackend,
     M: Vm<H, D, Z>,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     /// Initializes a new execution context.
-    pub fn init(library: Hash, data: D, vm: M, zkvm: Z) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn init(library: Hash, historical_root: Hash, data: D, vm: M, zkvm: Z) -> Self {
         Self {
             inner: Rc::new(ExecutionContextInner {
                 data: data.clone(),
                 historical: Smt::from(data.clone()),
+                historical_root,
                 registry: Registry::from(data.clone()),
                 vm,
                 zkvm,
@@ -333,24 +309,5 @@ where
                 log: Vec::with_capacity(10).into(),
             }),
         }
-    }
-}
-
-#[cfg(feature = "mocks")]
-impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
-where
-    H: Hasher,
-    D: DataBackend,
-    M: Vm<H, D, Z>,
-    Z: ZkVm,
-{
-    /// Executes an arbitrary library function.
-    pub fn execute_lib(&self, lib: &Hash, f: &str, args: Value) -> anyhow::Result<Value> {
-        self.inner.vm.execute(self, lib, f, args)
-    }
-
-    /// Computes an arbitrary program proof.
-    pub fn execute_proof(&self, witnesses: Vec<Witness>) -> anyhow::Result<ProvenProgram> {
-        self.inner.zkvm.prove(self, witnesses)
     }
 }

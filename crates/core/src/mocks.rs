@@ -1,20 +1,25 @@
 //! Mocks for the interfaces of the system.
 
+use core::marker::PhantomData;
+
 use alloc::vec::Vec;
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
-use serde_json::{json, Value};
+use msgpacker::Packable as _;
+use serde_json::Value;
 
 use crate::{
-    DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, SmtOpening, Vm, Witness, ZkVm,
+    Blake3Hasher, DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, Vm, Witness,
+    WitnessCoprocessor, ZkVm,
 };
 
 /// A mock implementation of a zkVM
-#[derive(Debug, Default)]
-pub struct MockZkVm;
+#[derive(Debug, Default, Clone, Copy)]
+pub struct MockZkVm<H: Hasher = Blake3Hasher> {
+    h: PhantomData<H>,
+}
 
-impl MockZkVm {
+impl<H: Hasher> MockZkVm<H> {
     /// Verify a proof.
-    pub fn verify<H, D, M>(
+    pub fn verify<D, M>(
         _ctx: &ExecutionContext<H, D, M, Self>,
         library: &Hash,
         mut witnesses: Vec<Witness>,
@@ -31,132 +36,79 @@ impl MockZkVm {
 
         for w in witnesses {
             match w {
-                Witness::DomainProof(SmtOpening {
-                    key,
-                    data,
-                    root,
-                    opening,
-                }) => {
-                    bytes.extend(key);
-                    bytes.extend(data);
-                    bytes.extend(root);
-
-                    for p in opening.path {
-                        bytes.extend(p);
-                    }
-                }
-
-                Witness::StateProof(items) | Witness::Data(items) => bytes.extend(items),
+                Witness::StateProof(p) => bytes.extend(p.pack_to_vec()),
+                Witness::Data(d) => bytes.extend(d),
             }
         }
 
         let proof = H::hash(&bytes).to_vec();
-        let outputs = bytes;
 
-        proven.proof == proof && proven.outputs == outputs
+        proven.proof == proof
     }
 }
 
-impl ZkVm for MockZkVm {
-    fn prove<H, D, M>(
+impl<H: Hasher> ZkVm for MockZkVm<H> {
+    type Hasher = H;
+
+    fn prove<D, M>(
         &self,
-        ctx: &ExecutionContext<H, D, M, Self>,
-        mut witnesses: Vec<Witness>,
+        ctx: &ExecutionContext<Self::Hasher, D, M, Self>,
+        w: WitnessCoprocessor,
     ) -> anyhow::Result<ProvenProgram>
     where
-        H: Hasher,
         D: DataBackend,
-        M: Vm<H, D, MockZkVm>,
+        M: Vm<Self::Hasher, D, Self>,
     {
+        let mut witnesses = w.validate::<H>()?.witnesses;
+
         witnesses.sort();
 
         let mut bytes = ctx.library().to_vec();
 
         for w in witnesses {
             match w {
-                Witness::DomainProof(SmtOpening {
-                    key,
-                    data,
-                    root,
-                    opening,
-                }) => {
-                    bytes.extend(key);
-                    bytes.extend(data);
-                    bytes.extend(root);
-
-                    for p in opening.path {
-                        bytes.extend(p);
-                    }
-                }
-
-                Witness::StateProof(items) | Witness::Data(items) => bytes.extend(items),
+                Witness::StateProof(p) => bytes.extend(p.pack_to_vec()),
+                Witness::Data(d) => bytes.extend(d),
             }
         }
 
         let proof = H::hash(&bytes).to_vec();
-        let outputs = bytes;
 
-        Ok(ProvenProgram { proof, outputs })
+        Ok(ProvenProgram { proof })
     }
 
-    fn verifying_key<H, D, M>(
+    fn verifying_key<D, M>(
         &self,
-        ctx: &ExecutionContext<H, D, M, Self>,
+        _ctx: &ExecutionContext<Self::Hasher, D, M, Self>,
     ) -> anyhow::Result<Vec<u8>>
     where
-        H: Hasher,
         D: DataBackend,
-        M: Vm<H, D, Self>,
+        M: Vm<Self::Hasher, D, Self>,
     {
-        Ok(ctx.library().to_vec())
+        Ok(vec![])
     }
 
-    fn updated(&self, _library: &Hash) {}
+    fn updated(&self, _program: &Hash) {}
 }
 
 /// A mock implementation for a VM.
+#[derive(Debug, Clone, Copy)]
 pub struct MockVm;
-
-impl MockVm {
-    /// Validates the execution of a library
-    pub fn validate<H, D, Z>(
-        _ctx: &ExecutionContext<H, D, Self, Z>,
-        lib: &Hash,
-        f: &str,
-        args: Value,
-        execution: Value,
-    ) -> bool
-    where
-        H: Hasher,
-        D: DataBackend,
-        Z: ZkVm,
-    {
-        json!({
-            "lib": Base64.encode(lib),
-            "f": f,
-            "args": args
-        }) == execution
-    }
-}
 
 impl<H, D, Z> Vm<H, D, Z> for MockVm
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm,
+    Z: ZkVm<Hasher = H>,
 {
     fn execute(
         &self,
         _ctx: &ExecutionContext<H, D, Self, Z>,
-        lib: &Hash,
-        f: &str,
+        _lib: &Hash,
+        _f: &str,
         args: Value,
     ) -> anyhow::Result<Value> {
-        Ok(json!({
-            "lib": Base64.encode(lib),
-            "f": f,
-            "args": args
-        }))
+        Ok(args)
     }
 
     fn updated(&self, _lib: &Hash) {}

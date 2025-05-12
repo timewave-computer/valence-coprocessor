@@ -7,36 +7,34 @@ use valence_coprocessor_wasm::abi;
 extern crate alloc;
 
 #[no_mangle]
-pub extern "C" fn set() {
+pub extern "C" fn entrypoint() {
     let args = abi::args().unwrap();
+    let cmd = args["cmd"].as_str().unwrap();
 
-    let path = args["path"].as_str().unwrap();
-    let contents = args["contents"].as_str().unwrap().as_bytes();
+    match cmd {
+        "set" => {
+            let path = args["path"].as_str().unwrap();
+            let contents = args["contents"].as_str().unwrap().as_bytes();
 
-    abi::set_storage_file(path, contents).unwrap();
-}
+            abi::set_storage_file(path, contents).unwrap();
+        }
+        "get" => {
+            let path = args["path"].as_str().unwrap();
+            let bytes = abi::get_storage_file(path).unwrap();
+            let b64 = Base64.encode(bytes);
+            let ret = serde_json::json!({"b64": b64});
 
-#[no_mangle]
-pub extern "C" fn get() {
-    let args = abi::args().unwrap();
+            abi::ret(&ret).unwrap();
+        }
+        "set_large" => {
+            let path = args["path"].as_str().unwrap();
+            let byte = args["byte"].as_u64().unwrap() as u8;
+            let count = args["count"].as_u64().unwrap() as usize;
 
-    let path = args["path"].as_str().unwrap();
-    let bytes = abi::get_storage_file(path).unwrap();
-    let b64 = Base64.encode(bytes);
-    let ret = serde_json::json!({"b64": b64});
+            let contents = vec![byte; count];
 
-    abi::ret(&ret).unwrap();
-}
-
-#[no_mangle]
-pub extern "C" fn set_large() {
-    let args = abi::args().unwrap();
-
-    let path = args["path"].as_str().unwrap();
-    let byte = args["byte"].as_u64().unwrap() as u8;
-    let count = args["count"].as_u64().unwrap() as usize;
-
-    let contents = vec![byte; count];
-
-    abi::set_storage_file(path, &contents).unwrap();
+            abi::set_storage_file(path, &contents).unwrap();
+        }
+        _ => panic!("unknown command"),
+    }
 }
