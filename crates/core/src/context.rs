@@ -11,21 +11,17 @@ use crate::{
 pub use buf_fs::{File, FileSystem};
 
 /// Execution context with blake3 hasher.
-pub type Blake3Context<D, M, Z> = ExecutionContext<Blake3Hasher, D, M, Z>;
+pub type Blake3Context<D> = ExecutionContext<Blake3Hasher, D>;
 
-struct ExecutionContextInner<H, D, M, Z>
+struct ExecutionContextInner<H, D>
 where
     H: Hasher,
     D: DataBackend,
-    M: Vm<H, D, Z>,
-    Z: ZkVm<Hasher = H>,
 {
     data: D,
     registry: Registry<D>,
     historical: Smt<D, H>,
     historical_root: Hash,
-    vm: M,
-    zkvm: Z,
     library: Hash,
 
     #[cfg(feature = "std")]
@@ -33,22 +29,18 @@ where
 }
 
 /// Execution context for a Valence library.
-pub struct ExecutionContext<H, D, M, Z>
+pub struct ExecutionContext<H, D>
 where
     H: Hasher,
     D: DataBackend,
-    M: Vm<H, D, Z>,
-    Z: ZkVm<Hasher = H>,
 {
-    inner: Rc<ExecutionContextInner<H, D, M, Z>>,
+    inner: Rc<ExecutionContextInner<H, D>>,
 }
 
-impl<H, D, M, Z> Clone for ExecutionContext<H, D, M, Z>
+impl<H, D> Clone for ExecutionContext<H, D>
 where
     H: Hasher,
     D: DataBackend,
-    M: Vm<H, D, Z>,
-    Z: ZkVm<Hasher = H>,
 {
     fn clone(&self) -> Self {
         Self {
@@ -57,12 +49,10 @@ where
     }
 }
 
-impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
+impl<H, D> ExecutionContext<H, D>
 where
     H: Hasher,
     D: DataBackend,
-    M: Vm<H, D, Z>,
-    Z: ZkVm<Hasher = H>,
 {
     /// Data backend prefix for the historical SMT.
     pub const PREFIX_SMT: &[u8] = b"smt-historical";
@@ -108,15 +98,21 @@ where
     }
 
     /// Compute the ZK proof of the provided program.
-    pub fn get_program_proof(&self, args: Value) -> anyhow::Result<ProvenProgram> {
+    pub fn get_program_proof<VM, ZK>(
+        &self,
+        vm: &VM,
+        zkvm: &ZK,
+        args: Value,
+    ) -> anyhow::Result<ProvenProgram>
+    where
+        VM: Vm<H, D>,
+        ZK: ZkVm<Hasher = H>,
+    {
         let library = self.library();
 
         tracing::debug!("computing library proof for `{:x?}`...", library);
 
-        let witnesses = self
-            .inner
-            .vm
-            .execute(self, library, Self::LIB_GET_WITNESSES, args)?;
+        let witnesses = vm.execute(self, library, Self::LIB_GET_WITNESSES, args)?;
 
         tracing::debug!("inner library executed; parsing...");
 
@@ -155,23 +151,31 @@ where
 
         tracing::debug!("co-processor witnesses computed...");
 
-        self.inner.zkvm.prove(self, witness)
+        zkvm.prove(self, witness)
     }
 
     /// Returns the program verifying key.
-    pub fn get_program_verifying_key(&self) -> anyhow::Result<Vec<u8>> {
-        self.inner.zkvm.verifying_key(self)
+    pub fn get_program_verifying_key<ZK>(&self, zkvm: &ZK) -> anyhow::Result<Vec<u8>>
+    where
+        ZK: ZkVm<Hasher = H>,
+    {
+        zkvm.verifying_key(self)
     }
 
     /// Computes a state proof with the provided arguments.
-    pub fn get_state_proof(&self, domain: &str, args: Value) -> anyhow::Result<StateProof> {
+    pub fn get_state_proof<VM>(
+        &self,
+        vm: &VM,
+        domain: &str,
+        args: Value,
+    ) -> anyhow::Result<StateProof>
+    where
+        VM: Vm<H, D>,
+    {
         tracing::debug!("fetching state proof for `{domain}` with {args:?}...");
 
         let domain = DomainData::identifier_from_parts(domain);
-        let proof = self
-            .inner
-            .vm
-            .execute(self, &domain, Self::LIB_GET_STATE_PROOF, args)?;
+        let proof = vm.execute(self, &domain, Self::LIB_GET_STATE_PROOF, args)?;
 
         tracing::debug!("state proof fetched from domain.");
 
@@ -179,11 +183,11 @@ where
     }
 
     /// Get the program witness data for the ZK circuit.
-    pub fn get_program_witnesses(&self, args: Value) -> anyhow::Result<Vec<Witness>> {
-        let witnesses =
-            self.inner
-                .vm
-                .execute(self, &self.inner.library, Self::LIB_GET_WITNESSES, args)?;
+    pub fn get_program_witnesses<VM>(&self, vm: &VM, args: Value) -> anyhow::Result<Vec<Witness>>
+    where
+        VM: Vm<H, D>,
+    {
+        let witnesses = vm.execute(self, &self.inner.library, Self::LIB_GET_WITNESSES, args)?;
 
         Ok(serde_json::from_value(witnesses)?)
     }
@@ -278,31 +282,28 @@ where
     }
 
     /// Calls the entrypoint of the library with the provided arguments.
-    pub fn entrypoint(&self, args: Value) -> anyhow::Result<Value> {
-        self.inner
-            .vm
-            .execute(self, self.library(), Self::LIB_ENTRYPOINT, args)
+    pub fn entrypoint<VM>(&self, vm: &VM, args: Value) -> anyhow::Result<Value>
+    where
+        VM: Vm<H, D>,
+    {
+        vm.execute(self, self.library(), Self::LIB_ENTRYPOINT, args)
     }
 }
 
-impl<H, D, M, Z> ExecutionContext<H, D, M, Z>
+impl<H, D> ExecutionContext<H, D>
 where
     H: Hasher,
     D: DataBackend,
-    M: Vm<H, D, Z>,
-    Z: ZkVm<Hasher = H>,
 {
     /// Initializes a new execution context.
     #[allow(dead_code)]
-    pub(crate) fn init(library: Hash, historical_root: Hash, data: D, vm: M, zkvm: Z) -> Self {
+    pub(crate) fn init(library: Hash, historical_root: Hash, data: D) -> Self {
         Self {
             inner: Rc::new(ExecutionContextInner {
                 data: data.clone(),
                 historical: Smt::from(data.clone()),
                 historical_root,
                 registry: Registry::from(data.clone()),
-                vm,
-                zkvm,
                 library,
 
                 #[cfg(feature = "std")]

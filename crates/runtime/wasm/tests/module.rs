@@ -41,11 +41,9 @@ fn deploy_hello() {
     let library = ProgramData::default().with_lib(hello);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Historical::load(data, vm, zkvm)
-        .unwrap()
-        .context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(library);
 
-    let ret = ctx.entrypoint(json!({"name": "Valence"})).unwrap()["message"]
+    let ret = ctx.entrypoint(&vm, json!({"name": "Valence"})).unwrap()["message"]
         .as_str()
         .unwrap()
         .to_string();
@@ -66,21 +64,24 @@ fn deploy_storage() {
     let library = ProgramData::default().with_lib(storage);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Historical::load(data, vm, zkvm)
-        .unwrap()
-        .context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(library);
 
     let path = "/var/share/foo.bin";
     let contents = "Valence";
 
     assert!(ctx.get_storage_file(path).is_err());
 
-    ctx.entrypoint(json!({"cmd": "set", "path": path, "contents": contents}))
-        .unwrap();
+    ctx.entrypoint(
+        &vm,
+        json!({"cmd": "set", "path": path, "contents": contents}),
+    )
+    .unwrap();
 
     assert_eq!(ctx.get_storage_file(path).unwrap(), contents.as_bytes());
 
-    let ret = ctx.entrypoint(json!({"cmd": "get", "path": path})).unwrap()["b64"]
+    let ret = ctx
+        .entrypoint(&vm, json!({"cmd": "get", "path": path}))
+        .unwrap()["b64"]
         .as_str()
         .unwrap()
         .to_string();
@@ -94,8 +95,11 @@ fn deploy_storage() {
     let byte = 0xfa;
     let count = 8 * 1024 * 1024;
 
-    ctx.entrypoint(json!({"cmd": "set_large", "path": path, "byte": byte, "count": count}))
-        .unwrap();
+    ctx.entrypoint(
+        &vm,
+        json!({"cmd": "set_large", "path": path, "byte": byte, "count": count}),
+    )
+    .unwrap();
 
     assert_eq!(ctx.get_storage_file(path).unwrap(), vec![byte; count]);
 }
@@ -113,13 +117,11 @@ fn deploy_raw_storage() {
     let library = ProgramData::default().with_lib(storage);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Historical::load(data, vm, zkvm)
-        .unwrap()
-        .context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(library);
 
     assert!(ctx.get_raw_storage().unwrap().is_none());
 
-    ctx.entrypoint(json!({"name": "Valence"})).unwrap();
+    ctx.entrypoint(&vm, json!({"name": "Valence"})).unwrap();
 
     let storage = ctx.get_raw_storage().unwrap().unwrap();
 
@@ -139,12 +141,10 @@ fn deploy_program() {
     let library = ProgramData::default().with_lib(library);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Historical::load(data, vm, zkvm)
-        .unwrap()
-        .context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(library);
 
     let ret: Vec<_> = ctx
-        .entrypoint(json!({}))
+        .entrypoint(&vm, json!({}))
         .unwrap()
         .as_array()
         .unwrap()
@@ -182,15 +182,16 @@ fn deploy_http() {
     let library = ProgramData::default().with_lib(library);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Historical::load(data, vm, zkvm)
-        .unwrap()
-        .context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(library);
 
     let ret = ctx
-        .entrypoint(json!({
-            "url": format!("http://127.0.0.1:{port}"),
-            "name": "Valence"
-        }))
+        .entrypoint(
+            &vm,
+            json!({
+                "url": format!("http://127.0.0.1:{port}"),
+                "name": "Valence"
+            }),
+        )
         .unwrap();
 
     let body = serde_json::from_value(ret["body"].clone()).unwrap();
@@ -212,11 +213,9 @@ fn deploy_log() {
     let library = ProgramData::default().with_lib(hello);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
 
-    let ctx = Blake3Historical::load(data, vm, zkvm)
-        .unwrap()
-        .context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(library);
 
-    ctx.entrypoint(json!({"name": "Valence"})).unwrap();
+    ctx.entrypoint(&vm, json!({"name": "Valence"})).unwrap();
 
     let mut log = ctx.get_log().unwrap();
 
@@ -232,16 +231,15 @@ fn deploy_domain() {
 
     let capacity = 500;
     let vm = ValenceWasm::new(capacity).unwrap();
-    let zkvm = MockZkVm::default();
 
     let name = "valence";
     let library = DomainData::new(name.into()).with_lib(domain);
     let library = registry.register_domain(&vm, library).unwrap();
-    let historical = Blake3Historical::load(data, vm, zkvm).unwrap();
+    let historical = Blake3Historical::load(data).unwrap();
 
     let ctx = historical.context(library);
 
-    let block = ctx.entrypoint(json!({"domain": name})).unwrap();
+    let block = ctx.entrypoint(&vm, json!({"domain": name})).unwrap();
     let block: Option<ValidatedDomainBlock> = serde_json::from_value(block).unwrap();
 
     assert!(block.is_none());
@@ -256,9 +254,9 @@ fn deploy_domain() {
     })
     .unwrap();
 
-    historical.add_domain_block(name, block).unwrap();
+    historical.add_domain_block(&vm, name, block).unwrap();
 
-    let ret = ctx.entrypoint(json!({"domain": name})).unwrap();
+    let ret = ctx.entrypoint(&vm, json!({"domain": name})).unwrap();
     let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
     let ret = ret.unwrap();
 
@@ -272,9 +270,9 @@ fn deploy_domain() {
     })
     .unwrap();
 
-    historical.add_domain_block(name, block).unwrap();
+    historical.add_domain_block(&vm, name, block).unwrap();
 
-    let ret = ctx.entrypoint(json!({"domain": name})).unwrap();
+    let ret = ctx.entrypoint(&vm, json!({"domain": name})).unwrap();
     let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
     let ret = ret.unwrap();
 
@@ -287,9 +285,9 @@ fn deploy_domain() {
     })
     .unwrap();
 
-    historical.add_domain_block(name, block).unwrap();
+    historical.add_domain_block(&vm, name, block).unwrap();
 
-    let ret = ctx.entrypoint(json!({"domain": name})).unwrap();
+    let ret = ctx.entrypoint(&vm, json!({"domain": name})).unwrap();
     let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
     let ret = ret.unwrap();
 

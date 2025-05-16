@@ -33,11 +33,11 @@ impl<D: DataBackend> Registry<D> {
     pub fn register_program<M, H, Z>(
         &self,
         vm: &M,
-        zk_vm: &Z,
+        zkvm: &Z,
         program: ProgramData,
     ) -> anyhow::Result<Hash>
     where
-        M: Vm<H, D, Z>,
+        M: Vm<H, D>,
         H: Hasher,
         Z: ZkVm<Hasher = H>,
     {
@@ -48,17 +48,16 @@ impl<D: DataBackend> Registry<D> {
         self.data.set(Self::PREFIX_CIRCUIT, &id, &circuit)?;
 
         vm.updated(&id);
-        zk_vm.updated(&id);
+        zkvm.updated(&id);
 
         Ok(id)
     }
 
     /// Register a new domain, returning its identifier.
-    pub fn register_domain<M, H, Z>(&self, vm: &M, domain: DomainData) -> anyhow::Result<Hash>
+    pub fn register_domain<M, H>(&self, vm: &M, domain: DomainData) -> anyhow::Result<Hash>
     where
-        M: Vm<H, D, Z>,
+        M: Vm<H, D>,
         H: Hasher,
-        Z: ZkVm<Hasher = H>,
     {
         let id = domain.identifier();
         let DomainData { lib, .. } = domain;

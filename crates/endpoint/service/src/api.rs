@@ -2,12 +2,12 @@ use flume::Sender;
 use poem::web::Data;
 use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::{json, Value};
+use valence_coprocessor::Hash;
 use valence_coprocessor::{DomainData, ProgramData};
-use valence_coprocessor_sp1::Sp1ZkVm;
 
-use crate::{worker::Job, Historical, Registry, ValenceWasm};
+use crate::{worker::Job, Historical, Registry, ServiceVm, ServiceZkVm};
 
-use super::{try_str_to_hash, Api};
+pub struct Api;
 
 #[derive(Object, Debug)]
 pub struct RegisterProgramRequest {
@@ -119,8 +119,8 @@ impl Api {
     pub async fn registry_program(
         &self,
         registry: Data<&Registry>,
-        vm: Data<&ValenceWasm>,
-        zkvm: Data<&Sp1ZkVm>,
+        vm: Data<&ServiceVm>,
+        zkvm: Data<&ServiceZkVm>,
         request: Json<RegisterProgramRequest>,
     ) -> poem::Result<Json<RegisterProgramResponse>> {
         let program = ProgramData {
@@ -142,7 +142,7 @@ impl Api {
     pub async fn register_domain(
         &self,
         registry: Data<&Registry>,
-        vm: Data<&ValenceWasm>,
+        vm: Data<&ServiceVm>,
         request: Json<RegisterDomainRequest>,
     ) -> poem::Result<Json<RegisterDomainResponse>> {
         let domain = DomainData {
@@ -223,11 +223,12 @@ impl Api {
         &self,
         program: Path<String>,
         historical: Data<&Historical>,
+        zkvm: Data<&ServiceZkVm>,
     ) -> poem::Result<Json<ProgramVkResponse>> {
         let program = try_str_to_hash(&program)?;
         let ctx = historical.context(program);
 
-        let vk = ctx.get_program_verifying_key()?;
+        let vk = ctx.get_program_verifying_key(*zkvm)?;
         let log = ctx.get_log()?;
 
         Ok(Json(ProgramVkResponse {
@@ -242,12 +243,13 @@ impl Api {
         &self,
         program: Path<String>,
         historical: Data<&Historical>,
+        vm: Data<&ServiceVm>,
         args: Json<Value>,
     ) -> poem::Result<Json<ProgramEntrypointResponse>> {
         let program = try_str_to_hash(&program)?;
         let ctx = historical.context(program);
 
-        let ret = ctx.entrypoint(args.0)?;
+        let ret = ctx.entrypoint(*vm, args.0)?;
         let log = ctx.get_log()?;
 
         Ok(Json(ProgramEntrypointResponse { ret, log }))
@@ -276,12 +278,20 @@ impl Api {
         &self,
         domain: Path<String>,
         historical: Data<&Historical>,
+        vm: Data<&ServiceVm>,
         args: Json<Value>,
     ) -> poem::Result<Json<Value>> {
-        let log = historical.add_domain_block(&domain, args.0)?;
+        let log = historical.add_domain_block(*vm, &domain, args.0)?;
 
         Ok(Json(serde_json::json!({
             "log": log
         })))
     }
+}
+
+fn try_str_to_hash(hash: &str) -> anyhow::Result<Hash> {
+    let bytes =
+        hex::decode(hash).map_err(|e| anyhow::anyhow!("error converting str to hash: {e}"))?;
+
+    Hash::try_from(bytes).map_err(|_| anyhow::anyhow!("error converting bytes to hash"))
 }

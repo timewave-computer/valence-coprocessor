@@ -2,7 +2,7 @@ use alloc::{string::String, vec::Vec};
 use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
 
-use crate::{DataBackend, ExecutionContext, Hash, Hasher, Opening, ProvenProgram, Vm, Witness};
+use crate::{DataBackend, ExecutionContext, Hash, Hasher, Opening, ProvenProgram, Witness};
 
 /// A domain opening co-processor witness.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
@@ -83,14 +83,13 @@ pub trait ZkVm: Clone + Sized {
     /// - `ctx`: Execution context to fetch the library bytes from.
     /// - `program`: Program unique identifier.
     /// - `witnesses`: Circuit arguments.
-    fn prove<D, M>(
+    fn prove<D>(
         &self,
-        ctx: &ExecutionContext<Self::Hasher, D, M, Self>,
+        ctx: &ExecutionContext<Self::Hasher, D>,
         w: WitnessCoprocessor,
     ) -> anyhow::Result<ProvenProgram>
     where
-        D: DataBackend,
-        M: Vm<Self::Hasher, D, Self>;
+        D: DataBackend;
 
     /// Returns the verifying key for the given program.
     ///
@@ -98,13 +97,9 @@ pub trait ZkVm: Clone + Sized {
     ///
     /// - `ctx`: Execution context to fetch the library bytes from.
     /// - `program`: Program unique identifier.
-    fn verifying_key<D, M>(
-        &self,
-        ctx: &ExecutionContext<Self::Hasher, D, M, Self>,
-    ) -> anyhow::Result<Vec<u8>>
+    fn verifying_key<D>(&self, ctx: &ExecutionContext<Self::Hasher, D>) -> anyhow::Result<Vec<u8>>
     where
-        D: DataBackend,
-        M: Vm<Self::Hasher, D, Self>;
+        D: DataBackend;
 
     /// A notification that the program has been updated.
     fn updated(&self, program: &Hash);

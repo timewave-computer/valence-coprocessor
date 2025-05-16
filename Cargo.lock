@@ -7140,6 +7140,7 @@ dependencies = [
  "tracing-subscriber 0.3.19",
  "tungstenite",
  "valence-coprocessor",
+ "valence-coprocessor-sp1",
 ]
 
 [[package]]
@@ -7158,6 +7159,7 @@ version = "0.1.8"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
+ "clap",
  "dirs 6.0.0",
  "flume",
  "hex",
@@ -7170,6 +7172,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.19",
  "valence-coprocessor",
+ "valence-coprocessor-prover",
  "valence-coprocessor-redis",
  "valence-coprocessor-sp1",
  "valence-coprocessor-wasm",

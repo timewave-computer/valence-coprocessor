@@ -1,13 +1,12 @@
 use serde_json::Value;
 
-use crate::{DataBackend, ExecutionContext, Hash, Hasher, ZkVm};
+use crate::{DataBackend, ExecutionContext, Hash, Hasher};
 
 /// A library VM definition.
-pub trait Vm<H, D, Z>: Clone + Sized
+pub trait Vm<H, D>: Clone + Sized
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
 {
     /// Execute a function in a library.
     ///
@@ -21,7 +20,7 @@ where
     /// - `args`: Arguments to be passed to the function call.
     fn execute(
         &self,
-        ctx: &ExecutionContext<H, D, Self, Z>,
+        ctx: &ExecutionContext<H, D>,
         lib: &Hash,
         f: &str,
         args: Value,
