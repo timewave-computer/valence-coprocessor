@@ -5,7 +5,8 @@ members = [
   "crates/domains/ethereum",
   "crates/runtime/sp1",
   "crates/runtime/wasm",
-  "crates/service",
+  "crates/endpoint/prover",
+  "crates/endpoint/service",
 ]
 resolver = "2"
 default-members = ["crates/core"]
