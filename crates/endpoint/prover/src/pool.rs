@@ -29,11 +29,11 @@ impl Pool {
         let sp1gpu = gpu.then(|| {
             tracing::info!("initializing GPU support...");
 
-           let client =  ProverClient::builder().cuda().build();
-           let client = Mutex::new(client);
-           let client = Arc::new(client);
+            let client = ProverClient::builder().cuda().build();
+            let client = Mutex::new(client);
+            let client = Arc::new(client);
 
-           client
+            client
         });
 
         Self {
