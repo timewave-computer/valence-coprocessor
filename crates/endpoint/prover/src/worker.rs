@@ -1,9 +1,10 @@
-use std::{net::TcpStream, thread, time::Duration};
+use std::{net::TcpStream, sync::Arc, thread, time::Duration};
 
 use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use flume::{Receiver, Sender};
 use msgpacker::{Packable as _, Unpackable as _};
 use sp1_sdk::{CpuProver, CudaProver, Prover as _, ProverClient, SP1ProvingKey, SP1Stdin};
+use tokio::sync::Mutex;
 use tungstenite::WebSocket;
 
 use crate::{
@@ -15,7 +16,7 @@ use crate::{
 pub struct Worker {
     cache: KeysCache,
     sp1mock: CpuProver,
-    sp1gpu: Option<CudaProver>,
+    sp1gpu: Option<Arc<Mutex<CudaProver>>>,
     rx: Receiver<Task>,
     tx: Sender<()>,
 }
@@ -108,7 +109,7 @@ impl Worker {
                         }
                     }
                 } else if let Some(c) = &self.sp1gpu {
-                    match c.prove(&pk, &stdin).groth16().run() {
+                    match c.lock().await.prove(&pk, &stdin).groth16().run() {
                         Ok(p) => p.bytes(),
                         Err(e) => return Response::Err(format!("failed computing gpu proof: {e}")),
                     }
@@ -135,15 +136,15 @@ impl Worker {
         }
     }
 
-    pub fn spawn(cache: KeysCache, rx: Receiver<Task>, tx: Sender<()>, gpu: bool) {
+    pub fn spawn(
+        cache: KeysCache,
+        rx: Receiver<Task>,
+        tx: Sender<()>,
+        sp1gpu: Option<Arc<Mutex<CudaProver>>>,
+    ) {
         tracing::debug!("spawning a new worker thread...");
 
         let sp1mock = ProverClient::builder().mock().build();
-        let sp1gpu = gpu.then(|| {
-            tracing::info!("initializing GPU support...");
-
-            ProverClient::builder().cuda().build()
-        });
 
         let worker = Self {
             cache,

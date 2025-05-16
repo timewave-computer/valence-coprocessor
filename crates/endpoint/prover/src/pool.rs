@@ -1,6 +1,8 @@
-use std::{thread, time::Duration};
+use std::{sync::Arc, thread, time::Duration};
 
 use flume::{Receiver, Sender};
+use sp1_sdk::{CudaProver, ProverClient};
+use tokio::sync::Mutex;
 
 use crate::{cache::KeysCache, types::Task, worker::Worker};
 
@@ -16,7 +18,7 @@ pub struct Pool {
     gradient: f64,
     frequency: Duration,
     cache: KeysCache,
-    gpu: bool,
+    sp1gpu: Option<Arc<Mutex<CudaProver>>>,
 }
 
 impl Pool {
@@ -24,6 +26,15 @@ impl Pool {
         let (tx, rx) = flume::unbounded();
         let (ack_tx, ack) = flume::unbounded();
         let cache = KeysCache::new(cache);
+        let sp1gpu = gpu.then(|| {
+            tracing::info!("initializing GPU support...");
+
+           let client =  ProverClient::builder().cuda().build();
+           let client = Mutex::new(client);
+           let client = Arc::new(client);
+
+           client
+        });
 
         Self {
             tx,
@@ -37,7 +48,7 @@ impl Pool {
             gradient: 0.1,
             frequency: Duration::from_secs(600),
             cache,
-            gpu,
+            sp1gpu,
         }
     }
 
@@ -144,6 +155,6 @@ impl Pool {
         let rx = self.rx.clone();
         let tx = self.ack_tx.clone();
 
-        Worker::spawn(cache, rx, tx, self.gpu);
+        Worker::spawn(cache, rx, tx, self.sp1gpu.clone());
     }
 }
