@@ -1,7 +1,7 @@
 use std::{sync::Arc, thread, time::Duration};
 
 use flume::{Receiver, Sender};
-use sp1_sdk::{CudaProver, ProverClient};
+use sp1_sdk::CudaProver;
 use tokio::sync::Mutex;
 
 use crate::{cache::KeysCache, types::Task, worker::Worker};
@@ -11,6 +11,7 @@ pub struct Pool {
     rx: Receiver<Task>,
     ack_tx: Sender<()>,
     ack: Receiver<()>,
+    sp1gpu: Option<Arc<Mutex<CudaProver>>>,
     min_workers: usize,
     max_workers: usize,
     kill_pending: usize,
@@ -18,29 +19,36 @@ pub struct Pool {
     gradient: f64,
     frequency: Duration,
     cache: KeysCache,
-    sp1gpu: Option<Arc<Mutex<CudaProver>>>,
 }
 
 impl Pool {
-    pub fn new(cache: usize, gpu: bool) -> Self {
+    pub fn new(cache: usize) -> Self {
         let (tx, rx) = flume::unbounded();
         let (ack_tx, ack) = flume::unbounded();
         let cache = KeysCache::new(cache);
-        let sp1gpu = gpu.then(|| {
+
+        #[cfg(feature = "gpu")]
+        let sp1gpu = {
             tracing::info!("initializing GPU support...");
 
-            let client = ProverClient::builder().cuda().build();
+            // SP1 recommends using a singleton cuda resource
+
+            let client = sp1_sdk::ProverClient::builder().cuda().build();
             let client = Mutex::new(client);
             let client = Arc::new(client);
 
-            client
-        });
+            Some(client)
+        };
+
+        #[cfg(not(feature = "gpu"))]
+        let sp1gpu = None;
 
         Self {
             tx,
             rx,
             ack_tx,
             ack,
+            sp1gpu,
             min_workers: 1,
             max_workers: 8,
             kill_pending: 0,
@@ -48,7 +56,6 @@ impl Pool {
             gradient: 0.1,
             frequency: Duration::from_secs(600),
             cache,
-            sp1gpu,
         }
     }
 

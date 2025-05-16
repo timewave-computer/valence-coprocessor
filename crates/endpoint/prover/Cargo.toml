@@ -22,3 +22,6 @@ tracing-subscriber = { version = "0.3.19", default-features = true, features = [
 ] }
 tungstenite = "0.26.2"
 valence-coprocessor.path = "../../core"
+
+[features]
+gpu = ["sp1-sdk/cuda", "sp1-sdk/native-gnark"]

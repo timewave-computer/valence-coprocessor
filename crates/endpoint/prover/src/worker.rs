@@ -74,6 +74,12 @@ impl Worker {
         tracing::debug!("worker received {req:?}");
 
         let sp1mock = matches!(req, Request::Sp1MockProof { .. });
+        let _gpu = matches!(req, Request::Sp1GpuProof { .. });
+
+        #[cfg(not(feature = "gpu"))]
+        if _gpu {
+            return Response::Err("GPU not enabled".into());
+        }
 
         match req {
             Request::Sp1MockProof { circuit, witnesses }

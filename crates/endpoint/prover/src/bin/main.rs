@@ -14,15 +14,11 @@ struct Cli {
     /// Keys cache capacity
     #[arg(short, long, value_name = "CACHE", default_value_t = 20)]
     cache: usize,
-
-    /// GPU support
-    #[arg(short, long, value_name = "GPU")]
-    gpu: bool,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let Cli { bind, cache, gpu } = Cli::parse();
+    let Cli { bind, cache } = Cli::parse();
 
     let filter_layer = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let fmt_layer = fmt::layer().with_target(false);
@@ -34,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("initializing pool...");
 
-    let pool = Pool::new(cache, gpu).run();
+    let pool = Pool::new(cache).run();
 
     tracing::info!("binding to `{bind}`...");
 
