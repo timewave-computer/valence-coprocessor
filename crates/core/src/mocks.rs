@@ -19,8 +19,8 @@ pub struct MockZkVm<H: Hasher = Blake3Hasher> {
 
 impl<H: Hasher> MockZkVm<H> {
     /// Verify a proof.
-    pub fn verify<D, M>(
-        _ctx: &ExecutionContext<H, D, M, Self>,
+    pub fn verify<D>(
+        _ctx: &ExecutionContext<H, D>,
         library: &Hash,
         mut witnesses: Vec<Witness>,
         proven: ProvenProgram,
@@ -28,7 +28,6 @@ impl<H: Hasher> MockZkVm<H> {
     where
         H: Hasher,
         D: DataBackend,
-        M: Vm<H, D, Self>,
     {
         witnesses.sort();
 
@@ -50,14 +49,13 @@ impl<H: Hasher> MockZkVm<H> {
 impl<H: Hasher> ZkVm for MockZkVm<H> {
     type Hasher = H;
 
-    fn prove<D, M>(
+    fn prove<D>(
         &self,
-        ctx: &ExecutionContext<Self::Hasher, D, M, Self>,
+        ctx: &ExecutionContext<Self::Hasher, D>,
         w: WitnessCoprocessor,
     ) -> anyhow::Result<ProvenProgram>
     where
         D: DataBackend,
-        M: Vm<Self::Hasher, D, Self>,
     {
         let mut witnesses = w.validate::<H>()?.witnesses;
 
@@ -77,13 +75,9 @@ impl<H: Hasher> ZkVm for MockZkVm<H> {
         Ok(ProvenProgram { proof })
     }
 
-    fn verifying_key<D, M>(
-        &self,
-        _ctx: &ExecutionContext<Self::Hasher, D, M, Self>,
-    ) -> anyhow::Result<Vec<u8>>
+    fn verifying_key<D>(&self, _ctx: &ExecutionContext<Self::Hasher, D>) -> anyhow::Result<Vec<u8>>
     where
         D: DataBackend,
-        M: Vm<Self::Hasher, D, Self>,
     {
         Ok(vec![])
     }
@@ -95,15 +89,14 @@ impl<H: Hasher> ZkVm for MockZkVm<H> {
 #[derive(Debug, Clone, Copy)]
 pub struct MockVm;
 
-impl<H, D, Z> Vm<H, D, Z> for MockVm
+impl<H, D> Vm<H, D> for MockVm
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
 {
     fn execute(
         &self,
-        _ctx: &ExecutionContext<H, D, Self, Z>,
+        _ctx: &ExecutionContext<H, D>,
         _lib: &Hash,
         _f: &str,
         args: Value,

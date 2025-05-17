@@ -6,42 +6,36 @@ use serde_json::Value;
 
 use crate::{
     Blake3Hasher, DataBackend, DomainData, ExecutionContext, Hash, Hasher, Smt, ValidatedBlock,
-    ValidatedDomainBlock, Vm, ZkVm,
+    ValidatedDomainBlock, Vm,
 };
 
 /// Historical tree with blake3 hasher.
-pub type Blake3Historical<D, M, Z> = Historical<Blake3Hasher, D, M, Z>;
+pub type Blake3Historical<D> = Historical<Blake3Hasher, D>;
 
 /// A historical SMT coordinator.
 #[derive(Debug, Clone)]
-pub struct Historical<H, D, M, Z>
+pub struct Historical<H, D>
 where
     H: Hasher,
     D: DataBackend,
-    M: Vm<H, D, Z>,
-    Z: ZkVm<Hasher = H>,
 {
     current: Arc<RwLock<Hash>>,
     next: Arc<Mutex<Hash>>,
     data: D,
-    vm: M,
-    zkvm: Z,
 
     phantom: PhantomData<H>,
 }
 
-impl<H, D, M, Z> Historical<H, D, M, Z>
+impl<H, D> Historical<H, D>
 where
     H: Hasher,
     D: DataBackend,
-    M: Vm<H, D, Z>,
-    Z: ZkVm<Hasher = H>,
 {
     /// Prefix for the current tree.
     pub const PREFIX_CURRENT: &[u8] = b"historical-current";
 
     /// Loads a new instance of the historical tree from the data backend.
-    pub fn load(data: D, vm: M, zkvm: Z) -> anyhow::Result<Self> {
+    pub fn load(data: D) -> anyhow::Result<Self> {
         let current = data.get(Self::PREFIX_CURRENT, &[])?;
         let current = current
             .map(Hash::try_from)
@@ -56,8 +50,6 @@ where
             current,
             next,
             data,
-            vm,
-            zkvm,
             phantom: PhantomData,
         })
     }
@@ -73,29 +65,31 @@ where
     }
 
     /// Initializes a new context.
-    pub fn context(&self, library: Hash) -> ExecutionContext<H, D, M, Z> {
+    pub fn context(&self, library: Hash) -> ExecutionContext<H, D> {
         let current = self.current();
 
-        ExecutionContext::init(
-            library,
-            current,
-            self.data.clone(),
-            self.vm.clone(),
-            self.zkvm.clone(),
-        )
+        ExecutionContext::init(library, current, self.data.clone())
     }
 
     /// Adds a new block.
     ///
     /// It will be validated on the domain library.
-    pub fn add_domain_block(&self, domain: &str, args: Value) -> anyhow::Result<Vec<String>> {
+    pub fn add_domain_block<VM>(
+        &self,
+        vm: &VM,
+        domain: &str,
+        args: Value,
+    ) -> anyhow::Result<Vec<String>>
+    where
+        VM: Vm<H, D>,
+    {
         let id = DomainData::identifier_from_parts(domain);
         let ctx = self.context(id);
 
-        let validated = self.vm.execute(
+        let validated = vm.execute(
             &ctx,
             &id,
-            ExecutionContext::<H, D, M, Z>::LIB_VALIDATE_BLOCK,
+            ExecutionContext::<H, D>::LIB_VALIDATE_BLOCK,
             args,
         )?;
 
@@ -141,7 +135,7 @@ where
                 None => {
                     if let Err(e) =
                         self.data
-                            .set(ExecutionContext::<H, D, M, Z>::PREFIX_BLOCK, &id, &packed)
+                            .set(ExecutionContext::<H, D>::PREFIX_BLOCK, &id, &packed)
                     {
                         tracing::error!(
                             "failed updating domain `{domain}` block {}: {e}",
@@ -153,7 +147,7 @@ where
                 Some(b) if b.number < validated.number => {
                     if let Err(e) =
                         self.data
-                            .set(ExecutionContext::<H, D, M, Z>::PREFIX_BLOCK, &id, &packed)
+                            .set(ExecutionContext::<H, D>::PREFIX_BLOCK, &id, &packed)
                     {
                         tracing::error!(
                             "failed updating domain `{domain}` block {}: {e}",

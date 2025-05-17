@@ -2,61 +2,61 @@ use std::sync::{Arc, Mutex};
 
 use lru::LruCache;
 use serde_json::Value;
-use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Hasher, Vm, ZkVm};
+use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Hasher, Vm};
 use wasmtime::{Engine, Linker, Module, Store};
 
 use crate::HOST_LIB;
 
 pub mod valence;
 
-pub struct Runtime<H, D, Z>
+pub struct Runtime<H, D, VM>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     pub args: Value,
     pub ret: Option<Value>,
-    pub ctx: ExecutionContext<H, D, ValenceWasm<H, D, Z>, Z>,
+    pub ctx: ExecutionContext<H, D>,
     pub log: Vec<String>,
     pub panic: Option<String>,
+    pub vm: VM,
 }
 
-impl<H, D, Z> Runtime<H, D, Z>
+impl<H, D, VM> Runtime<H, D, VM>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     /// Creates a new runtime with the underlying context.
-    pub fn new(ctx: ExecutionContext<H, D, ValenceWasm<H, D, Z>, Z>, args: Value) -> Self {
+    pub fn new(ctx: ExecutionContext<H, D>, args: Value, vm: VM) -> Self {
         Self {
             args,
             ret: None,
             ctx,
             log: Vec::with_capacity(10),
             panic: None,
+            vm,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ValenceWasm<H, D, Z>
+pub struct ValenceWasm<H, D>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
 {
     engine: Engine,
-    linker: Linker<Runtime<H, D, Z>>,
+    linker: Linker<Runtime<H, D, Self>>,
     libs: Arc<Mutex<LruCache<Hash, Module>>>,
 }
 
-impl<H, D, Z> ValenceWasm<H, D, Z>
+impl<H, D> ValenceWasm<H, D>
 where
     H: Hasher + 'static,
     D: DataBackend + 'static,
-    Z: ZkVm<Hasher = H> + 'static,
 {
     /// Creates a new instance of the VM.
     pub fn new(capacity: usize) -> anyhow::Result<Self> {
@@ -91,15 +91,14 @@ where
     }
 }
 
-impl<H, D, Z> Vm<H, D, Z> for ValenceWasm<H, D, Z>
+impl<H, D> Vm<H, D> for ValenceWasm<H, D>
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
 {
     fn execute(
         &self,
-        ctx: &ExecutionContext<H, D, Self, Z>,
+        ctx: &ExecutionContext<H, D>,
         lib: &Hash,
         f: &str,
         args: Value,
@@ -112,6 +111,7 @@ where
             ctx: ctx.clone(),
             log: Vec::with_capacity(10),
             panic: None,
+            vm: self.clone(),
         };
 
         let mut store = Store::new(&self.engine, runtime);

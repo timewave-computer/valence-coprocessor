@@ -44,15 +44,13 @@ fn deploy_hello() {
 
     let library = ProgramData::default().with_circuit(hello);
     let library = registry.register_program(&vm, &zkvm, library).unwrap();
-    let ctx = Historical::load(data, vm, zkvm.clone())
-        .unwrap()
-        .context(library);
+    let ctx = Historical::load(data).unwrap().context(library);
 
     let witness = String::from("Valence");
     let witness = Witness::Data(witness.as_bytes().to_vec());
     let witness = serde_json::to_value(vec![witness]).unwrap();
 
-    let proof = ctx.get_program_proof(witness).unwrap();
+    let proof = ctx.get_program_proof(&vm, &zkvm, witness).unwrap();
     let output: String = zkvm.outputs(&proof).unwrap();
 
     assert_eq!(output, "Hello, Valence!");

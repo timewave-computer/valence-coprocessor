@@ -1,6 +1,6 @@
 use msgpacker::Packable;
 use serde_json::Value;
-use valence_coprocessor::{utils, DataBackend, FileSystem, Hasher, ZkVm};
+use valence_coprocessor::{utils, DataBackend, FileSystem, Hasher, Vm};
 use wasmtime::{Caller, Extern, Memory};
 
 use super::Runtime;
@@ -27,11 +27,11 @@ pub enum ReturnCodes {
 }
 
 /// Resolves a panic.
-pub fn panic<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32)
+pub fn panic<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32, len: u32)
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     if let Some(Extern::Memory(mem)) = caller.get_export("memory") {
         let capacity = mem.size(&caller) as usize * mem.page_size(&caller) as usize;
@@ -57,11 +57,11 @@ where
 /// Writes the function arguments (JSON bytes) to `ptr`.
 ///
 /// Returns an error if the maximum `capacity` of the buffer is smaller than the arguments length.
-pub fn args<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
+pub fn args<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -77,11 +77,11 @@ where
 }
 
 /// Reads the function return (JSON bytes) from `ptr`.
-pub fn ret<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
+pub fn ret<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32, len: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -102,11 +102,11 @@ where
 }
 
 /// Get the [`FileSystem`] storage object.
-pub fn get_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
+pub fn get_storage<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -130,8 +130,8 @@ where
 }
 
 /// Fetch the provided file from the storage.
-pub fn get_storage_file<H, D, Z>(
-    mut caller: Caller<Runtime<H, D, Z>>,
+pub fn get_storage_file<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
     path_ptr: u32,
     path_len: u32,
     ptr: u32,
@@ -139,7 +139,7 @@ pub fn get_storage_file<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -163,11 +163,11 @@ where
 }
 
 /// Override the [`FileSystem`] storage object.
-pub fn set_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
+pub fn set_storage<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32, len: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -188,8 +188,8 @@ where
 }
 
 /// Set the provided file on the storage.
-pub fn set_storage_file<H, D, Z>(
-    mut caller: Caller<Runtime<H, D, Z>>,
+pub fn set_storage_file<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
     path_ptr: u32,
     path_len: u32,
     ptr: u32,
@@ -198,7 +198,7 @@ pub fn set_storage_file<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -227,11 +227,11 @@ where
 ///
 /// Returns an error if the maximum `capacity` of the buffer is smaller than the library raw
 /// storage length.
-pub fn get_raw_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
+pub fn get_raw_storage<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -250,11 +250,11 @@ where
 }
 
 /// Replace the library raw storage.
-pub fn set_raw_storage<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
+pub fn set_raw_storage<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32, len: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -274,11 +274,11 @@ where
 }
 
 /// Get the library identifier.
-pub fn get_library<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32) -> i32
+pub fn get_library<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -294,8 +294,8 @@ where
 }
 
 /// Returns the last included block for the provided domain.
-pub fn get_latest_block<H, D, Z>(
-    mut caller: Caller<Runtime<H, D, Z>>,
+pub fn get_latest_block<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
     domain_ptr: u32,
     domain_len: u32,
     ptr: u32,
@@ -303,7 +303,7 @@ pub fn get_latest_block<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -327,8 +327,8 @@ where
 }
 
 /// Get a state proof.
-pub fn get_state_proof<H, D, Z>(
-    mut caller: Caller<Runtime<H, D, Z>>,
+pub fn get_state_proof<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
     domain_ptr: u32,
     domain_len: u32,
     args_ptr: u32,
@@ -338,7 +338,7 @@ pub fn get_state_proof<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -355,7 +355,11 @@ where
         Err(e) => return e,
     };
 
-    let proof = match caller.data().ctx.get_state_proof(&domain, args) {
+    let proof = match caller
+        .data()
+        .ctx
+        .get_state_proof(&caller.data().vm, &domain, args)
+    {
         Ok(p) => p,
         Err(_) => return ReturnCodes::StateProof as i32,
     };
@@ -367,8 +371,8 @@ where
 }
 
 /// Perform a HTTP request.
-pub fn http<H, D, Z>(
-    mut caller: Caller<Runtime<H, D, Z>>,
+pub fn http<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
     args_ptr: u32,
     args_len: u32,
     ptr: u32,
@@ -376,7 +380,7 @@ pub fn http<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -405,11 +409,11 @@ where
 }
 
 /// Logs a string.
-pub fn log<H, D, Z>(mut caller: Caller<Runtime<H, D, Z>>, ptr: u32, len: u32) -> i32
+pub fn log<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32, len: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let mem = match caller.get_export("memory") {
         Some(Extern::Memory(mem)) => mem,
@@ -426,8 +430,8 @@ where
     ReturnCodes::Success as i32
 }
 
-fn read_buffer<H, D, Z>(
-    caller: &mut Caller<Runtime<H, D, Z>>,
+fn read_buffer<H, D, VM>(
+    caller: &mut Caller<Runtime<H, D, VM>>,
     mem: &Memory,
     ptr: u32,
     len: u32,
@@ -435,7 +439,7 @@ fn read_buffer<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let capacity = mem.data_size(&caller);
     let capacity = capacity.saturating_sub(ptr as usize);
@@ -453,8 +457,8 @@ where
     Ok(bytes)
 }
 
-fn read_string<H, D, Z>(
-    caller: &mut Caller<Runtime<H, D, Z>>,
+fn read_string<H, D, VM>(
+    caller: &mut Caller<Runtime<H, D, VM>>,
     mem: &Memory,
     ptr: u32,
     len: u32,
@@ -462,14 +466,14 @@ fn read_string<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     read_buffer(caller, mem, ptr, len)
         .and_then(|b| String::from_utf8(b).map_err(|_| ReturnCodes::StringUtf8 as i32))
 }
 
-fn read_json<H, D, Z>(
-    caller: &mut Caller<Runtime<H, D, Z>>,
+fn read_json<H, D, VM>(
+    caller: &mut Caller<Runtime<H, D, VM>>,
     mem: &Memory,
     ptr: u32,
     len: u32,
@@ -477,14 +481,14 @@ fn read_json<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     read_buffer(caller, mem, ptr, len)
         .and_then(|b| serde_json::from_slice(&b).map_err(|_| ReturnCodes::JsonValue as i32))
 }
 
-fn write_buffer<H, D, Z>(
-    caller: &mut Caller<Runtime<H, D, Z>>,
+fn write_buffer<H, D, VM>(
+    caller: &mut Caller<Runtime<H, D, VM>>,
     mem: &Memory,
     ptr: u32,
     buf: &[u8],
@@ -492,7 +496,7 @@ fn write_buffer<H, D, Z>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
+    VM: Vm<H, D>,
 {
     let capacity = mem.data_size(&caller);
     let capacity = capacity.saturating_sub(ptr as usize);
@@ -507,8 +511,8 @@ where
     Ok(buf.len() as i32)
 }
 
-fn serialize<H, D, Z, T>(
-    caller: &mut Caller<Runtime<H, D, Z>>,
+fn serialize<H, D, VM, T>(
+    caller: &mut Caller<Runtime<H, D, VM>>,
     mem: &Memory,
     ptr: u32,
     data: &T,
@@ -516,8 +520,8 @@ fn serialize<H, D, Z, T>(
 where
     H: Hasher,
     D: DataBackend,
-    Z: ZkVm<Hasher = H>,
     T: Packable,
+    VM: Vm<H, D>,
 {
     let bytes = msgpacker::pack_to_vec(data);
 

@@ -1,3 +1,4 @@
+use core::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
 
 use lru::LruCache;
@@ -7,7 +8,7 @@ use sp1_sdk::{
     SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
 };
 use valence_coprocessor::{
-    DataBackend, ExecutionContext, Hash, ProvenProgram, Vm, WitnessCoprocessor, ZkVm,
+    DataBackend, ExecutionContext, Hash, ProvenProgram, WitnessCoprocessor, ZkVm,
 };
 
 use crate::Sp1Hasher;
@@ -124,12 +125,23 @@ impl Sp1ZkVm {
         let client = WrappedClient::from(mode);
         let client = Arc::new(client);
 
-        let capacity = std::num::NonZeroUsize::new(capacity)
-            .ok_or_else(|| anyhow::anyhow!("invalid capacity"))?;
+        let capacity =
+            NonZeroUsize::new(capacity).ok_or_else(|| anyhow::anyhow!("invalid capacity"))?;
         let keys = LruCache::new(capacity);
         let keys = Arc::new(Mutex::new(keys));
 
         Ok(Self { client, keys })
+    }
+
+    pub fn mock() -> Self {
+        let client = WrappedClient::from(Mode::Mock);
+        let client = Arc::new(client);
+
+        let capacity = NonZeroUsize::new(10).unwrap();
+        let keys = LruCache::new(capacity);
+        let keys = Arc::new(Mutex::new(keys));
+
+        Self { client, keys }
     }
 
     pub fn verify(&self, vk: &SP1VerifyingKey, proof: &SP1ProofWithPublicValues) -> bool {
@@ -149,14 +161,13 @@ impl Sp1ZkVm {
 impl ZkVm for Sp1ZkVm {
     type Hasher = Sp1Hasher;
 
-    fn prove<D, M>(
+    fn prove<D>(
         &self,
-        ctx: &ExecutionContext<Sp1Hasher, D, M, Self>,
+        ctx: &ExecutionContext<Sp1Hasher, D>,
         w: WitnessCoprocessor,
     ) -> anyhow::Result<ProvenProgram>
     where
         D: DataBackend,
-        M: Vm<Sp1Hasher, D, Sp1ZkVm>,
     {
         let library = ctx.library();
 
@@ -181,13 +192,9 @@ impl ZkVm for Sp1ZkVm {
             })
     }
 
-    fn verifying_key<D, M>(
-        &self,
-        ctx: &ExecutionContext<Sp1Hasher, D, M, Self>,
-    ) -> anyhow::Result<Vec<u8>>
+    fn verifying_key<D>(&self, ctx: &ExecutionContext<Sp1Hasher, D>) -> anyhow::Result<Vec<u8>>
     where
         D: DataBackend,
-        M: Vm<Sp1Hasher, D, Self>,
     {
         let library = ctx.library();
 

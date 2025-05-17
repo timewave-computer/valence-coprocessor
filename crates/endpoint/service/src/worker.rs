@@ -3,9 +3,9 @@ use std::{thread, time::Duration};
 use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use flume::{Receiver, Sender};
 use serde_json::{json, Value};
-use valence_coprocessor::{Hash, ProvenProgram};
+use valence_coprocessor::Hash;
 
-use crate::Historical;
+use crate::{Historical, ServiceVm, ServiceZkVm};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Job {
@@ -34,10 +34,12 @@ pub struct Pool {
     gradient: f64,
     frequency: Duration,
     historical: Historical,
+    vm: ServiceVm,
+    zkvm: ServiceZkVm,
 }
 
 impl Pool {
-    pub fn new(historical: Historical) -> Self {
+    pub fn new(historical: Historical, vm: ServiceVm, zkvm: ServiceZkVm) -> Self {
         let (tx, rx) = flume::unbounded();
         let (ack_tx, ack) = flume::unbounded();
 
@@ -53,6 +55,8 @@ impl Pool {
             gradient: 0.1,
             frequency: Duration::from_secs(600),
             historical,
+            vm,
+            zkvm,
         }
     }
 
@@ -155,6 +159,8 @@ impl Pool {
     pub fn new_worker(&self) -> Worker {
         Worker {
             historical: self.historical.clone(),
+            vm: self.vm.clone(),
+            zkvm: self.zkvm.clone(),
             rx: self.rx.clone(),
             tx: self.ack_tx.clone(),
         }
@@ -164,6 +170,8 @@ impl Pool {
 #[derive(Clone)]
 pub struct Worker {
     historical: Historical,
+    vm: ServiceVm,
+    zkvm: ServiceZkVm,
     rx: Receiver<Job>,
     tx: Sender<Ack>,
 }
@@ -173,7 +181,7 @@ impl Worker {
         tracing::debug!("worker prove recv: {}", hex::encode(program));
 
         let ctx = self.historical.context(program);
-        let res = ctx.get_program_proof(args.clone());
+        let res = ctx.get_program_proof(&self.vm, &self.zkvm, args.clone());
 
         tracing::debug!(
             "worker prove received proof: {}, {}",
@@ -189,11 +197,12 @@ impl Worker {
             "payload": payload,
         });
 
-        if let Ok(ProvenProgram { proof }) = res {
-            args["proof"] = Base64.encode(proof).into();
+        match res {
+            Ok(p) => args["proof"] = Base64.encode(p.proof).into(),
+            Err(e) => tracing::debug!("error on computed proof: {e}"),
         }
 
-        if ctx.entrypoint(args.clone()).is_err() {
+        if ctx.entrypoint(&self.vm, args.clone()).is_err() {
             tracing::debug!(
                 "failed to call library entrypoint for program `{}` with args `{args:?}`",
                 hex::encode(program)
