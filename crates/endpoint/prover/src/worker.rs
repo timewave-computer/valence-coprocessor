@@ -115,7 +115,14 @@ impl Worker {
                         }
                     }
                 } else if let Some(c) = &self.sp1gpu {
-                    match c.lock().await.prove(&pk, &stdin).groth16().run() {
+                    match c
+                        .lock()
+                        .await
+                        .prove(&pk, &stdin)
+                        .compressed()
+                        .groth16()
+                        .run()
+                    {
                         Ok(p) => p.bytes(),
                         Err(e) => return Response::Err(format!("failed computing gpu proof: {e}")),
                     }

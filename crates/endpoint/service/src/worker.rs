@@ -3,7 +3,7 @@ use std::{thread, time::Duration};
 use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use flume::{Receiver, Sender};
 use serde_json::{json, Value};
-use valence_coprocessor::{Hash, ProvenProgram};
+use valence_coprocessor::Hash;
 
 use crate::{Historical, ServiceVm, ServiceZkVm};
 
@@ -197,8 +197,9 @@ impl Worker {
             "payload": payload,
         });
 
-        if let Ok(ProvenProgram { proof }) = res {
-            args["proof"] = Base64.encode(proof).into();
+        match res {
+            Ok(p) => args["proof"] = Base64.encode(p.proof).into(),
+            Err(e) => tracing::debug!("error on computed proof: {e}"),
         }
 
         if ctx.entrypoint(&self.vm, args.clone()).is_err() {
