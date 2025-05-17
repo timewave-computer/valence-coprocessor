@@ -1,11 +1,14 @@
-use std::net::{TcpStream, ToSocketAddrs};
+use std::{
+    env,
+    net::{TcpStream, ToSocketAddrs},
+};
 
 use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use msgpacker::{Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{SP1ProofWithPublicValues, SP1VerifyingKey};
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
-use valence_coprocessor::Hash;
+use valence_coprocessor::{Blake3Hasher, Hash, Hasher as _};
 
 use crate::types::{Circuit, Request, Response};
 
@@ -30,7 +33,15 @@ impl Client {
     }
 
     fn connect(&self) -> anyhow::Result<WebSocket<MaybeTlsStream<TcpStream>>> {
-        Ok(tungstenite::connect(&self.addr)?.0)
+        let mut stream = tungstenite::connect(&self.addr)?.0;
+
+        let secret = env::var("VALENCE_PROVER_SECRET").unwrap_or_default();
+        let challenge = stream.read()?.into_data().to_vec();
+        let challenge = Blake3Hasher::hash(&[secret.as_bytes(), challenge.as_slice()].concat());
+
+        stream.send(challenge.to_vec().into())?;
+
+        Ok(stream)
     }
 
     /// Get a SP1 mock proof.

@@ -71,7 +71,6 @@ pub fn verify(
 fn pvk_is_correct() {
     let sp1_vk = &sp1_verifier::GROTH16_VK_BYTES;
     let sp1_vk = sp1_verifier::load_ark_groth16_verifying_key_from_bytes(sp1_vk).unwrap();
-    let sp1_vk: VerifyingKey<Bn254> = unsafe { core::mem::transmute(sp1_vk) };
 
     assert_eq!(sp1_vk, pvk().vk);
 }

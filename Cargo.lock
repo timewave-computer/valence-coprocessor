@@ -7010,6 +7010,7 @@ dependencies = [
  "flume",
  "lru 0.14.0",
  "msgpacker",
+ "rand 0.9.1",
  "serde",
  "sp1-sdk",
  "tokio",
