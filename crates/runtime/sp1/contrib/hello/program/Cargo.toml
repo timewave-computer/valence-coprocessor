@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 valence-coprocessor = { path = "../../../../../core", default-features = false }
 valence-coprocessor-sp1 = { path = "../../../", default-features = false }
-sp1-zkvm = "4.2.0"
+sp1-zkvm = "4.2.1"
