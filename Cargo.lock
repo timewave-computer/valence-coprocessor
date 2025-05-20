@@ -4833,7 +4833,6 @@ dependencies = [
  "arc-swap",
  "combine",
  "itoa",
- "native-tls",
  "num-bigint 0.4.6",
  "percent-encoding",
  "r2d2",
