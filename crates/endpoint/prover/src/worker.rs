@@ -141,7 +141,7 @@ impl Worker {
                             return Response::Err(format!("failed to serialize core proof: {e}"))
                         }
                     },
-                    SP1Proof::Plonk(_) | SP1Proof::Groth16(_) => p.bytes(),
+                    SP1Proof::Plonk(_) | SP1Proof::Groth16(_) => proof.bytes(),
                 };
 
                 tracing::debug!("proof serialized.");
