@@ -3,7 +3,9 @@ use std::{net::TcpStream, sync::Arc, thread, time::Duration};
 use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use flume::{Receiver, Sender};
 use msgpacker::{Packable as _, Unpackable as _};
-use sp1_sdk::{CpuProver, CudaProver, Prover as _, ProverClient, SP1ProvingKey, SP1Stdin};
+use sp1_sdk::{
+    CpuProver, CudaProver, Prover as _, ProverClient, SP1Proof, SP1ProvingKey, SP1Stdin,
+};
 use tokio::sync::Mutex;
 use tungstenite::WebSocket;
 
@@ -101,17 +103,10 @@ impl Worker {
                 tracing::debug!("environment prepared...");
 
                 let proof = if sp1mock {
-                    let proof = match self.sp1mock.prove(&pk, &stdin).run() {
+                    match self.sp1mock.prove(&pk, &stdin).run() {
                         Ok(p) => p,
                         Err(e) => {
                             return Response::Err(format!("failed computing mock proof: {e}"))
-                        }
-                    };
-
-                    match bincode::serialize(&proof) {
-                        Ok(p) => p,
-                        Err(e) => {
-                            return Response::Err(format!("failed serializing mock proof: {e}"))
                         }
                     }
                 } else if let Some(c) = &self.sp1gpu {
@@ -123,14 +118,33 @@ impl Worker {
                         .groth16()
                         .run()
                     {
-                        Ok(p) => p.bytes(),
+                        Ok(p) => p,
                         Err(e) => return Response::Err(format!("failed computing gpu proof: {e}")),
                     }
                 } else {
                     return Response::Err("GPU support not activated.".into());
                 };
 
-                tracing::debug!("proof computed.");
+                tracing::debug!("proof computed");
+
+                if let Err(e) = self.sp1mock.verify(&proof, &pk.vk) {
+                    return Response::Err(format!("Proof sanity check failed: {e}"));
+                }
+
+                tracing::debug!("proof verified");
+
+                let proof = match &proof.proof {
+                    SP1Proof::Core(_) | SP1Proof::Compressed(_) => match bincode::serialize(&proof)
+                    {
+                        Ok(p) => p,
+                        Err(e) => {
+                            return Response::Err(format!("failed to serialize core proof: {e}"))
+                        }
+                    },
+                    SP1Proof::Plonk(_) | SP1Proof::Groth16(_) => p.bytes(),
+                };
+
+                tracing::debug!("proof serialized.");
 
                 Response::Proof(Base64.encode(proof))
             }
