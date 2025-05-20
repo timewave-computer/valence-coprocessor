@@ -8,5 +8,5 @@ description = "The Valence co-processor Redis data backend implementation."
 [dependencies]
 anyhow.workspace = true
 r2d2 = "0.8.10"
-redis = { version = "0.30.0", features = ["r2d2"] }
+redis = { version = "0.30.0", features = ["tls-native-tls", "r2d2"] }
 valence-coprocessor.path = "../../core"
