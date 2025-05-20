@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let data = match redis {
-        Some(redis) => RedisBackend::open(format!("{redis}"))?.into(),
+        Some(redis) => RedisBackend::open(format!("rediss://{redis}/"))?.into(),
         None => ServiceBackend::Memory(Default::default()),
     };
 
