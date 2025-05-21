@@ -6,7 +6,7 @@ use std::{
 use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use msgpacker::{Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
-use sp1_sdk::{SP1ProofWithPublicValues, SP1VerifyingKey};
+use sp1_sdk::SP1VerifyingKey;
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
 use valence_coprocessor::{Blake3Hasher, Hash, Hasher as _};
 
@@ -44,102 +44,26 @@ impl Client {
         Ok(stream)
     }
 
-    /// Get a SP1 mock proof.
+    /// Get a base64 encoded SP1 bytes proof.
     ///
     /// The `circuit` argument will be used to index the proving key. If the proving key cannot be
     /// found, `elf` will be evaluated to return the elf binary so the key can be computed and stored.
-    pub fn get_sp1_mock_proof<F, W>(
-        &self,
-        circuit: Hash,
-        witnesses: W,
-        elf: F,
-    ) -> anyhow::Result<SP1ProofWithPublicValues>
-    where
-        F: FnOnce(&Hash) -> anyhow::Result<Vec<u8>>,
-        W: AsRef<[u8]>,
-    {
-        let mut socket = self.connect()?;
-
-        socket.send(
-            Request::Sp1MockProof {
-                circuit: circuit.into(),
-                witnesses: Base64.encode(witnesses.as_ref()),
-            }
-            .pack_to_vec()
-            .into(),
-        )?;
-
-        let res = socket.read()?.into_data().to_vec();
-        let res = Response::unpack(&res)?.1;
-
-        match res {
-            Response::Proof(p) => {
-                let proof = Base64.decode(p)?;
-                let proof = bincode::deserialize(&proof)?;
-
-                return Ok(proof);
-            }
-
-            Response::ProvingKeyNotCached => (),
-
-            Response::Err(e) => anyhow::bail!("error processing request: {e}"),
-
-            _ => anyhow::bail!("unexpected response {res:?}"),
-        }
-
-        let elf = elf(&circuit)?;
-        let elf = Base64.encode(elf);
-
-        socket.send(
-            Request::Sp1MockProof {
-                circuit: Circuit::Elf {
-                    identifier: circuit,
-                    bytes: elf,
-                },
-                witnesses: Base64.encode(witnesses.as_ref()),
-            }
-            .pack_to_vec()
-            .into(),
-        )?;
-
-        let res = socket.read()?.into_data().to_vec();
-        let res = Response::unpack(&res)?.1;
-
-        let proof = match res {
-            Response::Proof(p) => {
-                let proof = Base64.decode(p)?;
-
-                bincode::deserialize(&proof)?
-            }
-
-            Response::Err(e) => anyhow::bail!("error processing request: {e}"),
-
-            _ => anyhow::bail!("unexpected response {res:?}"),
-        };
-
-        socket.send(Request::Close.pack_to_vec().into()).ok();
-
-        Ok(proof)
-    }
-
-    /// Get a SP1 GPU proof.
-    ///
-    /// The `circuit` argument will be used to index the proving key. If the proving key cannot be
-    /// found, `elf` will be evaluated to return the elf binary so the key can be computed and stored.
-    pub fn get_sp1_gpu_proof<F, W>(
+    pub fn get_sp1_proof<F, W>(
         &self,
         circuit: Hash,
         witnesses: &W,
         elf: F,
-    ) -> anyhow::Result<SP1ProofWithPublicValues>
+    ) -> anyhow::Result<String>
     where
         F: FnOnce(&Hash) -> anyhow::Result<Vec<u8>>,
         W: AsRef<[u8]>,
     {
+        tracing::debug!("sending SP1 prove with GPU request to remove prover...");
+
         let mut socket = self.connect()?;
 
         socket.send(
-            Request::Sp1GpuProof {
+            Request::Sp1Proof {
                 circuit: circuit.into(),
                 witnesses: Base64.encode(witnesses.as_ref()),
             }
@@ -148,14 +72,16 @@ impl Client {
         )?;
 
         let res = socket.read()?.into_data().to_vec();
+
+        tracing::debug!("response received...");
+
         let res = Response::unpack(&res)?.1;
 
         match res {
             Response::Proof(p) => {
-                let proof = Base64.decode(p)?;
-                let proof = bincode::deserialize(&proof)?;
+                tracing::debug!("proving key cached; returning proof");
 
-                return Ok(proof);
+                return Ok(p);
             }
 
             Response::ProvingKeyNotCached => (),
@@ -165,11 +91,13 @@ impl Client {
             _ => anyhow::bail!("unexpected response {res:?}"),
         }
 
+        tracing::debug!("proving key cache miss...");
+
         let elf = elf(&circuit)?;
         let elf = Base64.encode(elf);
 
         socket.send(
-            Request::Sp1GpuProof {
+            Request::Sp1Proof {
                 circuit: Circuit::Elf {
                     identifier: circuit,
                     bytes: elf,
@@ -181,21 +109,20 @@ impl Client {
         )?;
 
         let res = socket.read()?.into_data().to_vec();
+
+        tracing::debug!("response received...");
+
         let res = Response::unpack(&res)?.1;
 
         let proof = match res {
-            Response::Proof(p) => {
-                let proof = Base64.decode(p)?;
-
-                bincode::deserialize(&proof)?
-            }
-
+            Response::Proof(p) => p,
             Response::Err(e) => anyhow::bail!("error processing request: {e}"),
-
             _ => anyhow::bail!("unexpected response {res:?}"),
         };
 
         socket.send(Request::Close.pack_to_vec().into()).ok();
+
+        tracing::debug!("proof returned...");
 
         Ok(proof)
     }

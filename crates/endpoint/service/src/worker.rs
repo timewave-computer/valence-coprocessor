@@ -178,13 +178,13 @@ pub struct Worker {
 
 impl Worker {
     pub fn prove(&self, program: Hash, args: Value, payload: Option<Value>) {
-        tracing::debug!("worker prove recv: {}", hex::encode(program));
+        tracing::debug!("worker recv: {}", hex::encode(program));
 
         let ctx = self.historical.context(program);
         let res = ctx.get_program_proof(&self.vm, &self.zkvm, args.clone());
 
         tracing::debug!(
-            "worker prove received proof: {}, {}",
+            "worker received proof: {}, {}",
             hex::encode(program),
             res.is_ok()
         );

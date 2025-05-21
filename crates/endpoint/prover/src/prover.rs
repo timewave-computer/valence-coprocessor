@@ -1,6 +1,6 @@
 use std::net::ToSocketAddrs;
 
-use sp1_sdk::SP1Proof;
+use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use valence_coprocessor::{
     DataBackend, ExecutionContext, Hash, ProvenProgram, WitnessCoprocessor, ZkVm,
 };
@@ -35,21 +35,27 @@ impl ZkVm for ProverService {
     where
         D: DataBackend,
     {
+        tracing::debug!("initiating prove request...");
+
         let circuit = *ctx.library();
         let w = bincode::serialize(&w)?;
 
-        let proof = self.client.get_sp1_gpu_proof(circuit, &w, |_| {
+        tracing::debug!(
+            "witnesses serialized for circuit {}...",
+            hex::encode(circuit)
+        );
+
+        let proof = self.client.get_sp1_proof(circuit, &w, |_| {
             ctx.get_zkvm()
                 .transpose()
                 .ok_or_else(|| anyhow::anyhow!("failed to fetch ELF contents from context"))?
         })?;
 
-        let proof = match &proof.proof {
-            SP1Proof::Groth16(_) => proof.bytes(),
-            p => anyhow::bail!("unexpected proof format: {p:?}"),
-        };
+        tracing::debug!("proof fetched from service...");
 
-        Ok(ProvenProgram { proof })
+        Ok(ProvenProgram {
+            proof: Base64.decode(proof)?,
+        })
     }
 
     fn verifying_key<D>(&self, ctx: &ExecutionContext<Self::Hasher, D>) -> anyhow::Result<Vec<u8>>

@@ -10,6 +10,8 @@ anyhow.workspace = true
 base64.workspace = true
 clap.workspace = true
 dirs = "6.0.0"
+flume = "0.11.1"
+hex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio = { version = "1.44.2", features = ["full"] }
@@ -25,5 +27,3 @@ tracing-subscriber = { version = "0.3.19", default-features = true, features = [
 ] }
 poem = { version = "3.1.9", features = ["anyhow"] }
 poem-openapi = { version = "5.1.13", features = ["swagger-ui"] }
-hex = "0.4.3"
-flume = "0.11.1"
