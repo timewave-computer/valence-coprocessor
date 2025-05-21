@@ -13,6 +13,8 @@ impl Base64 {
 
     /// Decodes the provided base64 into bytes.
     pub fn decode<B: AsRef<str>>(b64: B) -> anyhow::Result<Vec<u8>> {
-        Ok(STANDARD.decode(b64.as_ref())?)
+        STANDARD
+            .decode(b64.as_ref())
+            .map_err(|e| anyhow::anyhow!("failed to decode base64: {e}"))
     }
 }
