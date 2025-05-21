@@ -1,5 +1,5 @@
 use alloc::{string::String, vec, vec::Vec};
-use msgpacker::MsgPacker;
+use msgpacker::{MsgPacker, Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
 
 use crate::{Base64, Blake3Hasher, DataBackend, Hash, Hasher};
@@ -147,6 +147,22 @@ pub struct ProvenProgram {
 }
 
 impl ProvenProgram {
+    /// Encodes the proven program into base64.
+    pub fn to_base64(&self) -> String {
+        let bytes = self.pack_to_vec();
+
+        Base64::encode(bytes)
+    }
+
+    /// Try to parse the proven program from a base64 string.
+    pub fn try_from_base64<B: AsRef<str>>(b64: B) -> anyhow::Result<Self> {
+        let bytes = Base64::decode(b64)?;
+
+        Ok(Self::unpack(&bytes)
+            .map_err(|e| anyhow::anyhow!("failed to unpack proof: {e}"))?
+            .1)
+    }
+
     /// Decodes the base64 bytes of the proof and public inputs.
     pub fn decode(&self) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
         let proof = Base64::decode(&self.proof)?;
