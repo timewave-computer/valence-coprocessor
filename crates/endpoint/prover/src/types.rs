@@ -30,16 +30,8 @@ impl From<Hash> for Circuit {
 /// Jobs that can be accepted by a worker.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, MsgPacker)]
 pub enum Request {
-    /// SP1 mock proof
-    Sp1MockProof {
-        /// Proving circuit
-        circuit: Circuit,
-        /// Circuit witnesses (base64)
-        witnesses: String,
-    },
-
-    /// SP1 GPU proof
-    Sp1GpuProof {
+    /// SP1 groth16 proof
+    Sp1Proof {
         /// Proving circuit
         circuit: Circuit,
         /// Circuit witnesses (base64)

@@ -7008,6 +7008,7 @@ dependencies = [
  "bincode",
  "clap",
  "flume",
+ "hex",
  "lru 0.14.0",
  "msgpacker",
  "rand 0.9.1",

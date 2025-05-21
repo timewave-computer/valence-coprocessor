@@ -9,7 +9,6 @@ use valence_coprocessor_sp1::{Mode, Sp1Hasher, Sp1ZkVm};
 #[derive(Clone)]
 pub enum ServiceZkVm {
     Mock(Sp1ZkVm),
-
     Service(ProverService),
 }
 
