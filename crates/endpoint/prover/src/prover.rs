@@ -42,7 +42,7 @@ impl ZkVm for ProverService {
 
         tracing::debug!(
             "witnesses serialized for circuit {}...",
-            hex::encode(&circuit)
+            hex::encode(circuit)
         );
 
         let proof = self.client.get_sp1_proof(circuit, &w, |_| {
