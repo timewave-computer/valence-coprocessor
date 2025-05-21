@@ -1,6 +1,6 @@
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use serde_json::{json, Value};
 use sp1_sdk::{Prover as _, ProverClient, SP1ProofWithPublicValues, SP1VerifyingKey};
+use valence_coprocessor::Base64;
 use valence_coprocessor_integrated_tests::Tester;
 use valence_coprocessor_integrated_tests_domain::{Domain, ID};
 
@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
         "/registry/domain",
         json!({
             "name": name,
-            "lib": Base64.encode(domain),
+            "lib": Base64::encode(domain),
         }),
     )?["domain"]
         .as_str()
@@ -33,8 +33,8 @@ fn main() -> anyhow::Result<()> {
     let program = tester.post(
         "/registry/program",
         json!({
-            "lib": Base64.encode(program),
-            "circuit": Base64.encode(circuit),
+            "lib": Base64::encode(program),
+            "circuit": Base64::encode(circuit),
         }),
     )?["program"]
         .as_str()
@@ -110,7 +110,7 @@ fn main() -> anyhow::Result<()> {
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("invalid data received"))?;
 
-        let data = Base64.decode(data)?;
+        let data = Base64::decode(data)?;
         let data = serde_json::from_slice(&data)?;
 
         Ok(data)
@@ -119,13 +119,13 @@ fn main() -> anyhow::Result<()> {
     println!("storage fetched `{}`...", serde_json::to_string(&data)?);
 
     let data = data["proof"].as_str().unwrap();
-    let data = Base64.decode(data)?;
+    let data = Base64::decode(data)?;
     let mut proof: SP1ProofWithPublicValues = bincode::deserialize(&data)?;
     println!("proof decoded...");
 
     let vk = tester.get(format!("/registry/program/{program}/vk"))?;
     let vk = vk["base64"].as_str().unwrap();
-    let vk = Base64.decode(vk)?;
+    let vk = Base64::decode(vk)?;
     let vk: SP1VerifyingKey = bincode::deserialize(&vk)?;
     println!("vk decoded...");
 

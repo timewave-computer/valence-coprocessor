@@ -6,9 +6,8 @@ use std::{
     time::Duration,
 };
 
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use serde_json::Value;
-use valence_coprocessor::Hash;
+use valence_coprocessor::{Base64, Hash};
 
 pub struct Tester {
     pub ws: PathBuf,
@@ -119,7 +118,7 @@ impl Tester {
         let b64 = b64
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("value is not string"))?;
-        let bytes = Base64.decode(b64)?;
+        let bytes = Base64::decode(b64)?;
 
         Ok(Hash::try_from(bytes.as_slice())?)
     }

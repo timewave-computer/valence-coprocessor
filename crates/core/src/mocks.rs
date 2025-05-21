@@ -7,7 +7,7 @@ use msgpacker::Packable as _;
 use serde_json::Value;
 
 use crate::{
-    Blake3Hasher, DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, Vm, Witness,
+    Base64, Blake3Hasher, DataBackend, ExecutionContext, Hash, Hasher, ProvenProgram, Vm, Witness,
     WitnessCoprocessor, ZkVm,
 };
 
@@ -40,9 +40,13 @@ impl<H: Hasher> MockZkVm<H> {
             }
         }
 
+        let p = match Base64::decode(proven.proof) {
+            Ok(p) => p,
+            Err(_) => return false,
+        };
         let proof = H::hash(&bytes).to_vec();
 
-        proven.proof == proof
+        p == proof
     }
 }
 
@@ -71,8 +75,13 @@ impl<H: Hasher> ZkVm for MockZkVm<H> {
         }
 
         let proof = H::hash(&bytes).to_vec();
+        let proof = Base64::encode(proof);
+        let public_inputs = Base64::encode(bytes);
 
-        Ok(ProvenProgram { proof })
+        Ok(ProvenProgram {
+            proof,
+            public_inputs,
+        })
     }
 
     fn verifying_key<D>(&self, _ctx: &ExecutionContext<Self::Hasher, D>) -> anyhow::Result<Vec<u8>>

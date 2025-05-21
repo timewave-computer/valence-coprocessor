@@ -7,7 +7,6 @@ description = "The Valence co-processor prover service."
 
 [dependencies]
 anyhow.workspace = true
-base64.workspace = true
 bincode.workspace = true
 clap.workspace = true
 flume = "0.11.1"

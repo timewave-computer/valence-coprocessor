@@ -2,7 +2,7 @@ use alloc::{string::String, vec, vec::Vec};
 use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
 
-use crate::{Blake3Hasher, DataBackend, Hash, Hasher};
+use crate::{Base64, Blake3Hasher, DataBackend, Hash, Hasher};
 
 use super::Registry;
 
@@ -139,8 +139,21 @@ impl Witness {
 /// A ZK proven program.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, MsgPacker)]
 pub struct ProvenProgram {
-    /// The target ZK proof.
-    pub proof: Vec<u8>,
+    /// The base64 encoded ZK proof.
+    pub proof: String,
+
+    /// The base64 encoded public inputs of the proof.
+    pub public_inputs: String,
+}
+
+impl ProvenProgram {
+    /// Decodes the base64 bytes of the proof and public inputs.
+    pub fn decode(&self) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
+        let proof = Base64::decode(&self.proof)?;
+        let public_inputs = Base64::decode(&self.public_inputs)?;
+
+        Ok((proof, public_inputs))
+    }
 }
 
 /// A domain validated block

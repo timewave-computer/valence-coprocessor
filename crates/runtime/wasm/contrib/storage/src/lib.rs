@@ -1,7 +1,7 @@
 #![no_std]
 
 use alloc::vec;
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
+use valence_coprocessor::Base64;
 use valence_coprocessor_wasm::abi;
 
 extern crate alloc;
@@ -21,7 +21,7 @@ pub extern "C" fn entrypoint() {
         "get" => {
             let path = args["path"].as_str().unwrap();
             let bytes = abi::get_storage_file(path).unwrap();
-            let b64 = Base64.encode(bytes);
+            let b64 = Base64::encode(bytes);
             let ret = serde_json::json!({"b64": b64});
 
             abi::ret(&ret).unwrap();

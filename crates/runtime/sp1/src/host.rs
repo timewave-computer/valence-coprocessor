@@ -5,10 +5,10 @@ use lru::LruCache;
 use serde::{de::DeserializeOwned, Serialize};
 use sp1_sdk::{
     CpuProver, CudaProver, NetworkProver, Prover as _, ProverClient, SP1Proof,
-    SP1ProofWithPublicValues, SP1ProvingKey, SP1Stdin, SP1VerifyingKey,
+    SP1ProofWithPublicValues, SP1ProvingKey, SP1PublicValues, SP1Stdin, SP1VerifyingKey,
 };
 use valence_coprocessor::{
-    DataBackend, ExecutionContext, Hash, ProvenProgram, WitnessCoprocessor, ZkVm,
+    Base64, DataBackend, ExecutionContext, Hash, ProvenProgram, WitnessCoprocessor, ZkVm,
 };
 
 use crate::Sp1Hasher;
@@ -92,7 +92,10 @@ impl WrappedClient {
 
         tracing::debug!("proof generated!");
 
-        Ok(ProvenProgram { proof: bytes })
+        Ok(ProvenProgram {
+            proof: Base64::encode(bytes),
+            public_inputs: Base64::encode(proof.public_values.to_vec()),
+        })
     }
 
     fn setup(&self, elf: &[u8]) -> (SP1ProvingKey, SP1VerifyingKey) {
@@ -152,9 +155,13 @@ impl Sp1ZkVm {
     where
         T: Serialize + DeserializeOwned,
     {
-        let mut proof: SP1ProofWithPublicValues = bincode::deserialize(&proof.proof)?;
+        let mut inputs = SP1PublicValues::new();
 
-        Ok(proof.public_values.read())
+        let values = Base64::decode(&proof.public_inputs)?;
+
+        inputs.write_slice(&values);
+
+        Ok(inputs.read())
     }
 }
 

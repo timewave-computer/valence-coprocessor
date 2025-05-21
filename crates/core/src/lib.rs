@@ -4,6 +4,7 @@
 
 extern crate alloc;
 
+mod b64;
 mod context;
 mod data;
 mod domain;
@@ -22,6 +23,7 @@ pub mod utils;
 #[cfg(feature = "mocks")]
 pub mod mocks;
 
+pub use b64::*;
 pub use context::*;
 pub use data::*;
 pub use domain::*;

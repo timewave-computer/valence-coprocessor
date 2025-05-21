@@ -1,9 +1,8 @@
 use std::{thread, time::Duration};
 
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use flume::{Receiver, Sender};
 use serde_json::{json, Value};
-use valence_coprocessor::Hash;
+use valence_coprocessor::{Base64, Hash};
 
 use crate::{Historical, ServiceVm, ServiceZkVm};
 
@@ -198,7 +197,7 @@ impl Worker {
         });
 
         match res {
-            Ok(p) => args["proof"] = Base64.encode(p.proof).into(),
+            Ok(p) => args["proof"] = Base64::encode(p.proof).into(),
             Err(e) => tracing::debug!("error on computed proof: {e}"),
         }
 
