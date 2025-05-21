@@ -228,7 +228,7 @@ impl Api {
         let program = try_str_to_hash(&program)?;
         let ctx = historical.context(program);
 
-        let vk = ctx.get_program_verifying_key(*zkvm)?;
+        let vk = ctx.get_verifying_key(*zkvm)?;
         let log = ctx.get_log()?;
 
         Ok(Json(ProgramVkResponse {

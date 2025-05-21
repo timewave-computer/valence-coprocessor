@@ -180,7 +180,7 @@ impl Worker {
         tracing::debug!("worker recv: {}", hex::encode(program));
 
         let ctx = self.historical.context(program);
-        let res = ctx.get_program_proof(&self.vm, &self.zkvm, args.clone());
+        let res = ctx.get_proof(&self.vm, &self.zkvm, args.clone());
 
         tracing::debug!(
             "worker received proof: {}, {}",

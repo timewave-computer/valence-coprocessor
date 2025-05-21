@@ -138,15 +138,27 @@ impl Witness {
 
 /// A ZK proven program.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, MsgPacker)]
-pub struct ProvenProgram {
+pub struct Proof {
     /// The base64 encoded ZK proof.
     pub proof: String,
 
     /// The base64 encoded public inputs of the proof.
-    pub public_inputs: String,
+    pub inputs: String,
 }
 
-impl ProvenProgram {
+impl Proof {
+    /// Encodes the arguments and returns a new proven program instance.
+    pub fn new<P, I>(proof: P, inputs: I) -> Self
+    where
+        P: AsRef<[u8]>,
+        I: AsRef<[u8]>,
+    {
+        Self {
+            proof: Base64::encode(proof.as_ref()),
+            inputs: Base64::encode(inputs.as_ref()),
+        }
+    }
+
     /// Encodes the proven program into base64.
     pub fn to_base64(&self) -> String {
         let bytes = self.pack_to_vec();
@@ -166,9 +178,9 @@ impl ProvenProgram {
     /// Decodes the base64 bytes of the proof and public inputs.
     pub fn decode(&self) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
         let proof = Base64::decode(&self.proof)?;
-        let public_inputs = Base64::decode(&self.public_inputs)?;
+        let inputs = Base64::decode(&self.inputs)?;
 
-        Ok((proof, public_inputs))
+        Ok((proof, inputs))
     }
 }
 
@@ -210,4 +222,22 @@ impl<D: DataBackend> From<D> for Registry<D> {
     fn from(data: D) -> Self {
         Self { data }
     }
+}
+
+#[test]
+fn proof_base64_encode_works() {
+    let proof_bytes = b"foo";
+    let inputs = b"bar";
+
+    let proof = Proof::new(proof_bytes, inputs);
+
+    let p = proof.to_base64();
+    let p = Proof::try_from_base64(p).unwrap();
+
+    assert_eq!(proof, p);
+
+    let (p, i) = proof.decode().unwrap();
+
+    assert_eq!(p, proof_bytes);
+    assert_eq!(i, inputs);
 }

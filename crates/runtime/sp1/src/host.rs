@@ -8,7 +8,7 @@ use sp1_sdk::{
     SP1ProofWithPublicValues, SP1ProvingKey, SP1PublicValues, SP1Stdin, SP1VerifyingKey,
 };
 use valence_coprocessor::{
-    Base64, DataBackend, ExecutionContext, Hash, ProvenProgram, WitnessCoprocessor, ZkVm,
+    Base64, DataBackend, ExecutionContext, Hash, Proof, WitnessCoprocessor, ZkVm,
 };
 
 use crate::Sp1Hasher;
@@ -67,7 +67,7 @@ impl From<Mode> for WrappedClient {
 }
 
 impl WrappedClient {
-    fn prove(&self, pk: &SP1ProvingKey, w: WitnessCoprocessor) -> anyhow::Result<ProvenProgram> {
+    fn prove(&self, pk: &SP1ProvingKey, w: WitnessCoprocessor) -> anyhow::Result<Proof> {
         tracing::debug!("prove routine initiated...");
 
         let mut stdin = SP1Stdin::new();
@@ -92,9 +92,9 @@ impl WrappedClient {
 
         tracing::debug!("proof generated!");
 
-        Ok(ProvenProgram {
+        Ok(Proof {
             proof: Base64::encode(bytes),
-            public_inputs: Base64::encode(proof.public_values.to_vec()),
+            inputs: Base64::encode(proof.public_values.to_vec()),
         })
     }
 
@@ -151,13 +151,13 @@ impl Sp1ZkVm {
         self.client.verify(vk, proof)
     }
 
-    pub fn outputs<T>(&self, proof: &ProvenProgram) -> anyhow::Result<T>
+    pub fn outputs<T>(&self, proof: &Proof) -> anyhow::Result<T>
     where
         T: Serialize + DeserializeOwned,
     {
         let mut inputs = SP1PublicValues::new();
 
-        let values = Base64::decode(&proof.public_inputs)?;
+        let values = Base64::decode(&proof.inputs)?;
 
         inputs.write_slice(&values);
 
@@ -172,7 +172,7 @@ impl ZkVm for Sp1ZkVm {
         &self,
         ctx: &ExecutionContext<Sp1Hasher, D>,
         w: WitnessCoprocessor,
-    ) -> anyhow::Result<ProvenProgram>
+    ) -> anyhow::Result<Proof>
     where
         D: DataBackend,
     {

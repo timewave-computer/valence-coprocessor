@@ -5,7 +5,7 @@ use msgpacker::{Packable as _, Unpackable as _};
 use sp1_sdk::{CpuProver, CudaProver, Prover as _, ProverClient, SP1ProvingKey, SP1Stdin};
 use tokio::sync::Mutex;
 use tungstenite::WebSocket;
-use valence_coprocessor::{Base64, ProvenProgram};
+use valence_coprocessor::{Base64, Proof};
 
 use crate::{
     cache::KeysCache,
@@ -115,13 +115,7 @@ impl Worker {
 
                 tracing::debug!("proof verified");
 
-                let public_inputs = Base64::encode(proof.public_values.to_vec());
-                let proof = Base64::encode(proof.bytes());
-                let proof = ProvenProgram {
-                    proof,
-                    public_inputs,
-                };
-                let proof = Base64::encode(proof.pack_to_vec());
+                let proof = Proof::new(proof.bytes(), proof.public_values.to_vec()).to_base64();
 
                 tracing::debug!("proof serialized.");
 

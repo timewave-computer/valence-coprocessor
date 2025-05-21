@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 use sp1_sdk::{Prover as _, ProverClient, SP1ProofWithPublicValues, SP1VerifyingKey};
-use valence_coprocessor::Base64;
+use valence_coprocessor::{Base64, Proof};
 use valence_coprocessor_integrated_tests::Tester;
 use valence_coprocessor_integrated_tests_domain::{Domain, ID};
 
@@ -119,8 +119,8 @@ fn main() -> anyhow::Result<()> {
     println!("storage fetched `{}`...", serde_json::to_string(&data)?);
 
     let data = data["proof"].as_str().unwrap();
-    let data = Base64::decode(data)?;
-    let mut proof: SP1ProofWithPublicValues = bincode::deserialize(&data)?;
+    let proof = Proof::try_from_base64(data).unwrap().decode().unwrap().0;
+    let mut proof: SP1ProofWithPublicValues = bincode::deserialize(&proof)?;
     println!("proof decoded...");
 
     let vk = tester.get(format!("/registry/program/{program}/vk"))?;

@@ -7,7 +7,7 @@ use msgpacker::{Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
 use sp1_sdk::SP1VerifyingKey;
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
-use valence_coprocessor::{Base64, Blake3Hasher, Hash, Hasher as _, ProvenProgram};
+use valence_coprocessor::{Base64, Blake3Hasher, Hash, Hasher as _, Proof};
 
 use crate::types::{Circuit, Request, Response};
 
@@ -47,12 +47,7 @@ impl Client {
     ///
     /// The `circuit` argument will be used to index the proving key. If the proving key cannot be
     /// found, `elf` will be evaluated to return the elf binary so the key can be computed and stored.
-    pub fn get_sp1_proof<F, W>(
-        &self,
-        circuit: Hash,
-        witnesses: &W,
-        elf: F,
-    ) -> anyhow::Result<ProvenProgram>
+    pub fn get_sp1_proof<F, W>(&self, circuit: Hash, witnesses: &W, elf: F) -> anyhow::Result<Proof>
     where
         F: FnOnce(&Hash) -> anyhow::Result<Vec<u8>>,
         W: AsRef<[u8]>,
@@ -81,7 +76,7 @@ impl Client {
                 tracing::debug!("proving key cached; returning proof");
 
                 let proof = Base64::decode(p)?;
-                let proof = ProvenProgram::unpack(&proof)?.1;
+                let proof = Proof::unpack(&proof)?.1;
 
                 return Ok(proof);
             }
@@ -122,7 +117,7 @@ impl Client {
             _ => anyhow::bail!("unexpected response {res:?}"),
         };
         let proof = Base64::decode(proof)?;
-        let proof = ProvenProgram::unpack(&proof)?.1;
+        let proof = Proof::unpack(&proof)?.1;
 
         socket.send(Request::Close.pack_to_vec().into()).ok();
 

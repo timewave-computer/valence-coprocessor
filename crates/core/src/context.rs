@@ -4,8 +4,8 @@ use msgpacker::Unpackable as _;
 use serde_json::Value;
 
 use crate::{
-    Blake3Hasher, DataBackend, DomainData, DomainOpening, Hash, Hasher, ProvenProgram, Registry,
-    Smt, StateProof, ValidatedDomainBlock, Vm, Witness, WitnessCoprocessor, ZkVm,
+    Blake3Hasher, DataBackend, DomainData, DomainOpening, Hash, Hasher, Proof, Registry, Smt,
+    StateProof, ValidatedDomainBlock, Vm, Witness, WitnessCoprocessor, ZkVm,
 };
 
 pub use buf_fs::{File, FileSystem};
@@ -98,12 +98,7 @@ where
     }
 
     /// Compute the ZK proof of the provided program.
-    pub fn get_program_proof<VM, ZK>(
-        &self,
-        vm: &VM,
-        zkvm: &ZK,
-        args: Value,
-    ) -> anyhow::Result<ProvenProgram>
+    pub fn get_proof<VM, ZK>(&self, vm: &VM, zkvm: &ZK, args: Value) -> anyhow::Result<Proof>
     where
         VM: Vm<H, D>,
         ZK: ZkVm<Hasher = H>,
@@ -155,7 +150,7 @@ where
     }
 
     /// Returns the program verifying key.
-    pub fn get_program_verifying_key<ZK>(&self, zkvm: &ZK) -> anyhow::Result<Vec<u8>>
+    pub fn get_verifying_key<ZK>(&self, zkvm: &ZK) -> anyhow::Result<Vec<u8>>
     where
         ZK: ZkVm<Hasher = H>,
     {
@@ -183,7 +178,7 @@ where
     }
 
     /// Get the program witness data for the ZK circuit.
-    pub fn get_program_witnesses<VM>(&self, vm: &VM, args: Value) -> anyhow::Result<Vec<Witness>>
+    pub fn get_witnesses<VM>(&self, vm: &VM, args: Value) -> anyhow::Result<Vec<Witness>>
     where
         VM: Vm<H, D>,
     {
