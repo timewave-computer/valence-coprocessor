@@ -1,9 +1,6 @@
 use std::net::ToSocketAddrs;
 
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
-use valence_coprocessor::{
-    DataBackend, ExecutionContext, Hash, ProvenProgram, WitnessCoprocessor, ZkVm,
-};
+use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Proof, WitnessCoprocessor, ZkVm};
 use valence_coprocessor_sp1::Sp1Hasher;
 
 use crate::client::Client;
@@ -31,7 +28,7 @@ impl ZkVm for ProverService {
         &self,
         ctx: &ExecutionContext<Self::Hasher, D>,
         w: WitnessCoprocessor,
-    ) -> anyhow::Result<ProvenProgram>
+    ) -> anyhow::Result<Proof>
     where
         D: DataBackend,
     {
@@ -53,9 +50,7 @@ impl ZkVm for ProverService {
 
         tracing::debug!("proof fetched from service...");
 
-        Ok(ProvenProgram {
-            proof: Base64.decode(proof)?,
-        })
+        Ok(proof)
     }
 
     fn verifying_key<D>(&self, ctx: &ExecutionContext<Self::Hasher, D>) -> anyhow::Result<Vec<u8>>

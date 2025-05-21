@@ -1,6 +1,5 @@
 use std::{thread, time::Duration};
 
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use flume::{Receiver, Sender};
 use serde_json::{json, Value};
 use valence_coprocessor::Hash;
@@ -181,7 +180,7 @@ impl Worker {
         tracing::debug!("worker recv: {}", hex::encode(program));
 
         let ctx = self.historical.context(program);
-        let res = ctx.get_program_proof(&self.vm, &self.zkvm, args.clone());
+        let res = ctx.get_proof(&self.vm, &self.zkvm, args.clone());
 
         tracing::debug!(
             "worker received proof: {}, {}",
@@ -198,7 +197,7 @@ impl Worker {
         });
 
         match res {
-            Ok(p) => args["proof"] = Base64.encode(p.proof).into(),
+            Ok(p) => args["proof"] = p.to_base64().into(),
             Err(e) => tracing::debug!("error on computed proof: {e}"),
         }
 

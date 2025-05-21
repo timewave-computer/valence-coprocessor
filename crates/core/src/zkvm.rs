@@ -2,7 +2,7 @@ use alloc::{string::String, vec::Vec};
 use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
 
-use crate::{DataBackend, ExecutionContext, Hash, Hasher, Opening, ProvenProgram, Witness};
+use crate::{DataBackend, ExecutionContext, Hash, Hasher, Opening, Proof, Witness};
 
 /// A domain opening co-processor witness.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
@@ -87,7 +87,7 @@ pub trait ZkVm: Clone + Sized {
         &self,
         ctx: &ExecutionContext<Self::Hasher, D>,
         w: WitnessCoprocessor,
-    ) -> anyhow::Result<ProvenProgram>
+    ) -> anyhow::Result<Proof>
     where
         D: DataBackend;
 

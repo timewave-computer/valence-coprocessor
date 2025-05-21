@@ -50,7 +50,7 @@ fn deploy_hello() {
     let witness = Witness::Data(witness.as_bytes().to_vec());
     let witness = serde_json::to_value(vec![witness]).unwrap();
 
-    let proof = ctx.get_program_proof(&vm, &zkvm, witness).unwrap();
+    let proof = ctx.get_proof(&vm, &zkvm, witness).unwrap();
     let output: String = zkvm.outputs(&proof).unwrap();
 
     assert_eq!(output, "Hello, Valence!");

@@ -3,12 +3,11 @@ use std::{
     net::{TcpStream, ToSocketAddrs},
 };
 
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use msgpacker::{Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
 use sp1_sdk::SP1VerifyingKey;
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
-use valence_coprocessor::{Blake3Hasher, Hash, Hasher as _};
+use valence_coprocessor::{Base64, Blake3Hasher, Hash, Hasher as _, Proof};
 
 use crate::types::{Circuit, Request, Response};
 
@@ -48,12 +47,7 @@ impl Client {
     ///
     /// The `circuit` argument will be used to index the proving key. If the proving key cannot be
     /// found, `elf` will be evaluated to return the elf binary so the key can be computed and stored.
-    pub fn get_sp1_proof<F, W>(
-        &self,
-        circuit: Hash,
-        witnesses: &W,
-        elf: F,
-    ) -> anyhow::Result<String>
+    pub fn get_sp1_proof<F, W>(&self, circuit: Hash, witnesses: &W, elf: F) -> anyhow::Result<Proof>
     where
         F: FnOnce(&Hash) -> anyhow::Result<Vec<u8>>,
         W: AsRef<[u8]>,
@@ -65,7 +59,7 @@ impl Client {
         socket.send(
             Request::Sp1Proof {
                 circuit: circuit.into(),
-                witnesses: Base64.encode(witnesses.as_ref()),
+                witnesses: Base64::encode(witnesses.as_ref()),
             }
             .pack_to_vec()
             .into(),
@@ -81,7 +75,10 @@ impl Client {
             Response::Proof(p) => {
                 tracing::debug!("proving key cached; returning proof");
 
-                return Ok(p);
+                let proof = Base64::decode(p)?;
+                let proof = Proof::unpack(&proof)?.1;
+
+                return Ok(proof);
             }
 
             Response::ProvingKeyNotCached => (),
@@ -94,7 +91,7 @@ impl Client {
         tracing::debug!("proving key cache miss...");
 
         let elf = elf(&circuit)?;
-        let elf = Base64.encode(elf);
+        let elf = Base64::encode(elf);
 
         socket.send(
             Request::Sp1Proof {
@@ -102,7 +99,7 @@ impl Client {
                     identifier: circuit,
                     bytes: elf,
                 },
-                witnesses: Base64.encode(witnesses.as_ref()),
+                witnesses: Base64::encode(witnesses.as_ref()),
             }
             .pack_to_vec()
             .into(),
@@ -119,6 +116,8 @@ impl Client {
             Response::Err(e) => anyhow::bail!("error processing request: {e}"),
             _ => anyhow::bail!("unexpected response {res:?}"),
         };
+        let proof = Base64::decode(proof)?;
+        let proof = Proof::unpack(&proof)?.1;
 
         socket.send(Request::Close.pack_to_vec().into()).ok();
 
@@ -150,7 +149,7 @@ impl Client {
 
         match res {
             Response::VerifyingKey(vk) => {
-                let vk = Base64.decode(vk)?;
+                let vk = Base64::decode(vk)?;
 
                 return Ok(bincode::deserialize(&vk)?);
             }
@@ -162,7 +161,7 @@ impl Client {
         }
 
         let elf = elf(&circuit)?;
-        let elf = Base64.encode(elf);
+        let elf = Base64::encode(elf);
 
         socket.send(
             Request::Sp1GetVerifyingKey {
@@ -180,7 +179,7 @@ impl Client {
 
         let vk = match res {
             Response::VerifyingKey(vk) => {
-                let vk = Base64.decode(vk)?;
+                let vk = Base64::decode(vk)?;
 
                 bincode::deserialize(&vk)?
             }

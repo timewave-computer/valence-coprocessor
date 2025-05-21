@@ -1,10 +1,9 @@
 use std::{array, env, fs, path::PathBuf, process::Command, thread};
 
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use serde_json::json;
 use valence_coprocessor::{
-    mocks::MockZkVm, Blake3Historical, DomainData, Hash, MemoryBackend, ProgramData, Registry,
-    ValidatedBlock, ValidatedDomainBlock,
+    mocks::MockZkVm, Base64, Blake3Historical, DomainData, Hash, MemoryBackend, ProgramData,
+    Registry, ValidatedBlock, ValidatedDomainBlock,
 };
 use valence_coprocessor_wasm::host::ValenceWasm;
 
@@ -86,7 +85,7 @@ fn deploy_storage() {
         .unwrap()
         .to_string();
 
-    let ret = Base64.decode(ret).unwrap();
+    let ret = Base64::decode(ret).unwrap();
     let ret = String::from_utf8(ret).unwrap();
 
     assert_eq!(ret, contents);

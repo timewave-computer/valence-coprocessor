@@ -22,6 +22,7 @@ base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0.140", default-features = false, features = [
   "alloc",
 ] }
+valence-coprocessor = { path = "../../../core", default-features = false }
 valence-coprocessor-wasm = { path = "../", default-features = false, features = [
   "abi-handlers",
 ] }

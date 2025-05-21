@@ -1,8 +1,8 @@
 use alloc::{string::String, vec, vec::Vec};
-use msgpacker::MsgPacker;
+use msgpacker::{MsgPacker, Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
 
-use crate::{Blake3Hasher, DataBackend, Hash, Hasher};
+use crate::{Base64, Blake3Hasher, DataBackend, Hash, Hasher};
 
 use super::Registry;
 
@@ -138,9 +138,50 @@ impl Witness {
 
 /// A ZK proven program.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, MsgPacker)]
-pub struct ProvenProgram {
-    /// The target ZK proof.
-    pub proof: Vec<u8>,
+pub struct Proof {
+    /// The base64 encoded ZK proof.
+    pub proof: String,
+
+    /// The base64 encoded public inputs of the proof.
+    pub inputs: String,
+}
+
+impl Proof {
+    /// Encodes the arguments and returns a new proven program instance.
+    pub fn new<P, I>(proof: P, inputs: I) -> Self
+    where
+        P: AsRef<[u8]>,
+        I: AsRef<[u8]>,
+    {
+        Self {
+            proof: Base64::encode(proof.as_ref()),
+            inputs: Base64::encode(inputs.as_ref()),
+        }
+    }
+
+    /// Encodes the proven program into base64.
+    pub fn to_base64(&self) -> String {
+        let bytes = self.pack_to_vec();
+
+        Base64::encode(bytes)
+    }
+
+    /// Try to parse the proven program from a base64 string.
+    pub fn try_from_base64<B: AsRef<str>>(b64: B) -> anyhow::Result<Self> {
+        let bytes = Base64::decode(b64)?;
+
+        Ok(Self::unpack(&bytes)
+            .map_err(|e| anyhow::anyhow!("failed to unpack proof: {e}"))?
+            .1)
+    }
+
+    /// Decodes the base64 bytes of the proof and public inputs.
+    pub fn decode(&self) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
+        let proof = Base64::decode(&self.proof)?;
+        let inputs = Base64::decode(&self.inputs)?;
+
+        Ok((proof, inputs))
+    }
 }
 
 /// A domain validated block
@@ -181,4 +222,22 @@ impl<D: DataBackend> From<D> for Registry<D> {
     fn from(data: D) -> Self {
         Self { data }
     }
+}
+
+#[test]
+fn proof_base64_encode_works() {
+    let proof_bytes = b"foo";
+    let inputs = b"bar";
+
+    let proof = Proof::new(proof_bytes, inputs);
+
+    let p = proof.to_base64();
+    let p = Proof::try_from_base64(p).unwrap();
+
+    assert_eq!(proof, p);
+
+    let (p, i) = proof.decode().unwrap();
+
+    assert_eq!(p, proof_bytes);
+    assert_eq!(i, inputs);
 }

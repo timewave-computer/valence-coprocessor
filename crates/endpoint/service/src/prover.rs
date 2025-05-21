@@ -1,8 +1,6 @@
 use std::net::ToSocketAddrs;
 
-use valence_coprocessor::{
-    DataBackend, ExecutionContext, Hash, ProvenProgram, WitnessCoprocessor, ZkVm,
-};
+use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Proof, WitnessCoprocessor, ZkVm};
 use valence_coprocessor_prover::prover::ProverService;
 use valence_coprocessor_sp1::{Mode, Sp1Hasher, Sp1ZkVm};
 
@@ -36,7 +34,7 @@ impl ZkVm for ServiceZkVm {
         &self,
         ctx: &ExecutionContext<Self::Hasher, D>,
         w: WitnessCoprocessor,
-    ) -> anyhow::Result<ProvenProgram>
+    ) -> anyhow::Result<Proof>
     where
         D: DataBackend,
     {

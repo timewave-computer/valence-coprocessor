@@ -1,11 +1,11 @@
 use std::{net::TcpStream, sync::Arc, thread, time::Duration};
 
-use base64::{engine::general_purpose::STANDARD as Base64, Engine as _};
 use flume::{Receiver, Sender};
 use msgpacker::{Packable as _, Unpackable as _};
 use sp1_sdk::{CpuProver, CudaProver, Prover as _, ProverClient, SP1ProvingKey, SP1Stdin};
 use tokio::sync::Mutex;
 use tungstenite::WebSocket;
+use valence_coprocessor::{Base64, Proof};
 
 use crate::{
     cache::KeysCache,
@@ -58,7 +58,7 @@ impl Worker {
             }
 
             Circuit::Elf { identifier, bytes } => {
-                let elf = Base64.decode(bytes).ok()?;
+                let elf = Base64::decode(bytes).ok()?;
                 let (pk, _vk) = self.sp1cpu.setup(&elf);
 
                 if let Ok(b) = bincode::serialize(&pk) {
@@ -80,7 +80,7 @@ impl Worker {
                     None => return Response::ProvingKeyNotCached,
                 };
 
-                let witnesses = match Base64.decode(&witnesses) {
+                let witnesses = match Base64::decode(&witnesses) {
                     Ok(w) => w,
                     Err(e) => return Response::Err(format!("error decoding the witnesses: {e}")),
                 };
@@ -115,7 +115,7 @@ impl Worker {
 
                 tracing::debug!("proof verified");
 
-                let proof = Base64.encode(proof.bytes());
+                let proof = Proof::new(proof.bytes(), proof.public_values.to_vec()).to_base64();
 
                 tracing::debug!("proof serialized.");
 
@@ -125,7 +125,7 @@ impl Worker {
             Request::Sp1GetVerifyingKey { circuit } => match self.sp1pk(circuit).await {
                 Some(pk) => {
                     let vk = bincode::serialize(&pk.vk).unwrap_or_default();
-                    let vk = Base64.encode(vk);
+                    let vk = Base64::encode(vk);
 
                     Response::VerifyingKey(vk)
                 }

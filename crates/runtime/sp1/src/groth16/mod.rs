@@ -53,18 +53,14 @@ pub fn convert(vk: &SP1VerifyingKey, proof: &SP1ProofWithPublicValues) -> (Proof
     b[0] &= 0x1F;
     let b = Fr::from_be_bytes_mod_order(&b);
 
-    let public_inputs = [a, b];
+    let inputs = [a, b];
 
-    (p, public_inputs)
+    (p, inputs)
 }
 
 /// Verifies the given proof.
-pub fn verify(
-    pvk: &PreparedVerifyingKey<Bn254>,
-    proof: &Proof<Bn254>,
-    public_inputs: &[Fr],
-) -> bool {
-    Groth16::<Bn254>::verify_proof(pvk, proof, public_inputs).unwrap_or(false)
+pub fn verify(pvk: &PreparedVerifyingKey<Bn254>, proof: &Proof<Bn254>, inputs: &[Fr]) -> bool {
+    Groth16::<Bn254>::verify_proof(pvk, proof, inputs).unwrap_or(false)
 }
 
 #[test]
