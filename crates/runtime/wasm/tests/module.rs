@@ -2,12 +2,12 @@ use std::{array, env, fs, path::PathBuf, process::Command, thread};
 
 use serde_json::json;
 use valence_coprocessor::{
-    mocks::MockZkVm, Base64, Blake3Historical, DomainData, Hash, MemoryBackend, ProgramData,
+    mocks::MockZkVm, Base64, Blake3Historical, ControllerData, DomainData, Hash, MemoryBackend,
     Registry, ValidatedBlock, ValidatedDomainBlock,
 };
 use valence_coprocessor_wasm::host::ValenceWasm;
 
-fn get_library_bytes(name: &str) -> Vec<u8> {
+fn get_controller_bytes(name: &str) -> Vec<u8> {
     let dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let dir = PathBuf::from(dir).join("contrib");
 
@@ -29,7 +29,7 @@ fn get_library_bytes(name: &str) -> Vec<u8> {
 
 #[test]
 fn deploy_hello() {
-    let hello = get_library_bytes("hello");
+    let hello = get_controller_bytes("hello");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
@@ -37,10 +37,12 @@ fn deploy_hello() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
-    let library = ProgramData::default().with_lib(hello);
-    let library = registry.register_program(&vm, &zkvm, library).unwrap();
+    let controller = ControllerData::default().with_controller(hello);
+    let controller = registry
+        .register_controller(&vm, &zkvm, controller)
+        .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(controller);
 
     let ret = ctx.entrypoint(&vm, json!({"name": "Valence"})).unwrap()["message"]
         .as_str()
@@ -52,7 +54,7 @@ fn deploy_hello() {
 
 #[test]
 fn deploy_storage() {
-    let storage = get_library_bytes("storage");
+    let storage = get_controller_bytes("storage");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
@@ -60,10 +62,12 @@ fn deploy_storage() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
-    let library = ProgramData::default().with_lib(storage);
-    let library = registry.register_program(&vm, &zkvm, library).unwrap();
+    let controller = ControllerData::default().with_controller(storage);
+    let controller = registry
+        .register_controller(&vm, &zkvm, controller)
+        .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(controller);
 
     let path = "/var/share/foo.bin";
     let contents = "Valence";
@@ -105,7 +109,7 @@ fn deploy_storage() {
 
 #[test]
 fn deploy_raw_storage() {
-    let storage = get_library_bytes("raw_storage");
+    let storage = get_controller_bytes("raw_storage");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
@@ -113,10 +117,12 @@ fn deploy_raw_storage() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
-    let library = ProgramData::default().with_lib(storage);
-    let library = registry.register_program(&vm, &zkvm, library).unwrap();
+    let controller = ControllerData::default().with_controller(storage);
+    let controller = registry
+        .register_controller(&vm, &zkvm, controller)
+        .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(controller);
 
     assert!(ctx.get_raw_storage().unwrap().is_none());
 
@@ -128,8 +134,8 @@ fn deploy_raw_storage() {
 }
 
 #[test]
-fn deploy_program() {
-    let library = get_library_bytes("program");
+fn deploy_controller() {
+    let controller = get_controller_bytes("controller");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
@@ -137,10 +143,12 @@ fn deploy_program() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
-    let library = ProgramData::default().with_lib(library);
-    let library = registry.register_program(&vm, &zkvm, library).unwrap();
+    let controller = ControllerData::default().with_controller(controller);
+    let controller = registry
+        .register_controller(&vm, &zkvm, controller)
+        .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(controller);
 
     let ret: Vec<_> = ctx
         .entrypoint(&vm, json!({}))
@@ -151,7 +159,7 @@ fn deploy_program() {
         .map(|v| v.as_u64().unwrap() as u8)
         .collect();
 
-    assert_eq!(&library, ret.as_slice());
+    assert_eq!(&controller, ret.as_slice());
 }
 
 #[test]
@@ -170,7 +178,7 @@ fn deploy_http() {
         }
     });
 
-    let library = get_library_bytes("http");
+    let controller = get_controller_bytes("http");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
@@ -178,10 +186,12 @@ fn deploy_http() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
-    let library = ProgramData::default().with_lib(library);
-    let library = registry.register_program(&vm, &zkvm, library).unwrap();
+    let controller = ControllerData::default().with_controller(controller);
+    let controller = registry
+        .register_controller(&vm, &zkvm, controller)
+        .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(controller);
 
     let ret = ctx
         .entrypoint(
@@ -201,7 +211,7 @@ fn deploy_http() {
 
 #[test]
 fn deploy_log() {
-    let hello = get_library_bytes("log");
+    let hello = get_controller_bytes("log");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
@@ -209,10 +219,12 @@ fn deploy_log() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
-    let library = ProgramData::default().with_lib(hello);
-    let library = registry.register_program(&vm, &zkvm, library).unwrap();
+    let controller = ControllerData::default().with_controller(hello);
+    let controller = registry
+        .register_controller(&vm, &zkvm, controller)
+        .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(library);
+    let ctx = Blake3Historical::load(data).unwrap().context(controller);
 
     ctx.entrypoint(&vm, json!({"name": "Valence"})).unwrap();
 
@@ -224,7 +236,7 @@ fn deploy_log() {
 
 #[test]
 fn deploy_domain() {
-    let domain = get_library_bytes("domain");
+    let domain = get_controller_bytes("domain");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
@@ -232,11 +244,11 @@ fn deploy_domain() {
     let vm = ValenceWasm::new(capacity).unwrap();
 
     let name = "valence";
-    let library = DomainData::new(name.into()).with_lib(domain);
-    let library = registry.register_domain(&vm, library).unwrap();
+    let controller = DomainData::new(name.into()).with_controller(domain);
+    let controller = registry.register_domain(&vm, controller).unwrap();
     let historical = Blake3Historical::load(data).unwrap();
 
-    let ctx = historical.context(library);
+    let ctx = historical.context(controller);
 
     let block = ctx.entrypoint(&vm, json!({"domain": name})).unwrap();
     let block: Option<ValidatedDomainBlock> = serde_json::from_value(block).unwrap();

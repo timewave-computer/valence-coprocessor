@@ -34,7 +34,7 @@ impl ZkVm for ProverService {
     {
         tracing::debug!("initiating prove request...");
 
-        let circuit = *ctx.library();
+        let circuit = *ctx.controller();
         let w = bincode::serialize(&w)?;
 
         tracing::debug!(
@@ -57,7 +57,7 @@ impl ZkVm for ProverService {
     where
         D: DataBackend,
     {
-        let circuit = *ctx.library();
+        let circuit = *ctx.controller();
         let vk = self.client.get_sp1_verifying_key(circuit, |_| {
             ctx.get_zkvm()
                 .transpose()
@@ -67,5 +67,5 @@ impl ZkVm for ProverService {
         Ok(bincode::serialize(&vk)?)
     }
 
-    fn updated(&self, _program: &Hash) {}
+    fn updated(&self, _controller: &Hash) {}
 }

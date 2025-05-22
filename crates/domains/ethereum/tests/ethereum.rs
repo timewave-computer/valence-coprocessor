@@ -1,7 +1,7 @@
 use std::{env, fs, path::PathBuf};
 
 use msgpacker::{Packable as _, Unpackable as _};
-use valence_coprocessor::{DomainCircuit as _, DomainLibrary as _, Hash, StateProof};
+use valence_coprocessor::{DomainCircuit as _, DomainController as _, Hash, StateProof};
 use valence_coprocessor_ethereum::{Ethereum, EthereumStateProof};
 
 fn read_account_proof_test_vector() -> (Hash, EthereumStateProof) {

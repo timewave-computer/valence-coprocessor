@@ -65,15 +65,15 @@ where
     }
 
     /// Initializes a new context.
-    pub fn context(&self, library: Hash) -> ExecutionContext<H, D> {
+    pub fn context(&self, controller: Hash) -> ExecutionContext<H, D> {
         let current = self.current();
 
-        ExecutionContext::init(library, current, self.data.clone())
+        ExecutionContext::init(controller, current, self.data.clone())
     }
 
     /// Adds a new block.
     ///
-    /// It will be validated on the domain library.
+    /// It will be validated on the domain controller.
     pub fn add_domain_block<VM>(
         &self,
         vm: &VM,
@@ -89,7 +89,7 @@ where
         let validated = vm.execute(
             &ctx,
             &id,
-            ExecutionContext::<H, D>::LIB_VALIDATE_BLOCK,
+            ExecutionContext::<H, D>::CONTROLLER_VALIDATE_BLOCK,
             args,
         )?;
 

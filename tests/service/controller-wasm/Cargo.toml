@@ -1,5 +1,5 @@
 [package]
-name = "valence-coprocessor-integrated-tests-program-wasm"
+name = "valence-coprocessor-integrated-tests-controller-wasm"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

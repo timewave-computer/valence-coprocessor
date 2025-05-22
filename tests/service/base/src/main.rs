@@ -11,10 +11,10 @@ fn main() -> anyhow::Result<()> {
     let domain = tester.build_wasm("valence-coprocessor-integrated-tests-domain-wasm")?;
     println!("domain built...");
 
-    let program = tester.build_wasm("valence-coprocessor-integrated-tests-program-wasm")?;
-    println!("program built...");
+    let controller = tester.build_wasm("valence-coprocessor-integrated-tests-controller-wasm")?;
+    println!("controller built...");
 
-    let circuit = tester.build_circuit("program-circuit")?;
+    let circuit = tester.build_circuit("circuit")?;
     println!("circuit built...");
 
     let name = ID;
@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
         "/registry/domain",
         json!({
             "name": name,
-            "lib": Base64::encode(domain),
+            "controller": Base64::encode(domain),
         }),
     )?["domain"]
         .as_str()
@@ -30,17 +30,17 @@ fn main() -> anyhow::Result<()> {
         .to_string();
     println!("domain registered `{domain}`...");
 
-    let program = tester.post(
-        "/registry/program",
+    let controller = tester.post(
+        "/registry/controller",
         json!({
-            "lib": Base64::encode(program),
+            "controller": Base64::encode(controller),
             "circuit": Base64::encode(circuit),
         }),
-    )?["program"]
+    )?["controller"]
         .as_str()
         .unwrap()
         .to_string();
-    println!("program registered `{program}`...");
+    println!("controller registered `{controller}`...");
 
     let number = 2;
     let value = 15;
@@ -76,7 +76,7 @@ fn main() -> anyhow::Result<()> {
     let state = 13;
     let value = 8;
     tester.post(
-        format!("/registry/program/{program}/prove"),
+        format!("/registry/controller/{controller}/prove"),
         json!({
             "args": {
                 "state": {
@@ -92,11 +92,11 @@ fn main() -> anyhow::Result<()> {
     )?;
     println!("proof submitted...");
 
-    let p = program.as_str();
+    let p = controller.as_str();
     let t = &tester;
     let data = Tester::retry_until::<Value, anyhow::Error, _>(2000, 10, move || {
         let storage = t.post(
-            format!("/registry/program/{p}/storage/fs"),
+            format!("/registry/controller/{p}/storage/fs"),
             json!({
                 "path": path
             }),
@@ -123,7 +123,7 @@ fn main() -> anyhow::Result<()> {
     let mut proof: SP1ProofWithPublicValues = bincode::deserialize(&proof)?;
     println!("proof decoded...");
 
-    let vk = tester.get(format!("/registry/program/{program}/vk"))?;
+    let vk = tester.get(format!("/registry/controller/{controller}/vk"))?;
     let vk = vk["base64"].as_str().unwrap();
     let vk = Base64::decode(vk)?;
     let vk: SP1VerifyingKey = bincode::deserialize(&vk)?;

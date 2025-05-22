@@ -11,8 +11,8 @@ use super::Registry;
 pub struct DomainData {
     /// Name of the domain
     pub name: String,
-    /// Library used to compute the domain functions.
-    pub lib: Vec<u8>,
+    /// Controller used to compute the domain functions.
+    pub controller: Vec<u8>,
 }
 
 impl DomainData {
@@ -21,18 +21,21 @@ impl DomainData {
 
     /// Creates a new domain with the provided name a identifier.
     pub fn new(name: String) -> Self {
-        Self { name, lib: vec![] }
+        Self {
+            name,
+            controller: vec![],
+        }
     }
 
-    /// Associates the provided library with the domain.
-    pub fn with_lib(mut self, lib: Vec<u8>) -> Self {
-        self.lib = lib;
+    /// Associates the provided controller with the domain.
+    pub fn with_controller(mut self, controller: Vec<u8>) -> Self {
+        self.controller = controller;
         self
     }
 
     /// Generates an unique identifier for the domain.
     ///
-    /// The library definition can be hot swapped so it is not part of the identifier
+    /// The controller definition can be hot swapped so it is not part of the identifier
     /// computation.
     pub fn identifier(&self) -> Hash {
         Self::identifier_from_parts(&self.name)
@@ -44,38 +47,38 @@ impl DomainData {
     }
 }
 
-/// Program data of the registry.
+/// Controller data of the registry.
 #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ProgramData {
-    /// Library containing the witness computation functions.
-    pub lib: Vec<u8>,
+pub struct ControllerData {
+    /// Controller containing the witness computation functions.
+    pub controller: Vec<u8>,
     /// Circuit containing the transition function.
     pub circuit: Vec<u8>,
     /// Deployed nonce value.
     pub nonce: u64,
 }
 
-impl ProgramData {
-    /// Prefix for the program identifier hash.
-    pub const ID_PREFIX: &[u8] = b"program";
+impl ControllerData {
+    /// Prefix for the controller identifier hash.
+    pub const ID_PREFIX: &[u8] = b"controller";
 
-    /// Generates an unique identifier for the program.
+    /// Generates an unique identifier for the controller.
     ///
-    /// The library file does not extend the security properties of the zkVM program so it is
+    /// The controller file does not extend the security properties of the zkVM controller so it is
     /// not included within the scope of identification, as it can be freely replaced without
     /// causing breaking changes.
     pub fn identifier(&self) -> Hash {
         Self::identifier_from_parts(&self.circuit, self.nonce)
     }
 
-    /// Computes the program identifier from its parts.
+    /// Computes the controller identifier from its parts.
     pub fn identifier_from_parts(circuit: &[u8], nonce: u64) -> Hash {
         Blake3Hasher::digest([Self::ID_PREFIX, circuit, &nonce.to_le_bytes()])
     }
 
-    /// Set the library execution definition.
-    pub fn with_lib(mut self, lib: Vec<u8>) -> Self {
-        self.lib = lib;
+    /// Set the controller execution definition.
+    pub fn with_controller(mut self, controller: Vec<u8>) -> Self {
+        self.controller = controller;
         self
     }
 
@@ -108,7 +111,7 @@ pub struct StateProof {
     pub proof: Vec<u8>,
 }
 
-/// A program witness data obtained via Valence API.
+/// A circuit witness data obtained via Valence API.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Witness {
     /// A domain opening of a state argument to its root.
@@ -136,7 +139,7 @@ impl Witness {
     }
 }
 
-/// A ZK proven program.
+/// A ZK proven circuit.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, MsgPacker)]
 pub struct Proof {
     /// The base64 encoded ZK proof.
@@ -147,7 +150,7 @@ pub struct Proof {
 }
 
 impl Proof {
-    /// Encodes the arguments and returns a new proven program instance.
+    /// Encodes the arguments and returns a new proven circuit instance.
     pub fn new<P, I>(proof: P, inputs: I) -> Self
     where
         P: AsRef<[u8]>,
@@ -159,14 +162,14 @@ impl Proof {
         }
     }
 
-    /// Encodes the proven program into base64.
+    /// Encodes the proven circuit into base64.
     pub fn to_base64(&self) -> String {
         let bytes = self.pack_to_vec();
 
         Base64::encode(bytes)
     }
 
-    /// Try to parse the proven program from a base64 string.
+    /// Try to parse the proven circuit from a base64 string.
     pub fn try_from_base64<B: AsRef<str>>(b64: B) -> anyhow::Result<Self> {
         let bytes = Base64::decode(b64)?;
 

@@ -15,7 +15,7 @@ pub enum ReturnCodes {
     MemoryRead = -4,
     ReturnBytes = -5,
     BufferTooLarge = -6,
-    LibraryRawStorage = -7,
+    ControllerRawStorage = -7,
     StringUtf8 = -8,
     DomainProof = -9,
     Serialization = -10,
@@ -23,7 +23,7 @@ pub enum ReturnCodes {
     StateProof = -12,
     Http = -13,
     LatestBlock = -14,
-    LibraryStorage = -15,
+    ControllerStorage = -15,
 }
 
 /// Resolves a panic.
@@ -115,12 +115,12 @@ where
 
     let fs = match caller.data().ctx.get_storage() {
         Ok(s) => s,
-        Err(_) => return ReturnCodes::LibraryStorage as i32,
+        Err(_) => return ReturnCodes::ControllerStorage as i32,
     };
 
     let bytes = match fs.try_to_raw_device() {
         Ok(s) => s,
-        Err(_) => return ReturnCodes::LibraryStorage as i32,
+        Err(_) => return ReturnCodes::ControllerStorage as i32,
     };
 
     match write_buffer(&mut caller, &mem, ptr, &bytes) {
@@ -153,7 +153,7 @@ where
 
     let bytes = match caller.data().ctx.get_storage_file(&path) {
         Ok(s) => s,
-        Err(_) => return ReturnCodes::LibraryStorage as i32,
+        Err(_) => return ReturnCodes::ControllerStorage as i32,
     };
 
     match write_buffer(&mut caller, &mem, ptr, &bytes) {
@@ -181,7 +181,7 @@ where
 
     match caller.data().ctx.set_storage(&fs) {
         Ok(_) => (),
-        Err(_) => return ReturnCodes::LibraryStorage as i32,
+        Err(_) => return ReturnCodes::ControllerStorage as i32,
     }
 
     ReturnCodes::Success as i32
@@ -217,15 +217,15 @@ where
 
     match caller.data().ctx.set_storage_file(&path, &contents) {
         Ok(_) => (),
-        Err(_) => return ReturnCodes::LibraryStorage as i32,
+        Err(_) => return ReturnCodes::ControllerStorage as i32,
     }
 
     ReturnCodes::Success as i32
 }
 
-/// Writes the library raw storage to `ptr`.
+/// Writes the controller raw storage to `ptr`.
 ///
-/// Returns an error if the maximum `capacity` of the buffer is smaller than the library raw
+/// Returns an error if the maximum `capacity` of the buffer is smaller than the controller raw
 /// storage length.
 pub fn get_raw_storage<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32) -> i32
 where
@@ -240,7 +240,7 @@ where
 
     let bytes = match caller.data().ctx.get_raw_storage() {
         Ok(s) => s.unwrap_or_default(),
-        Err(_) => return ReturnCodes::LibraryRawStorage as i32,
+        Err(_) => return ReturnCodes::ControllerRawStorage as i32,
     };
 
     match write_buffer(&mut caller, &mem, ptr, &bytes) {
@@ -249,7 +249,7 @@ where
     }
 }
 
-/// Replace the library raw storage.
+/// Replace the controller raw storage.
 pub fn set_raw_storage<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32, len: u32) -> i32
 where
     H: Hasher,
@@ -267,14 +267,14 @@ where
     };
 
     if caller.data_mut().ctx.set_raw_storage(&bytes).is_err() {
-        return ReturnCodes::LibraryRawStorage as i32;
+        return ReturnCodes::ControllerRawStorage as i32;
     }
 
     ReturnCodes::Success as i32
 }
 
-/// Get the library identifier.
-pub fn get_library<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32) -> i32
+/// Get the controller identifier.
+pub fn get_controller<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32) -> i32
 where
     H: Hasher,
     D: DataBackend,
@@ -285,9 +285,9 @@ where
         _ => return ReturnCodes::MemoryExport as i32,
     };
 
-    let library = *caller.data().ctx.library();
+    let controller = *caller.data().ctx.controller();
 
-    match write_buffer(&mut caller, &mem, ptr, &library) {
+    match write_buffer(&mut caller, &mem, ptr, &controller) {
         Ok(len) => len,
         Err(e) => e,
     }

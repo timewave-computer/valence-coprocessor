@@ -7,5 +7,5 @@ pub mod abi;
 #[cfg(feature = "std")]
 pub mod host;
 
-/// Host module identifier.
-pub const HOST_LIB: &str = "valence";
+/// Host controller identifier.
+pub const HOST_CONTROLLER: &str = "valence";

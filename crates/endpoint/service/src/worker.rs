@@ -9,7 +9,7 @@ use crate::{Historical, ServiceVm, ServiceZkVm};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Job {
     Prove {
-        program: Hash,
+        controller: Hash,
         args: Value,
         payload: Option<Value>,
     },
@@ -176,15 +176,15 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn prove(&self, program: Hash, args: Value, payload: Option<Value>) {
-        tracing::debug!("worker recv: {}", hex::encode(program));
+    pub fn prove(&self, controller: Hash, args: Value, payload: Option<Value>) {
+        tracing::debug!("worker recv: {}", hex::encode(controller));
 
-        let ctx = self.historical.context(program);
+        let ctx = self.historical.context(controller);
         let res = ctx.get_proof(&self.vm, &self.zkvm, args.clone());
 
         tracing::debug!(
             "worker received proof: {}, {}",
-            hex::encode(program),
+            hex::encode(controller),
             res.is_ok()
         );
 
@@ -203,8 +203,8 @@ impl Worker {
 
         if ctx.entrypoint(&self.vm, args.clone()).is_err() {
             tracing::debug!(
-                "failed to call library entrypoint for program `{}` with args `{args:?}`",
-                hex::encode(program)
+                "failed to call controller `{}` entrypoint with args `{args:?}`",
+                hex::encode(controller)
             );
         }
     }
@@ -214,10 +214,10 @@ impl Worker {
             while let Ok(j) = self.rx.recv() {
                 match j {
                     Job::Prove {
-                        program,
+                        controller,
                         args,
                         payload,
-                    } => self.prove(program, args, payload),
+                    } => self.prove(controller, args, payload),
                     Job::Quit => {
                         self.tx.send(Ack::Kill).ok();
                         break;

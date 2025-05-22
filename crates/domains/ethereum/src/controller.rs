@@ -2,12 +2,12 @@ use alloc::vec;
 
 use msgpacker::Packable as _;
 use serde_json::Value;
-use valence_coprocessor::{DomainLibrary, StateProof, ValidatedDomainBlock};
+use valence_coprocessor::{DomainController, StateProof, ValidatedDomainBlock};
 use valence_coprocessor_wasm::abi;
 
 use super::*;
 
-impl DomainLibrary for Ethereum {
+impl DomainController for Ethereum {
     const ID: &str = "ethereum-alpha";
 
     fn state_proof(&self, args: Value) -> anyhow::Result<StateProof> {

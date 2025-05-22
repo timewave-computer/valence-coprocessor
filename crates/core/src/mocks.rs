@@ -21,7 +21,7 @@ impl<H: Hasher> MockZkVm<H> {
     /// Verify a proof.
     pub fn verify<D>(
         _ctx: &ExecutionContext<H, D>,
-        library: &Hash,
+        controller: &Hash,
         mut witnesses: Vec<Witness>,
         proven: Proof,
     ) -> bool
@@ -31,7 +31,7 @@ impl<H: Hasher> MockZkVm<H> {
     {
         witnesses.sort();
 
-        let mut bytes = library.to_vec();
+        let mut bytes = controller.to_vec();
 
         for w in witnesses {
             match w {
@@ -65,7 +65,7 @@ impl<H: Hasher> ZkVm for MockZkVm<H> {
 
         witnesses.sort();
 
-        let mut bytes = ctx.library().to_vec();
+        let mut bytes = ctx.controller().to_vec();
 
         for w in witnesses {
             match w {
@@ -88,7 +88,7 @@ impl<H: Hasher> ZkVm for MockZkVm<H> {
         Ok(vec![])
     }
 
-    fn updated(&self, _program: &Hash) {}
+    fn updated(&self, _controller: &Hash) {}
 }
 
 /// A mock implementation for a VM.
@@ -103,12 +103,12 @@ where
     fn execute(
         &self,
         _ctx: &ExecutionContext<H, D>,
-        _lib: &Hash,
+        _controller: &Hash,
         _f: &str,
         args: Value,
     ) -> anyhow::Result<Value> {
         Ok(args)
     }
 
-    fn updated(&self, _lib: &Hash) {}
+    fn updated(&self, _controller: &Hash) {}
 }
