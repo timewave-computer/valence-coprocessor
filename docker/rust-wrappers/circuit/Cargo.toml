@@ -1,0 +1,12 @@
+[package]
+version = "0.1.0"
+name = "program-circuit"
+edition = "2021"
+
+[dependencies]
+!PROJECT!.path = "!PATH!"
+sp1-zkvm = "4.2.1"
+valence-coprocessor = { git = "https://github.com/timewave-computer/valence-coprocessor.git", tag = "!VERSION!", default-features = false }
+valence-coprocessor-sp1 = { git = "https://github.com/timewave-computer/valence-coprocessor.git", tag = "!VERSION!", default-features = false }
+
+[workspace]

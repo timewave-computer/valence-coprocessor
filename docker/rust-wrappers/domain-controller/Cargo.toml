@@ -1,0 +1,20 @@
+[package]
+name = "!PROJECT!-controller"
+authors = ["Timewave Labs"]
+edition = "2021"
+license = "Apache-2.0"
+version = "0.1.0"
+
+[dependencies]
+!PROJECT!.path = "!PATH!"
+serde_json = { version = "1.0.140", default-features = false, features = [
+  "alloc",
+] }
+valence-coprocessor-wasm = { git = "https://github.com/timewave-computer/valence-coprocessor.git", tag = "!VERSION!", default-features = false, features = [
+  "abi-handlers",
+] }
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
