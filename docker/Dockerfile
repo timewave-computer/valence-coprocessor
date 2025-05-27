@@ -17,7 +17,7 @@ RUN rustup target add wasm32-unknown-unknown && \
 RUN curl -L https://sp1up.succinct.xyz | bash && \
   /root/.sp1/bin/sp1up
 
-ADD ./rust-wrappers /rust-wrappers
+ADD rust-wrappers.tar.gz /
 
 RUN . /root/.bashrc && \
   cd /rust-wrappers/dummy-circuit && \
