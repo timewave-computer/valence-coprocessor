@@ -1,5 +1,5 @@
+use cargo_valence::{App, Cli, CmdDeploy, Commands};
 use clap::Parser as _;
-use valence_coprocessor_cli::{App, Cli, CmdDeploy, Commands};
 
 fn main() -> anyhow::Result<()> {
     let Cli {

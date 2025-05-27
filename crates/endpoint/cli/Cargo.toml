@@ -1,9 +1,9 @@
 [package]
-name = "valence-coprocessor-cli"
+name = "cargo-valence"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "The Valence co-processor CLI application."
+description = "The Valence co-processor cargo subcommand."
 
 [dependencies]
 anyhow.workspace = true

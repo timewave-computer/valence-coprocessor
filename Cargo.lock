@@ -1250,6 +1250,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo-valence"
+version = "0.1.13"
+dependencies = [
+ "anyhow",
+ "clap",
+ "reqwest",
+ "serde_json",
+ "toml",
+ "valence-coprocessor",
+]
+
+[[package]]
 name = "cargo_metadata"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6965,18 +6977,6 @@ dependencies = [
  "tracing",
  "valence-coprocessor",
  "zerocopy",
-]
-
-[[package]]
-name = "valence-coprocessor-cli"
-version = "0.1.13"
-dependencies = [
- "anyhow",
- "clap",
- "reqwest",
- "serde_json",
- "toml",
- "valence-coprocessor",
 ]
 
 [[package]]
