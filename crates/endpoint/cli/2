@@ -1,0 +1,34 @@
+use clap::Parser as _;
+use valence_coprocessor_cli::{App, Cli, CmdDeploy, Commands};
+
+fn main() -> anyhow::Result<()> {
+    let Cli { cmd, socket, tag } = Cli::parse();
+
+    let app = App::default().with_tag(tag).with_socket(socket);
+
+    match cmd {
+        Commands::Deploy(d) => match d {
+            CmdDeploy::Domain { name, controller } => {
+                let response = app.deploy_domain(controller, name)?;
+
+                println!("{}", serde_json::to_string(&response)?);
+            }
+
+            CmdDeploy::Circuit {
+                controller,
+                circuit,
+            } => todo!(),
+        },
+
+        Commands::Prove {
+            circuit,
+            json,
+            path,
+        } => todo!(),
+        Commands::Storage { circuit, path } => todo!(),
+        Commands::Vk { circuit } => todo!(),
+        Commands::ProofInputs { circuit, path } => todo!(),
+    }
+
+    Ok(())
+}

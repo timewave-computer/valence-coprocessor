@@ -5,6 +5,7 @@ members = [
   "crates/domains/ethereum",
   "crates/runtime/sp1",
   "crates/runtime/wasm",
+  "crates/endpoint/cli",
   "crates/endpoint/prover",
   "crates/endpoint/service",
 ]
@@ -15,7 +16,7 @@ default-members = ["crates/core"]
 authors = ["Timewave Labs"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.1.12"
+version = "0.1.13"
 repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]

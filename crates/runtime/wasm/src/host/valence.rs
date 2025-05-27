@@ -425,6 +425,8 @@ where
         Err(e) => return e,
     };
 
+    tracing::debug!("controller log: {log}");
+
     caller.data_mut().log.push(log);
 
     ReturnCodes::Success as i32
