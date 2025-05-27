@@ -1,4 +1,4 @@
 [alias]
-run-service = "run -p valence-coprocessor-service --profile optimized"
-run-service-release = "run -p valence-coprocessor-service --release"
+run-service = "run -p valence-coprocessor-service --profile optimized -- --prover 104.171.203.127:37282"
+run-service-release = "run -p valence-coprocessor-service --release -- --prover 104.171.203.127:37282"
 lint = "clippy --all --all-targets -- -D warnings"

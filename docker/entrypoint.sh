@@ -90,7 +90,7 @@ case "$CMD" in
       --manifest-path /rust-wrappers/controller/Cargo.toml
 
     cd /rust-wrappers/circuit && \
-      PATH="$PATH:/root/.sp1/bin" $CARGO_HOME/bin/cargo prove build
+      PATH="$PATH:/root/.sp1/bin" $CARGO_HOME/bin/cargo prove build >&2
 
     TARGET="/tmp/controller-json"
     CONTROLLER="/rust-wrappers/controller/target/wasm32-unknown-unknown/release/${LIB}_controller.wasm"

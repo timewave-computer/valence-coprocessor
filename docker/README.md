@@ -7,9 +7,9 @@ This is the docker definition for the Valence circuit & controller builder.
 ```sh
 docker run --rm -i \
   -v $HOME/dev/timewave/valence-coprocessor-app:/mnt \
-  valence-coprocessor-utils:0.1.0 \
+  vtw11/valence:0.1.0 \
   domain \
-  v0.1.12 \
+  v0.1.13 \
   valence-coprocessor-app-domain \
   /mnt/crates/domain \
   104.171.203.127:37281 \
@@ -25,9 +25,9 @@ docker run --rm -i \
 ```sh
 docker run --rm -i \
   -v $HOME/dev/timewave/valence-coprocessor-app:/mnt \
-  valence-coprocessor-utils:0.1.0 \
+  vtw11/valence:0.1.0 \
   controller \
-  v0.1.12 \
+  v0.1.13 \
   valence-coprocessor-app-controller \
   /mnt/crates/controller \
   104.171.203.127:37281 \
