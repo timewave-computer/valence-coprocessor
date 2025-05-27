@@ -1,5 +1,5 @@
 [workspace]
-members = ["base", "domain", "domain-wasm", "program-wasm"]
+members = ["base", "domain", "domain-wasm", "controller-wasm"]
 resolver = "2"
 default-members = ["base", "domain"]
 

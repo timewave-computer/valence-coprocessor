@@ -22,13 +22,13 @@ where
     registry: Registry<D>,
     historical: Smt<D, H>,
     historical_root: Hash,
-    library: Hash,
+    controller: Hash,
 
     #[cfg(feature = "std")]
     log: ::std::sync::Mutex<Vec<String>>,
 }
 
-/// Execution context for a Valence library.
+/// Execution context for a Valence controller.
 pub struct ExecutionContext<H, D>
 where
     H: Hasher,
@@ -60,60 +60,60 @@ where
     /// Data backend prefix for the latest block of a domain.
     pub const PREFIX_BLOCK: &[u8] = b"smt-domain-block";
 
-    /// Data backend prefix for the context library data.
-    pub const PREFIX_LIB: &[u8] = b"context-library";
+    /// Data backend prefix for the context controller data.
+    pub const PREFIX_CONTROLLER: &[u8] = b"context-controller";
 
-    /// Library function name to get witnesses.
-    pub const LIB_GET_WITNESSES: &str = "get_witnesses";
+    /// Controller function name to get witnesses.
+    pub const CONTROLLER_GET_WITNESSES: &str = "get_witnesses";
 
-    /// Library function name to get state proofs.
-    pub const LIB_GET_STATE_PROOF: &str = "get_state_proof";
+    /// Controller function name to get state proofs.
+    pub const CONTROLLER_GET_STATE_PROOF: &str = "get_state_proof";
 
-    /// Library function name to validate blocks.
-    pub const LIB_VALIDATE_BLOCK: &str = "validate_block";
+    /// Controller function name to validate blocks.
+    pub const CONTROLLER_VALIDATE_BLOCK: &str = "validate_block";
 
-    /// Library function name to the entrypoint.
-    pub const LIB_ENTRYPOINT: &str = "entrypoint";
+    /// Controller function name to the entrypoint.
+    pub const CONTROLLER_ENTRYPOINT: &str = "entrypoint";
 
-    /// Returns the library being executed.
-    pub fn library(&self) -> &Hash {
-        &self.inner.library
+    /// Returns the controller being executed.
+    pub fn controller(&self) -> &Hash {
+        &self.inner.controller
     }
 
     /// Returns a zkVM circuit.
     pub fn get_zkvm(&self) -> anyhow::Result<Option<Vec<u8>>> {
-        self.inner.registry.get_zkvm(&self.inner.library)
+        self.inner.registry.get_zkvm(&self.inner.controller)
     }
 
-    /// Returns a library.
-    pub fn get_lib(&self, lib: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
-        self.inner.registry.get_lib(lib)
+    /// Returns a controller.
+    pub fn get_controller(&self, controller: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
+        self.inner.registry.get_controller(controller)
     }
 
-    /// Returns a domain library.
-    pub fn get_domain_lib(&self, domain: &str) -> anyhow::Result<Option<Vec<u8>>> {
+    /// Returns a domain controller.
+    pub fn get_domain_controller(&self, domain: &str) -> anyhow::Result<Option<Vec<u8>>> {
         let domain = DomainData::identifier_from_parts(domain);
 
-        self.inner.registry.get_lib(&domain)
+        self.inner.registry.get_controller(&domain)
     }
 
-    /// Compute the ZK proof of the provided program.
+    /// Compute the ZK proof of the provided circuit.
     pub fn get_proof<VM, ZK>(&self, vm: &VM, zkvm: &ZK, args: Value) -> anyhow::Result<Proof>
     where
         VM: Vm<H, D>,
         ZK: ZkVm<Hasher = H>,
     {
-        let library = self.library();
+        let controller = self.controller();
 
-        tracing::debug!("computing library proof for `{:x?}`...", library);
+        tracing::debug!("computing controller proof for `{:x?}`...", controller);
 
-        let witnesses = vm.execute(self, library, Self::LIB_GET_WITNESSES, args)?;
+        let witnesses = vm.execute(self, controller, Self::CONTROLLER_GET_WITNESSES, args)?;
 
-        tracing::debug!("inner library executed; parsing...");
+        tracing::debug!("inner controller executed; parsing...");
 
         let witnesses: Vec<Witness> = serde_json::from_value(witnesses)?;
 
-        tracing::debug!("witnesses computed from library...");
+        tracing::debug!("witnesses computed from controller...");
 
         let root = self.inner.historical_root;
         let proofs = witnesses
@@ -149,7 +149,7 @@ where
         zkvm.prove(self, witness)
     }
 
-    /// Returns the program verifying key.
+    /// Returns the circuit verifying key.
     pub fn get_verifying_key<ZK>(&self, zkvm: &ZK) -> anyhow::Result<Vec<u8>>
     where
         ZK: ZkVm<Hasher = H>,
@@ -170,24 +170,29 @@ where
         tracing::debug!("fetching state proof for `{domain}` with {args:?}...");
 
         let domain = DomainData::identifier_from_parts(domain);
-        let proof = vm.execute(self, &domain, Self::LIB_GET_STATE_PROOF, args)?;
+        let proof = vm.execute(self, &domain, Self::CONTROLLER_GET_STATE_PROOF, args)?;
 
         tracing::debug!("state proof fetched from domain.");
 
         Ok(serde_json::from_value(proof)?)
     }
 
-    /// Get the program witness data for the ZK circuit.
+    /// Get the witnesses from the controller, to the ZK circuit.
     pub fn get_witnesses<VM>(&self, vm: &VM, args: Value) -> anyhow::Result<Vec<Witness>>
     where
         VM: Vm<H, D>,
     {
-        let witnesses = vm.execute(self, &self.inner.library, Self::LIB_GET_WITNESSES, args)?;
+        let witnesses = vm.execute(
+            self,
+            &self.inner.controller,
+            Self::CONTROLLER_GET_WITNESSES,
+            args,
+        )?;
 
         Ok(serde_json::from_value(witnesses)?)
     }
 
-    /// Returns the library storage.
+    /// Returns the controller storage.
     pub fn get_storage(&self) -> anyhow::Result<FileSystem> {
         let raw = self.get_raw_storage()?;
 
@@ -197,21 +202,21 @@ where
         }
     }
 
-    /// Overrides the library storage.
+    /// Overrides the controller storage.
     pub fn set_storage(&self, fs: &FileSystem) -> anyhow::Result<()> {
         let fs = fs.try_to_raw_device()?;
 
         self.set_raw_storage(&fs)
     }
 
-    /// Returns the library storage file from the given path.
+    /// Returns the controller storage file from the given path.
     pub fn get_storage_file(&self, path: &str) -> anyhow::Result<Vec<u8>> {
         self.get_storage()
             .and_then(|mut fs| fs.open(path))
             .map(|f| f.contents)
     }
 
-    /// Overrides the library storage file.
+    /// Overrides the controller storage file.
     pub fn set_storage_file(&self, path: &str, contents: &[u8]) -> anyhow::Result<()> {
         let mut fs = self.get_storage()?;
 
@@ -224,18 +229,18 @@ where
         self.set_storage(&fs)
     }
 
-    /// Returns the library raw storage.
+    /// Returns the controller raw storage.
     pub fn get_raw_storage(&self) -> anyhow::Result<Option<Vec<u8>>> {
         self.inner
             .data
-            .get_bulk(Self::PREFIX_LIB, &self.inner.library)
+            .get_bulk(Self::PREFIX_CONTROLLER, &self.inner.controller)
     }
 
-    /// Overrides the library raw storage.
+    /// Overrides the controller raw storage.
     pub fn set_raw_storage(&self, storage: &[u8]) -> anyhow::Result<()> {
         self.inner
             .data
-            .set_bulk(Self::PREFIX_LIB, &self.inner.library, storage)
+            .set_bulk(Self::PREFIX_CONTROLLER, &self.inner.controller, storage)
             .map(|_| ())
     }
 
@@ -276,12 +281,12 @@ where
         Ok(())
     }
 
-    /// Calls the entrypoint of the library with the provided arguments.
+    /// Calls the entrypoint of the controller with the provided arguments.
     pub fn entrypoint<VM>(&self, vm: &VM, args: Value) -> anyhow::Result<Value>
     where
         VM: Vm<H, D>,
     {
-        vm.execute(self, self.library(), Self::LIB_ENTRYPOINT, args)
+        vm.execute(self, self.controller(), Self::CONTROLLER_ENTRYPOINT, args)
     }
 }
 
@@ -292,14 +297,14 @@ where
 {
     /// Initializes a new execution context.
     #[allow(dead_code)]
-    pub(crate) fn init(library: Hash, historical_root: Hash, data: D) -> Self {
+    pub(crate) fn init(controller: Hash, historical_root: Hash, data: D) -> Self {
         Self {
             inner: Rc::new(ExecutionContextInner {
                 data: data.clone(),
                 historical: Smt::from(data.clone()),
                 historical_root,
                 registry: Registry::from(data.clone()),
-                library,
+                controller,
 
                 #[cfg(feature = "std")]
                 log: Vec::with_capacity(10).into(),

@@ -1,7 +1,7 @@
 use std::{env, fs, path::PathBuf, process::Command};
 
 use valence_coprocessor::{
-    mocks::MockVm, Historical, MemoryBackend, ProgramData, Registry, Witness,
+    mocks::MockVm, ControllerData, Historical, MemoryBackend, Registry, Witness,
 };
 use valence_coprocessor_sp1::{Mode, Sp1ZkVm};
 
@@ -10,11 +10,11 @@ fn get_hello_bytes() -> Vec<u8> {
     let dir = PathBuf::from(dir).join("contrib").join("hello");
     let path = dir.join("target").join("hello.elf");
 
-    let program = dir.join("program");
+    let controller = dir.join("program");
     let script = dir.join("script");
 
     assert!(Command::new("cargo")
-        .current_dir(&program)
+        .current_dir(&controller)
         .args(["prove", "build"])
         .status()
         .unwrap()
@@ -42,9 +42,11 @@ fn deploy_hello() {
     let vm = MockVm;
     let zkvm = Sp1ZkVm::new(mode, capacity).unwrap();
 
-    let library = ProgramData::default().with_circuit(hello);
-    let library = registry.register_program(&vm, &zkvm, library).unwrap();
-    let ctx = Historical::load(data).unwrap().context(library);
+    let controller = ControllerData::default().with_circuit(hello);
+    let controller = registry
+        .register_controller(&vm, &zkvm, controller)
+        .unwrap();
+    let ctx = Historical::load(data).unwrap().context(controller);
 
     let witness = String::from("Valence");
     let witness = Witness::Data(witness.as_bytes().to_vec());

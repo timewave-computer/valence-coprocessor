@@ -6,9 +6,9 @@ extern crate alloc;
 
 #[no_mangle]
 pub extern "C" fn entrypoint() {
-    let library = abi::get_library().unwrap();
+    let controller = abi::get_controller().unwrap();
 
-    let ret = serde_json::json!(library);
+    let ret = serde_json::json!(controller);
 
     abi::ret(&ret).unwrap();
 }

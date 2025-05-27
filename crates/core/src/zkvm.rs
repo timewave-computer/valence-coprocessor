@@ -20,7 +20,7 @@ pub struct DomainOpening {
     pub opening: Opening,
 }
 
-/// A program witness data obtained via Valence API.
+/// A circuit witness data obtained via Valence API.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct WitnessCoprocessor {
     /// Co-processor historical commitments root.
@@ -29,12 +29,12 @@ pub struct WitnessCoprocessor {
     /// Openings to the historical tree.
     pub proofs: Vec<DomainOpening>,
 
-    /// Witness data for the program.
+    /// Witness data for the circuit.
     pub witnesses: Vec<Witness>,
 }
 
 impl WitnessCoprocessor {
-    /// Validates the co-processor witness, yielding verified state proofs & data for the program.
+    /// Validates the co-processor witness, yielding verified state proofs & data for the circuit.
     pub fn validate<H: Hasher>(self) -> anyhow::Result<ValidatedWitnesses> {
         for o in &self.proofs {
             let key = H::key(&o.domain, &o.root);
@@ -67,7 +67,7 @@ pub struct ValidatedWitnesses {
     /// Co-processor historical commitments root.
     pub root: Hash,
 
-    /// Witness data for the program.
+    /// Witness data for the circuit.
     pub witnesses: Vec<Witness>,
 }
 
@@ -76,12 +76,12 @@ pub trait ZkVm: Clone + Sized {
     /// Friendly hasher of the zkVM.
     type Hasher: Hasher;
 
-    /// Prove a given program.
+    /// Prove a given circuit.
     ///
     /// ## Arguments
     ///
-    /// - `ctx`: Execution context to fetch the library bytes from.
-    /// - `program`: Program unique identifier.
+    /// - `ctx`: Execution context to fetch the controller bytes from.
+    /// - `circuit`: Circuit unique identifier.
     /// - `witnesses`: Circuit arguments.
     fn prove<D>(
         &self,
@@ -91,16 +91,16 @@ pub trait ZkVm: Clone + Sized {
     where
         D: DataBackend;
 
-    /// Returns the verifying key for the given program.
+    /// Returns the verifying key for the given circuit.
     ///
     /// ## Arguments
     ///
-    /// - `ctx`: Execution context to fetch the library bytes from.
-    /// - `program`: Program unique identifier.
+    /// - `ctx`: Execution context to fetch the controller bytes from.
+    /// - `circuit`: Circuit unique identifier.
     fn verifying_key<D>(&self, ctx: &ExecutionContext<Self::Hasher, D>) -> anyhow::Result<Vec<u8>>
     where
         D: DataBackend;
 
-    /// A notification that the program has been updated.
-    fn updated(&self, program: &Hash);
+    /// A notification that the circuit has been updated.
+    fn updated(&self, circuit: &Hash);
 }

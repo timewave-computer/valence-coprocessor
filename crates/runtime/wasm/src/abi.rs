@@ -24,7 +24,7 @@ mod host {
         pub(super) fn set_storage_file(path_ptr: u32, path_len: u32, ptr: u32, len: u32) -> i32;
         pub(super) fn get_raw_storage(ptr: u32) -> i32;
         pub(super) fn set_raw_storage(ptr: u32, len: u32) -> i32;
-        pub(super) fn get_library(ptr: u32) -> i32;
+        pub(super) fn get_controller(ptr: u32) -> i32;
         pub(super) fn get_latest_block(domain_ptr: u32, domain_len: u32, ptr: u32) -> i32;
         pub(super) fn get_state_proof(
             domain_ptr: u32,
@@ -54,11 +54,11 @@ pub(crate) mod use_std {
     }
 
     /// Initializes the runtime.
-    pub fn initialize_runtime(library: Hash, raw_storage: Vec<u8>) {
+    pub fn initialize_runtime(controller: Hash, raw_storage: Vec<u8>) {
         let mut runtime = RUNTIME.lock().unwrap();
 
         runtime.raw_storage = raw_storage;
-        runtime.library = library;
+        runtime.controller = controller;
     }
 
     pub fn runtime() -> Runtime {
@@ -74,11 +74,11 @@ pub(crate) mod use_std {
         /// Computation result.
         pub ret: Value,
 
-        /// library raw storage.
+        /// controller raw storage.
         pub raw_storage: Vec<u8>,
 
-        /// library identifier
-        pub library: Hash,
+        /// controller identifier
+        pub controller: Hash,
 
         /// Execution logs.
         pub log: Vec<String>,
@@ -124,8 +124,8 @@ pub(crate) mod use_std {
         Ok(())
     }
 
-    pub fn get_library() -> anyhow::Result<Hash> {
-        Ok(RUNTIME.lock().unwrap().library)
+    pub fn get_controller() -> anyhow::Result<Hash> {
+        Ok(RUNTIME.lock().unwrap().controller)
     }
 
     pub fn get_latest_block(_domain: &str) -> anyhow::Result<Option<ValidatedDomainBlock>> {
@@ -203,8 +203,8 @@ pub fn get_storage() -> anyhow::Result<FileSystem> {
         let ptr = BUF.as_ptr() as u32;
         let len = host::get_storage(ptr);
 
-        anyhow::ensure!(len >= 0, "failed to fetch library storage");
-        anyhow::ensure!(len as usize <= BUF_LEN, "library storage too large");
+        anyhow::ensure!(len >= 0, "failed to fetch controller storage");
+        anyhow::ensure!(len as usize <= BUF_LEN, "controller storage too large");
 
         let fs = FileSystem::from_raw_device_unchecked(BUF[..len as usize].to_vec());
 
@@ -224,7 +224,7 @@ pub fn set_storage(fs: &FileSystem) -> anyhow::Result<()> {
 
         let r = host::set_storage(ptr, len);
 
-        anyhow::ensure!(r >= 0, "failed to write library storage");
+        anyhow::ensure!(r >= 0, "failed to write controller storage");
 
         return Ok(());
     }
@@ -242,8 +242,8 @@ pub fn get_storage_file(path: &str) -> anyhow::Result<Vec<u8>> {
 
         let len = host::get_storage_file(path_ptr, path_len, ptr);
 
-        anyhow::ensure!(len >= 0, "failed to fetch library storage file");
-        anyhow::ensure!(len as usize <= BUF_LEN, "library storage file too large");
+        anyhow::ensure!(len >= 0, "failed to fetch controller storage file");
+        anyhow::ensure!(len as usize <= BUF_LEN, "controller storage file too large");
 
         Ok(BUF[..len as usize].to_vec())
     }
@@ -262,13 +262,13 @@ pub fn set_storage_file(path: &str, contents: &[u8]) -> anyhow::Result<()> {
 
         let r = host::set_storage_file(path_ptr, path_len, ptr, len);
 
-        anyhow::ensure!(r >= 0, "failed to write library storage file");
+        anyhow::ensure!(r >= 0, "failed to write controller storage file");
 
         Ok(())
     }
 }
 
-/// Fetch the library raw storage.
+/// Fetch the controller raw storage.
 pub fn get_raw_storage() -> anyhow::Result<Vec<u8>> {
     #[cfg(feature = "std")]
     return use_std::get_raw_storage();
@@ -278,14 +278,14 @@ pub fn get_raw_storage() -> anyhow::Result<Vec<u8>> {
         let ptr = BUF.as_ptr() as u32;
         let len = host::get_raw_storage(ptr);
 
-        anyhow::ensure!(len >= 0, "failed to fetch library raw storage");
-        anyhow::ensure!(len as usize <= BUF_LEN, "library raw storage too large");
+        anyhow::ensure!(len >= 0, "failed to fetch controller raw storage");
+        anyhow::ensure!(len as usize <= BUF_LEN, "controller raw storage too large");
 
         Ok(BUF[..len as usize].to_vec())
     }
 }
 
-/// Replace the library raw storage.
+/// Replace the controller raw storage.
 pub fn set_raw_storage(raw_storage: &[u8]) -> anyhow::Result<()> {
     #[cfg(feature = "std")]
     return use_std::set_raw_storage(raw_storage);
@@ -297,24 +297,24 @@ pub fn set_raw_storage(raw_storage: &[u8]) -> anyhow::Result<()> {
 
         let r = host::set_raw_storage(ptr, len as u32);
 
-        anyhow::ensure!(r >= 0, "failed to write library raw storage");
+        anyhow::ensure!(r >= 0, "failed to write controller raw storage");
 
         return Ok(());
     }
 }
 
-/// Get the library identifier of the current context.
-pub fn get_library() -> anyhow::Result<Hash> {
+/// Get the controller identifier of the current context.
+pub fn get_controller() -> anyhow::Result<Hash> {
     #[cfg(feature = "std")]
-    return use_std::get_library();
+    return use_std::get_controller();
 
     #[cfg(not(feature = "std"))]
     unsafe {
         let ptr = BUF.as_ptr() as u32;
-        let len = host::get_library(ptr);
+        let len = host::get_controller(ptr);
 
-        anyhow::ensure!(len >= 0, "failed to read library id");
-        anyhow::ensure!(len as usize <= BUF_LEN, "library id too large");
+        anyhow::ensure!(len >= 0, "failed to read controller id");
+        anyhow::ensure!(len as usize <= BUF_LEN, "controller id too large");
 
         Ok(Hash::try_from(&BUF[..len as usize])?)
     }
@@ -342,7 +342,7 @@ pub fn get_latest_block(domain: &str) -> anyhow::Result<Option<ValidatedDomainBl
     }
 }
 
-/// Get the library identifier of the current context.
+/// Get the controller identifier of the current context.
 pub fn get_state_proof(domain: &str, args: &Value) -> anyhow::Result<StateProof> {
     #[cfg(feature = "std")]
     return use_std::get_state_proof(domain, args);

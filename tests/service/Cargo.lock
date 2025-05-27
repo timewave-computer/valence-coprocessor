@@ -5948,6 +5948,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "valence-coprocessor-integrated-tests-controller-wasm"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "valence-coprocessor",
+ "valence-coprocessor-integrated-tests-domain",
+ "valence-coprocessor-wasm",
+]
+
+[[package]]
 name = "valence-coprocessor-integrated-tests-domain"
 version = "0.1.0"
 dependencies = [
@@ -5961,16 +5971,6 @@ dependencies = [
 name = "valence-coprocessor-integrated-tests-domain-wasm"
 version = "0.1.0"
 dependencies = [
- "valence-coprocessor",
- "valence-coprocessor-integrated-tests-domain",
- "valence-coprocessor-wasm",
-]
-
-[[package]]
-name = "valence-coprocessor-integrated-tests-program-wasm"
-version = "0.1.0"
-dependencies = [
- "serde_json",
  "valence-coprocessor",
  "valence-coprocessor-integrated-tests-domain",
  "valence-coprocessor-wasm",

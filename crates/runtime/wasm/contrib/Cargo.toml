@@ -1,10 +1,10 @@
 [workspace]
 members = [
+  "controller",
   "domain",
   "hello",
   "http",
   "log",
-  "program",
   "raw_storage",
   "storage",
 ]

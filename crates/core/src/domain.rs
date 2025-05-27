@@ -12,7 +12,7 @@ pub trait DomainCircuit {
 }
 
 /// A domain definition.
-pub trait DomainLibrary {
+pub trait DomainController {
     /// A constant identifier.
     const ID: &str;
 

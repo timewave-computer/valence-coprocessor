@@ -54,10 +54,10 @@ impl ZkVm for ServiceZkVm {
         }
     }
 
-    fn updated(&self, program: &Hash) {
+    fn updated(&self, controller: &Hash) {
         match self {
-            ServiceZkVm::Mock(z) => z.updated(program),
-            ServiceZkVm::Service(z) => z.updated(program),
+            ServiceZkVm::Mock(z) => z.updated(controller),
+            ServiceZkVm::Service(z) => z.updated(controller),
         }
     }
 }

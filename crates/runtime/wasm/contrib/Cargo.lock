@@ -345,6 +345,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "valence-coprocessor-wasm-controller"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "valence-coprocessor-wasm",
+]
+
+[[package]]
 name = "valence-coprocessor-wasm-domain"
 version = "0.1.0"
 dependencies = [
@@ -370,14 +378,6 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm-log"
-version = "0.1.0"
-dependencies = [
- "serde_json",
- "valence-coprocessor-wasm",
-]
-
-[[package]]
-name = "valence-coprocessor-wasm-program"
 version = "0.1.0"
 dependencies = [
  "serde_json",

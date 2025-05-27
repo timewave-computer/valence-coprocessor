@@ -5,7 +5,7 @@ use serde_json::Value;
 use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Hasher, Vm};
 use wasmtime::{Engine, Linker, Module, Store};
 
-use crate::HOST_LIB;
+use crate::HOST_CONTROLLER;
 
 pub mod valence;
 
@@ -50,7 +50,7 @@ where
 {
     engine: Engine,
     linker: Linker<Runtime<H, D, Self>>,
-    libs: Arc<Mutex<LruCache<Hash, Module>>>,
+    modules: Arc<Mutex<LruCache<Hash, Module>>>,
 }
 
 impl<H, D> ValenceWasm<H, D>
@@ -63,30 +63,42 @@ where
         let engine = Engine::default();
         let mut linker = Linker::new(&engine);
 
-        linker.func_wrap(HOST_LIB, "panic", valence::panic)?;
-        linker.func_wrap(HOST_LIB, "args", valence::args)?;
-        linker.func_wrap(HOST_LIB, "ret", valence::ret)?;
-        linker.func_wrap(HOST_LIB, "get_storage", valence::get_storage)?;
-        linker.func_wrap(HOST_LIB, "set_storage", valence::set_storage)?;
-        linker.func_wrap(HOST_LIB, "get_storage_file", valence::get_storage_file)?;
-        linker.func_wrap(HOST_LIB, "set_storage_file", valence::set_storage_file)?;
-        linker.func_wrap(HOST_LIB, "get_raw_storage", valence::get_raw_storage)?;
-        linker.func_wrap(HOST_LIB, "set_raw_storage", valence::set_raw_storage)?;
-        linker.func_wrap(HOST_LIB, "get_library", valence::get_library)?;
-        linker.func_wrap(HOST_LIB, "get_latest_block", valence::get_latest_block)?;
-        linker.func_wrap(HOST_LIB, "get_state_proof", valence::get_state_proof)?;
-        linker.func_wrap(HOST_LIB, "http", valence::http)?;
-        linker.func_wrap(HOST_LIB, "log", valence::log)?;
+        linker.func_wrap(HOST_CONTROLLER, "panic", valence::panic)?;
+        linker.func_wrap(HOST_CONTROLLER, "args", valence::args)?;
+        linker.func_wrap(HOST_CONTROLLER, "ret", valence::ret)?;
+        linker.func_wrap(HOST_CONTROLLER, "get_storage", valence::get_storage)?;
+        linker.func_wrap(HOST_CONTROLLER, "set_storage", valence::set_storage)?;
+        linker.func_wrap(
+            HOST_CONTROLLER,
+            "get_storage_file",
+            valence::get_storage_file,
+        )?;
+        linker.func_wrap(
+            HOST_CONTROLLER,
+            "set_storage_file",
+            valence::set_storage_file,
+        )?;
+        linker.func_wrap(HOST_CONTROLLER, "get_raw_storage", valence::get_raw_storage)?;
+        linker.func_wrap(HOST_CONTROLLER, "set_raw_storage", valence::set_raw_storage)?;
+        linker.func_wrap(HOST_CONTROLLER, "get_controller", valence::get_controller)?;
+        linker.func_wrap(
+            HOST_CONTROLLER,
+            "get_latest_block",
+            valence::get_latest_block,
+        )?;
+        linker.func_wrap(HOST_CONTROLLER, "get_state_proof", valence::get_state_proof)?;
+        linker.func_wrap(HOST_CONTROLLER, "http", valence::http)?;
+        linker.func_wrap(HOST_CONTROLLER, "log", valence::log)?;
 
         let capacity = std::num::NonZeroUsize::new(capacity)
             .ok_or_else(|| anyhow::anyhow!("invalid capacity"))?;
-        let libs = LruCache::new(capacity);
-        let libs = Arc::new(Mutex::new(libs));
+        let modules = LruCache::new(capacity);
+        let modules = Arc::new(Mutex::new(modules));
 
         Ok(Self {
             engine,
             linker,
-            libs,
+            modules,
         })
     }
 }
@@ -99,11 +111,11 @@ where
     fn execute(
         &self,
         ctx: &ExecutionContext<H, D>,
-        lib: &Hash,
+        controller: &Hash,
         f: &str,
         args: Value,
     ) -> anyhow::Result<Value> {
-        tracing::debug!("executing library {lib:x?}, {f}({:?})", args);
+        tracing::debug!("executing controller {controller:x?}, {f}({:?})", args);
 
         let runtime = Runtime {
             args,
@@ -117,17 +129,17 @@ where
         let mut store = Store::new(&self.engine, runtime);
 
         let instance = self
-            .libs
+            .modules
             .lock()
-            .map_err(|e| anyhow::anyhow!("error locking libs: {e}"))?
-            .try_get_or_insert(*lib, || {
-                ctx.get_lib(lib)?
-                    .ok_or_else(|| anyhow::anyhow!("lib not found"))
+            .map_err(|e| anyhow::anyhow!("error locking modules: {e}"))?
+            .try_get_or_insert(*controller, || {
+                ctx.get_controller(controller)?
+                    .ok_or_else(|| anyhow::anyhow!("controller not found"))
                     .and_then(|b| Module::from_binary(&self.engine, &b))
             })
             .and_then(|i| self.linker.instantiate(&mut store, i))?;
 
-        tracing::debug!("library loaded...");
+        tracing::debug!("controller loaded...");
 
         instance
             .get_typed_func::<(), ()>(&mut store, f)?
@@ -142,12 +154,12 @@ where
         Ok(ret.unwrap_or_default())
     }
 
-    fn updated(&self, lib: &Hash) {
-        match self.libs.lock() {
+    fn updated(&self, controller: &Hash) {
+        match self.modules.lock() {
             Ok(mut m) => {
-                m.pop(lib);
+                m.pop(controller);
             }
-            Err(e) => tracing::error!("error locking libs: {e}"),
+            Err(e) => tracing::error!("error locking modules: {e}"),
         }
     }
 }

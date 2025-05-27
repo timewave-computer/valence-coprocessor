@@ -2,7 +2,9 @@
 
 use alloc::vec;
 use serde_json::Value;
-use valence_coprocessor::{DomainCircuit, DomainLibrary, Hasher as _, StateProof, ValidatedBlock};
+use valence_coprocessor::{
+    DomainCircuit, DomainController, Hasher as _, StateProof, ValidatedBlock,
+};
 use valence_coprocessor_sp1::Sp1Hasher;
 
 extern crate alloc;
@@ -26,7 +28,7 @@ impl Domain {
     }
 }
 
-impl DomainLibrary for Domain {
+impl DomainController for Domain {
     const ID: &str = ID;
 
     fn state_proof(&self, args: Value) -> anyhow::Result<StateProof> {

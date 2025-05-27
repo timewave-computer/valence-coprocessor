@@ -7,8 +7,8 @@ use alloc::vec::Vec;
 #[cfg(feature = "circuit")]
 mod circuit;
 
-#[cfg(feature = "lib")]
-mod library;
+#[cfg(feature = "controller")]
+mod controller;
 
 /// A Ethereum domain definition.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

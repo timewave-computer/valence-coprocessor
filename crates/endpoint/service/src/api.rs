@@ -3,29 +3,29 @@ use poem::web::Data;
 use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::{json, Value};
 use valence_coprocessor::Hash;
-use valence_coprocessor::{DomainData, ProgramData};
+use valence_coprocessor::{ControllerData, DomainData};
 
 use crate::{worker::Job, Historical, Registry, ServiceVm, ServiceZkVm};
 
 pub struct Api;
 
 #[derive(Object, Debug)]
-pub struct RegisterProgramRequest {
-    /// A Base64 WASM encoded library.
-    pub lib: Base64<Vec<u8>>,
+pub struct RegisterControllerRequest {
+    /// A Base64 WASM encoded controller.
+    pub controller: Base64<Vec<u8>>,
 
     /// A Base64 circuit encoded prover.
     pub circuit: Base64<Vec<u8>>,
 
-    /// Optional nonce to affect the program id.
+    /// Optional nonce to affect the controller id.
     #[oai(default)]
     pub nonce: Option<u64>,
 }
 
 #[derive(Object, Debug)]
-pub struct RegisterProgramResponse {
-    /// The allocated program id as hex.
-    pub program: String,
+pub struct RegisterControllerResponse {
+    /// The allocated controller id as hex.
+    pub controller: String,
 }
 
 #[derive(Object, Debug)]
@@ -33,8 +33,8 @@ pub struct RegisterDomainRequest {
     /// Unique name identifier for the domain.
     pub name: String,
 
-    /// Base64 code for the WASM domain library.
-    pub lib: Base64<Vec<u8>>,
+    /// Base64 code for the WASM domain controller.
+    pub controller: Base64<Vec<u8>>,
 }
 
 #[derive(Object, Debug)]
@@ -44,26 +44,26 @@ pub struct RegisterDomainResponse {
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramStorageFileRequest {
-    /// Path of the program file.
+pub struct ControllerStorageFileRequest {
+    /// Path of the controller file.
     pub path: String,
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramStorageFileResponse {
+pub struct ControllerStorageFileResponse {
     /// Base64 encoded contents of the file
     pub data: Base64<Vec<u8>>,
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramDomainsResponse {
-    /// Domains associated with the program
+pub struct ControllerDomainsResponse {
+    /// Domains associated with the controller
     pub domains: Vec<String>,
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramRawStorageResponse {
-    /// Raw storage associated with the program as base64.
+pub struct ControllerRawStorageResponse {
+    /// Raw storage associated with the controller as base64.
     pub data: Base64<Vec<u8>>,
 
     /// Logs of the operation.
@@ -71,8 +71,8 @@ pub struct ProgramRawStorageResponse {
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramProveRequest {
-    /// Arguments of the Valence program.
+pub struct ControllerProveRequest {
+    /// Arguments of the Valence controller.
     pub args: Value,
 
     /// Optional callback payload.
@@ -80,7 +80,7 @@ pub struct ProgramProveRequest {
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramVkResponse {
+pub struct ControllerVkResponse {
     /// The verifying key in base64.
     pub base64: Base64<Vec<u8>>,
 
@@ -89,13 +89,13 @@ pub struct ProgramVkResponse {
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramEntrypointRequest {
-    /// Arguments of the Valence program.
+pub struct ControllerEntrypointRequest {
+    /// Arguments of the Valence controller.
     pub args: Value,
 }
 
 #[derive(Object, Debug)]
-pub struct ProgramEntrypointResponse {
+pub struct ControllerEntrypointResponse {
     /// Return value of the entrypoint.
     pub ret: Value,
 
@@ -114,27 +114,27 @@ impl Api {
         })))
     }
 
-    /// Register a new program, returning its allocated id.
-    #[oai(path = "/registry/program", method = "post")]
-    pub async fn registry_program(
+    /// Register a new controller, returning its allocated id.
+    #[oai(path = "/registry/controller", method = "post")]
+    pub async fn registry_controller(
         &self,
         registry: Data<&Registry>,
         vm: Data<&ServiceVm>,
         zkvm: Data<&ServiceZkVm>,
-        request: Json<RegisterProgramRequest>,
-    ) -> poem::Result<Json<RegisterProgramResponse>> {
-        let program = ProgramData {
-            lib: request.lib.to_vec(),
+        request: Json<RegisterControllerRequest>,
+    ) -> poem::Result<Json<RegisterControllerResponse>> {
+        let controller = ControllerData {
+            controller: request.controller.to_vec(),
             circuit: request.circuit.to_vec(),
             nonce: request.nonce.unwrap_or(0),
         };
 
-        let program = registry.register_program(*vm, *zkvm, program)?;
-        let program = RegisterProgramResponse {
-            program: hex::encode(program),
+        let controller = registry.register_controller(*vm, *zkvm, controller)?;
+        let controller = RegisterControllerResponse {
+            controller: hex::encode(controller),
         };
 
-        Ok(Json(program))
+        Ok(Json(controller))
     }
 
     /// Register a new domain, returning its allocated id.
@@ -147,7 +147,7 @@ impl Api {
     ) -> poem::Result<Json<RegisterDomainResponse>> {
         let domain = DomainData {
             name: request.name.clone(),
-            lib: request.lib.to_vec(),
+            controller: request.controller.to_vec(),
         };
 
         let domain = registry.register_domain(*vm, domain)?;
@@ -158,57 +158,57 @@ impl Api {
         Ok(Json(domain))
     }
 
-    /// Returns the raw storage of the program.
-    #[oai(path = "/registry/program/:program/storage/raw", method = "get")]
+    /// Returns the raw storage of the controller.
+    #[oai(path = "/registry/controller/:controller/storage/raw", method = "get")]
     pub async fn storage_raw(
         &self,
-        program: Path<String>,
+        controller: Path<String>,
         historical: Data<&Historical>,
-    ) -> poem::Result<Json<ProgramRawStorageResponse>> {
-        let program = try_str_to_hash(&program)?;
-        let ctx = historical.context(program);
+    ) -> poem::Result<Json<ControllerRawStorageResponse>> {
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
 
         let data = ctx.get_raw_storage()?.unwrap_or_default();
         let data = Base64(data);
         let log = ctx.get_log()?;
 
-        Ok(Json(ProgramRawStorageResponse { data, log }))
+        Ok(Json(ControllerRawStorageResponse { data, log }))
     }
 
-    /// Returns a file from the storage of the program.
-    #[oai(path = "/registry/program/:program/storage/fs", method = "post")]
+    /// Returns a file from the storage of the controller.
+    #[oai(path = "/registry/controller/:controller/storage/fs", method = "post")]
     pub async fn storage_file(
         &self,
-        program: Path<String>,
+        controller: Path<String>,
         historical: Data<&Historical>,
-        request: Json<ProgramStorageFileRequest>,
-    ) -> poem::Result<Json<ProgramStorageFileResponse>> {
+        request: Json<ControllerStorageFileRequest>,
+    ) -> poem::Result<Json<ControllerStorageFileResponse>> {
         let path = request.0.path;
 
         tracing::debug!("received file request for path `{path}`...");
 
-        let program = try_str_to_hash(&program)?;
-        let ctx = historical.context(program);
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
 
         let data = ctx.get_storage_file(&path)?;
         let data = Base64(data);
 
-        Ok(Json(ProgramStorageFileResponse { data }))
+        Ok(Json(ControllerStorageFileResponse { data }))
     }
 
-    /// Computes the program proof.
-    #[oai(path = "/registry/program/:program/prove", method = "post")]
-    pub async fn program_prove(
+    /// Computes the controller proof.
+    #[oai(path = "/registry/controller/:controller/prove", method = "post")]
+    pub async fn controller_prove(
         &self,
-        program: Path<String>,
+        controller: Path<String>,
         pool: Data<&Sender<Job>>,
-        request: Json<ProgramProveRequest>,
+        request: Json<ControllerProveRequest>,
     ) -> poem::Result<Json<Value>> {
-        let program = try_str_to_hash(&program)?;
-        let ProgramProveRequest { args, payload } = request.0;
+        let controller = try_str_to_hash(&controller)?;
+        let ControllerProveRequest { args, payload } = request.0;
 
         pool.send(Job::Prove {
-            program,
+            controller,
             args,
             payload,
         })
@@ -217,42 +217,42 @@ impl Api {
         Ok(Json(json!({"status": "received"})))
     }
 
-    /// Returns the program verifying key.
-    #[oai(path = "/registry/program/:program/vk", method = "get")]
-    pub async fn program_vk(
+    /// Returns the controller verifying key.
+    #[oai(path = "/registry/controller/:controller/vk", method = "get")]
+    pub async fn controller_vk(
         &self,
-        program: Path<String>,
+        controller: Path<String>,
         historical: Data<&Historical>,
         zkvm: Data<&ServiceZkVm>,
-    ) -> poem::Result<Json<ProgramVkResponse>> {
-        let program = try_str_to_hash(&program)?;
-        let ctx = historical.context(program);
+    ) -> poem::Result<Json<ControllerVkResponse>> {
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
 
         let vk = ctx.get_verifying_key(*zkvm)?;
         let log = ctx.get_log()?;
 
-        Ok(Json(ProgramVkResponse {
+        Ok(Json(ControllerVkResponse {
             base64: Base64(vk),
             log,
         }))
     }
 
-    /// Computes the program proof.
-    #[oai(path = "/registry/program/:program/entrypoint", method = "post")]
-    pub async fn program_entrypoint(
+    /// Computes the controller proof.
+    #[oai(path = "/registry/controller/:controller/entrypoint", method = "post")]
+    pub async fn controller_entrypoint(
         &self,
-        program: Path<String>,
+        controller: Path<String>,
         historical: Data<&Historical>,
         vm: Data<&ServiceVm>,
         args: Json<Value>,
-    ) -> poem::Result<Json<ProgramEntrypointResponse>> {
-        let program = try_str_to_hash(&program)?;
-        let ctx = historical.context(program);
+    ) -> poem::Result<Json<ControllerEntrypointResponse>> {
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
 
         let ret = ctx.entrypoint(*vm, args.0)?;
         let log = ctx.get_log()?;
 
-        Ok(Json(ProgramEntrypointResponse { ret, log }))
+        Ok(Json(ControllerEntrypointResponse { ret, log }))
     }
 
     /// Get the latest proven block for the domain.

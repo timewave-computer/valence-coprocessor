@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use valence_coprocessor::DomainLibrary as _;
+use valence_coprocessor::DomainController as _;
 use valence_coprocessor_integrated_tests_domain::Domain;
 use valence_coprocessor_wasm::abi;
 

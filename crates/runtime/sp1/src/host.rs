@@ -176,14 +176,14 @@ impl ZkVm for Sp1ZkVm {
     where
         D: DataBackend,
     {
-        let library = ctx.library();
+        let controller = ctx.controller();
 
         tracing::debug!("SP1 proving initialized...");
 
         self.keys
             .lock()
             .map_err(|e| anyhow::anyhow!("error locking keys: {e}"))?
-            .try_get_or_insert(*library, || {
+            .try_get_or_insert(*controller, || {
                 tracing::debug!("fetching keys from context...");
 
                 let elf = ctx
@@ -193,7 +193,7 @@ impl ZkVm for Sp1ZkVm {
                 Ok(self.client.setup(&elf))
             })
             .and_then(|(pk, _vk)| {
-                tracing::debug!("proving program...");
+                tracing::debug!("proving circuit...");
 
                 self.client.prove(pk, w)
             })
@@ -203,12 +203,12 @@ impl ZkVm for Sp1ZkVm {
     where
         D: DataBackend,
     {
-        let library = ctx.library();
+        let controller = ctx.controller();
 
         self.keys
             .lock()
             .map_err(|e| anyhow::anyhow!("error locking keys: {e}"))?
-            .try_get_or_insert::<_, anyhow::Error>(*library, || {
+            .try_get_or_insert::<_, anyhow::Error>(*controller, || {
                 tracing::debug!("fetching keys from context...");
 
                 let elf = ctx
@@ -220,10 +220,10 @@ impl ZkVm for Sp1ZkVm {
             .and_then(|(_pk, vk)| Ok(bincode::serialize(&vk)?))
     }
 
-    fn updated(&self, library: &Hash) {
+    fn updated(&self, controller: &Hash) {
         match self.keys.lock() {
             Ok(mut k) => {
-                k.pop(library);
+                k.pop(controller);
             }
             Err(e) => tracing::error!("error locking keys: {e}"),
         }
