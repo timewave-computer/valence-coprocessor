@@ -161,7 +161,7 @@ impl Client {
     ///
     /// Uses the default retries & frequency arguments.
     pub async fn prove<C: AsRef<str>>(&self, circuit: C, args: &Value) -> anyhow::Result<Proof> {
-        let retries = 15;
+        let retries = 25;
         let frequency = 2000;
 
         self.prove_with_params(circuit, retries, frequency, args)
