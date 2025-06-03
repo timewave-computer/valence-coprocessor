@@ -1251,7 +1251,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-valence"
-version = "0.1.13"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3526,9 +3526,9 @@ dependencies = [
 
 [[package]]
 name = "msgpacker"
-version = "0.4.7"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db10f6b26b3a8b743c088b3a80e6ebc78ac052e0ee11ca6e261d678ad09e3b41"
+checksum = "134a72ec3a6d034e9c767344ce8aebde228eef4e1343fff3ea209993f12920b3"
 dependencies = [
  "msgpacker-derive",
 ]
@@ -6962,7 +6962,7 @@ checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.1.13"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -6981,7 +6981,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-ethereum"
-version = "0.1.13"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "common",
@@ -6995,7 +6995,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-prover"
-version = "0.1.13"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -7017,7 +7017,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-redis"
-version = "0.1.13"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "r2d2",
@@ -7027,7 +7027,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-service"
-version = "0.1.13"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -7051,7 +7051,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-sp1"
-version = "0.1.13"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -7072,7 +7072,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm"
-version = "0.1.13"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "dlmalloc",

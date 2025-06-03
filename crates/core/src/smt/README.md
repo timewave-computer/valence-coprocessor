@@ -81,7 +81,7 @@ sequenceDiagram
 // An ephemeral in-memory data backend
 #[cfg(feature = "std")]
 fn run() -> anyhow::Result<()> {
-    use valence_coprocessor::MemorySmt;
+    use valence_coprocessor::{Blake3Hasher, Hasher as _, MemorySmt};
 
     let key = b"bar";
     let data = b"baz".to_vec();
@@ -93,7 +93,7 @@ fn run() -> anyhow::Result<()> {
     let root = MemorySmt::empty_tree_root();
 
     // computes the SMT key from the data
-    let key = MemorySmt::key(key);
+    let key = Blake3Hasher::key("context", key);
 
     // appends the data into the tree, returning its new Merkle root
     let root = tree.insert(root, &key, &data)?;

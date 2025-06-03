@@ -4,8 +4,8 @@ use msgpacker::Unpackable as _;
 use serde_json::Value;
 
 use crate::{
-    Blake3Hasher, DataBackend, DomainData, DomainOpening, Hash, Hasher, Proof, Registry, Smt,
-    StateProof, ValidatedDomainBlock, Vm, Witness, WitnessCoprocessor, ZkVm,
+    Blake3Hasher, DataBackend, DomainData, DomainOpening, Hash, Hasher, Opening, Proof, Registry,
+    Smt, StateProof, ValidatedDomainBlock, Vm, Witness, WitnessCoprocessor, ZkVm,
 };
 
 pub use buf_fs::{File, FileSystem};
@@ -97,21 +97,29 @@ where
         self.inner.registry.get_controller(&domain)
     }
 
+    /// Computes the circuit witnesses.
+    pub fn get_circuit_witnesses<VM>(&self, vm: &VM, args: Value) -> anyhow::Result<Vec<Witness>>
+    where
+        VM: Vm<H, D>,
+    {
+        let controller = self.controller();
+
+        tracing::debug!("computing controller witnesses for `{:x?}`...", controller);
+
+        let witnesses = vm.execute(self, controller, Self::CONTROLLER_GET_WITNESSES, args)?;
+
+        tracing::debug!("inner controller executed; parsing...");
+
+        Ok(serde_json::from_value(witnesses)?)
+    }
+
     /// Compute the ZK proof of the provided circuit.
     pub fn get_proof<VM, ZK>(&self, vm: &VM, zkvm: &ZK, args: Value) -> anyhow::Result<Proof>
     where
         VM: Vm<H, D>,
         ZK: ZkVm<Hasher = H>,
     {
-        let controller = self.controller();
-
-        tracing::debug!("computing controller proof for `{:x?}`...", controller);
-
-        let witnesses = vm.execute(self, controller, Self::CONTROLLER_GET_WITNESSES, args)?;
-
-        tracing::debug!("inner controller executed; parsing...");
-
-        let witnesses: Vec<Witness> = serde_json::from_value(witnesses)?;
+        let witnesses = self.get_circuit_witnesses(vm, args)?;
 
         tracing::debug!("witnesses computed from controller...");
 
@@ -279,6 +287,34 @@ where
             .extend(log);
 
         Ok(())
+    }
+
+    /// Returns the current historical SMT root.
+    pub fn get_historical(&self) -> Hash {
+        self.inner.historical_root
+    }
+
+    /// Returns the opening to the provided root on the historical SMT.
+    pub fn get_historical_opening(
+        &self,
+        tree: Hash,
+        domain: &str,
+        root: &[u8],
+    ) -> anyhow::Result<Option<Opening>> {
+        let key = H::key(domain, root);
+
+        self.inner.historical.get_opening(tree, &key)
+    }
+
+    /// Returns the payload of the provided domain root on the historical SMT.
+    pub fn get_historical_payload(
+        &self,
+        domain: &str,
+        root: &[u8],
+    ) -> anyhow::Result<Option<Vec<u8>>> {
+        let key = H::key(domain, root);
+
+        self.inner.historical.get_key_data(&key)
     }
 
     /// Calls the entrypoint of the controller with the provided arguments.

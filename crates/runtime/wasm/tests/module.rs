@@ -1,9 +1,10 @@
-use std::{array, env, fs, path::PathBuf, process::Command, thread};
+use std::{env, fs, path::PathBuf, process::Command, thread};
 
 use serde_json::json;
 use valence_coprocessor::{
-    mocks::MockZkVm, Base64, Blake3Historical, ControllerData, DomainData, Hash, MemoryBackend,
-    Registry, ValidatedBlock, ValidatedDomainBlock,
+    mocks::MockZkVm, Base64, Blake3Hasher, Blake3Historical, BlockAdded, ControllerData,
+    DomainData, Hash, Hasher as _, MemoryBackend, Opening, Registry, Smt, ValidatedBlock,
+    ValidatedDomainBlock,
 };
 use valence_coprocessor_wasm::host::ValenceWasm;
 
@@ -246,61 +247,196 @@ fn deploy_domain() {
     let name = "valence";
     let controller = DomainData::new(name.into()).with_controller(domain);
     let controller = registry.register_domain(&vm, controller).unwrap();
-    let historical = Blake3Historical::load(data).unwrap();
+    let historical = Blake3Historical::load(data.clone()).unwrap();
 
-    let ctx = historical.context(controller);
-
-    let block = ctx.entrypoint(&vm, json!({"domain": name})).unwrap();
+    let block = historical
+        .context(controller)
+        .entrypoint(&vm, json!({"cmd": "latest", "domain": name}))
+        .unwrap();
     let block: Option<ValidatedDomainBlock> = serde_json::from_value(block).unwrap();
 
     assert!(block.is_none());
 
-    let number = 5834794;
-    let root = array::from_fn(|i| i as u8);
+    let number = 5834794u64;
+    let root = Blake3Hasher::hash(&number.to_le_bytes());
     let payload = b"some block payload";
-    let block = serde_json::to_value(ValidatedBlock {
+    let prev = historical.current();
+    let validated = ValidatedBlock {
         number,
         root,
         payload: payload.to_vec(),
-    })
-    .unwrap();
+    };
 
-    historical.add_domain_block(&vm, name, block).unwrap();
+    let BlockAdded {
+        prev_smt,
+        smt,
+        block,
+        ..
+    } = historical
+        .add_domain_block(&vm, name, serde_json::to_value(&validated).unwrap())
+        .unwrap();
 
-    let ret = ctx.entrypoint(&vm, json!({"domain": name})).unwrap();
+    assert_eq!(block.number, validated.number);
+    assert_eq!(block.root, validated.root);
+    assert_eq!(block.payload, validated.payload);
+    assert_eq!(block.key, Blake3Hasher::key(name, &block.root));
+    assert_eq!(prev_smt, prev);
+
+    let tree: Smt<MemoryBackend, Blake3Hasher> = Smt::from(data.clone());
+    let opening = tree.get_opening(smt, &block.key).unwrap().unwrap();
+    let tree = smt;
+    let value = Blake3Hasher::hash(&block.payload);
+
+    assert!(!opening.is_empty());
+    assert!(opening.verify::<Blake3Hasher>(&tree, &block.key, &value));
+
+    let ret = historical
+        .context(controller)
+        .entrypoint(&vm, json!({"cmd": "opening", "domain": name}))
+        .unwrap();
+
+    let tree_p: Hash = serde_json::from_value(ret["historical"].clone()).unwrap();
+    let key: Hash = serde_json::from_value(ret["key"].clone()).unwrap();
+    let root_p: Vec<u8> = serde_json::from_value(ret["root"].clone()).unwrap();
+    let payload: Vec<u8> = serde_json::from_value(ret["payload"].clone()).unwrap();
+    let opening: Opening = serde_json::from_value(ret["opening"].clone()).unwrap();
+    let value = Blake3Hasher::hash(&payload);
+
+    let key_p = Blake3Hasher::key(name, &root_p);
+
+    assert!(!opening.is_empty());
+    assert_eq!(key, key_p);
+    assert_eq!(tree_p, historical.current());
+    assert_eq!(tree_p, smt);
+
+    assert!(opening.verify::<Blake3Hasher>(&tree_p, &key, &value));
+
+    let ret = historical
+        .context(controller)
+        .entrypoint(&vm, json!({"cmd": "latest", "domain": name}))
+        .unwrap();
     let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
     let ret = ret.unwrap();
 
     assert_eq!(ret.number, number);
     assert_eq!(ret.root, root);
 
-    let block = serde_json::to_value(ValidatedBlock {
-        number: number - 1,
-        root: Hash::default(),
+    let number = number - 1;
+    let root = Blake3Hasher::hash(&number.to_le_bytes());
+    let validated = ValidatedBlock {
+        number,
+        root,
+        payload: payload.to_vec(),
+    };
+
+    let BlockAdded {
+        prev_smt,
+        smt,
+        block,
+        ..
+    } = historical
+        .add_domain_block(&vm, name, serde_json::to_value(&validated).unwrap())
+        .unwrap();
+
+    assert_eq!(block.number, validated.number);
+    assert_eq!(block.root, validated.root);
+    assert_eq!(block.payload, validated.payload);
+    assert_eq!(block.key, Blake3Hasher::key(name, &block.root));
+    assert_eq!(prev_smt, tree);
+
+    let tree: Smt<MemoryBackend, Blake3Hasher> = Smt::from(data.clone());
+    let opening = tree.get_opening(smt, &block.key).unwrap().unwrap();
+    let tree = smt;
+    let value = Blake3Hasher::hash(&block.payload);
+
+    assert!(!opening.is_empty());
+    assert!(opening.verify::<Blake3Hasher>(&tree, &block.key, &value));
+
+    let ret = historical
+        .context(controller)
+        .entrypoint(&vm, json!({"cmd": "opening", "domain": name}))
+        .unwrap();
+
+    let tree_p: Hash = serde_json::from_value(ret["historical"].clone()).unwrap();
+    let key: Hash = serde_json::from_value(ret["key"].clone()).unwrap();
+    let root_p: Vec<u8> = serde_json::from_value(ret["root"].clone()).unwrap();
+    let payload: Vec<u8> = serde_json::from_value(ret["payload"].clone()).unwrap();
+    let opening: Opening = serde_json::from_value(ret["opening"].clone()).unwrap();
+    let value = Blake3Hasher::hash(&payload);
+
+    let key_p = Blake3Hasher::key(name, &root_p);
+
+    assert!(!opening.is_empty());
+    assert_eq!(key, key_p);
+    assert_eq!(tree_p, historical.current());
+    assert_eq!(tree_p, smt);
+
+    assert!(opening.verify::<Blake3Hasher>(&tree_p, &key, &value));
+
+    let ret = historical
+        .context(controller)
+        .entrypoint(&vm, json!({"cmd": "latest", "domain": name}))
+        .unwrap();
+    let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
+    let ret = ret.unwrap();
+
+    assert_eq!(
+        ret.number,
+        number + 1,
+        "older block shouldn't override latest"
+    );
+
+    let number = number + 2;
+    let root = Blake3Hasher::hash(&number.to_le_bytes());
+
+    serde_json::to_value(ValidatedBlock {
+        number,
+        root,
         payload: payload.to_vec(),
     })
     .unwrap();
 
-    historical.add_domain_block(&vm, name, block).unwrap();
+    let BlockAdded {
+        prev_smt,
+        smt,
+        block,
+        ..
+    } = historical
+        .add_domain_block(&vm, name, serde_json::to_value(&validated).unwrap())
+        .unwrap();
 
-    let ret = ctx.entrypoint(&vm, json!({"domain": name})).unwrap();
-    let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
-    let ret = ret.unwrap();
+    assert_eq!(block.number, validated.number);
+    assert_eq!(block.root, validated.root);
+    assert_eq!(block.payload, validated.payload);
+    assert_eq!(block.key, Blake3Hasher::key(name, &block.root));
+    assert_eq!(prev_smt, tree);
 
-    assert_eq!(ret.number, number, "older block shouldn't override latest");
+    let tree: Smt<MemoryBackend, Blake3Hasher> = Smt::from(data.clone());
+    let opening = tree.get_opening(smt, &block.key).unwrap().unwrap();
+    let tree = smt;
+    let value = Blake3Hasher::hash(&block.payload);
 
-    let block = serde_json::to_value(ValidatedBlock {
-        number: number + 1,
-        root: Hash::default(),
-        payload: payload.to_vec(),
-    })
-    .unwrap();
+    assert!(!opening.is_empty());
+    assert!(opening.verify::<Blake3Hasher>(&tree, &block.key, &value));
 
-    historical.add_domain_block(&vm, name, block).unwrap();
+    let ret = historical
+        .context(controller)
+        .entrypoint(&vm, json!({"cmd": "opening", "domain": name}))
+        .unwrap();
 
-    let ret = ctx.entrypoint(&vm, json!({"domain": name})).unwrap();
-    let ret: Option<ValidatedDomainBlock> = serde_json::from_value(ret).unwrap();
-    let ret = ret.unwrap();
+    let tree_p: Hash = serde_json::from_value(ret["historical"].clone()).unwrap();
+    let key: Hash = serde_json::from_value(ret["key"].clone()).unwrap();
+    let root_p: Vec<u8> = serde_json::from_value(ret["root"].clone()).unwrap();
+    let payload: Vec<u8> = serde_json::from_value(ret["payload"].clone()).unwrap();
+    let opening: Opening = serde_json::from_value(ret["opening"].clone()).unwrap();
+    let value = Blake3Hasher::hash(&payload);
 
-    assert_eq!(ret.number, number + 1);
+    let key_p = Blake3Hasher::key(name, &root_p);
+
+    assert!(!opening.is_empty());
+    assert_eq!(key, key_p);
+    assert_eq!(tree_p, historical.current());
+    assert_eq!(tree_p, smt);
+
+    assert!(opening.verify::<Blake3Hasher>(&tree_p, &key, &value));
 }

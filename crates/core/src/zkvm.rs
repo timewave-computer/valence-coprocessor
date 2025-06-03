@@ -21,7 +21,7 @@ pub struct DomainOpening {
 }
 
 /// A circuit witness data obtained via Valence API.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
 pub struct WitnessCoprocessor {
     /// Co-processor historical commitments root.
     pub root: Hash,
