@@ -218,8 +218,10 @@ where
     }
 
     /// Returns the controller storage file from the given path.
-    pub fn get_storage_file(&self, path: &str) -> anyhow::Result<Option<Vec<u8>>> {
-        Ok(self.get_storage()?.open(path).ok().map(|f| f.contents))
+    pub fn get_storage_file(&self, path: &str) -> anyhow::Result<Vec<u8>> {
+        self.get_storage()
+            .and_then(|mut fs| fs.open(path))
+            .map(|f| f.contents)
     }
 
     /// Overrides the controller storage file.

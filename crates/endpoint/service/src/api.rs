@@ -52,7 +52,7 @@ pub struct ControllerStorageFileRequest {
 #[derive(Object, Debug)]
 pub struct ControllerStorageFileResponse {
     /// Base64 encoded contents of the file
-    pub data: Option<Base64<Vec<u8>>>,
+    pub data: Base64<Vec<u8>>,
 }
 
 #[derive(Object, Debug)]
@@ -218,8 +218,9 @@ impl Api {
 
         let controller = try_str_to_hash(&controller)?;
         let ctx = historical.context(controller);
+
         let data = ctx.get_storage_file(&path)?;
-        let data = data.map(Base64);
+        let data = Base64(data);
 
         Ok(Json(ControllerStorageFileResponse { data }))
     }

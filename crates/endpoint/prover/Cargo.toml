@@ -16,7 +16,7 @@ msgpacker = { workspace = true, default-features = true }
 rand = "0.9.1"
 serde.workspace = true
 sp1-sdk.workspace = true
-tokio = { version = "1.44.2", features = ["full"] }
+tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber = { version = "0.3.19", default-features = true, features = [
   "env-filter",

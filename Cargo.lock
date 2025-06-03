@@ -6992,7 +6992,10 @@ dependencies = [
  "hex",
  "reqwest",
  "serde_json",
+ "tokio",
+ "tracing",
  "uuid",
+ "valence-coprocessor",
 ]
 
 [[package]]

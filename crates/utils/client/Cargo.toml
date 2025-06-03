@@ -10,4 +10,7 @@ anyhow.workspace = true
 hex.workspace = true
 reqwest.workspace = true
 serde_json.workspace = true
+tracing.workspace = true
+tokio.workspace = true
 uuid = { version = "1.17.0", features = ["v4"] }
+valence-coprocessor.path = "../../core"
