@@ -61,10 +61,8 @@
           pkgs.llvmPackages.llvm
         ];
 
-        # Helper script for running the service (equivalent to cargo run-service)
-        run-service-script = pkgs.writeShellScriptBin "run-service" ''
-          set -e
-          
+        # Common environment setup script
+        env-setup-script = pkgs.writeShellScript "env-setup" ''
           # Set macOS deployment target if on Darwin
           export MACOSX_DEPLOYMENT_TARGET="10.12"
           
@@ -78,9 +76,16 @@
           ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
             export LIBRARY_PATH="${pkgs.darwin.libiconv}/lib:${pkgs.libiconv}/lib:$LIBRARY_PATH"
           ''}
+        '';
+
+        # Helper script for running the service (equivalent to cargo run-service)
+        run-service-script = pkgs.writeShellScriptBin "run-service" ''
+          set -e
           
-          # Default values
-          PROVER_HOST="104.171.203.127:37282"
+          source ${env-setup-script}
+          
+          # Default values with configurable prover host
+          PROVER_HOST="''${VALENCE_PROVER_HOST:-104.171.203.127:37282}"
           RUST_LOG_DEFAULT="info,valence_coprocessor=debug,valence_coprocessor_wasm=debug"
           
           # Use provided RUST_LOG or default
@@ -109,21 +114,9 @@
         run-service-release-script = pkgs.writeShellScriptBin "run-service-release" ''
           set -e
           
-          # Set macOS deployment target if on Darwin
-          export MACOSX_DEPLOYMENT_TARGET="10.12"
+          source ${env-setup-script}
           
-          # Set SOURCE_DATE_EPOCH for reproducible builds
-          export SOURCE_DATE_EPOCH="1"
-          
-          # Ensure C compiler is available
-          export CC="${pkgs.clang}/bin/clang"
-          
-          # Add library paths for macOS system libraries
-          ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
-            export LIBRARY_PATH="${pkgs.darwin.libiconv}/lib:${pkgs.libiconv}/lib:$LIBRARY_PATH"
-          ''}
-          
-          PROVER_HOST="104.171.203.127:37282"
+          PROVER_HOST="''${VALENCE_PROVER_HOST:-104.171.203.127:37282}"
           export RUST_LOG="''${RUST_LOG:-info,valence_coprocessor=debug,valence_coprocessor_wasm=debug}"
           
           echo "🚀 Starting Valence co-processor service (release mode)..."
@@ -139,38 +132,14 @@
 
         # Linting script (equivalent to cargo lint)
         lint-script = pkgs.writeShellScriptBin "cargo-lint" ''
-          # Set macOS deployment target if on Darwin
-          export MACOSX_DEPLOYMENT_TARGET="10.12"
-          
-          # Set SOURCE_DATE_EPOCH for reproducible builds
-          export SOURCE_DATE_EPOCH="1"
-          
-          # Ensure C compiler is available
-          export CC="${pkgs.clang}/bin/clang"
-          
-          # Add library paths for macOS system libraries
-          ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
-            export LIBRARY_PATH="${pkgs.darwin.libiconv}/lib:${pkgs.libiconv}/lib:$LIBRARY_PATH"
-          ''}
+          source ${env-setup-script}
           
           exec ${rustToolchain}/bin/cargo clippy --all --all-targets -- -D warnings "$@"
         '';
 
         # Install cargo-valence globally script
         install-cargo-valence-script = pkgs.writeShellScriptBin "install-cargo-valence" ''
-          # Set macOS deployment target if on Darwin
-          export MACOSX_DEPLOYMENT_TARGET="10.12"
-          
-          # Set SOURCE_DATE_EPOCH for reproducible builds
-          export SOURCE_DATE_EPOCH="1"
-          
-          # Ensure C compiler is available
-          export CC="${pkgs.clang}/bin/clang"
-          
-          # Add library paths for macOS system libraries
-          ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
-            export LIBRARY_PATH="${pkgs.darwin.libiconv}/lib:${pkgs.libiconv}/lib:$LIBRARY_PATH"
-          ''}
+          source ${env-setup-script}
           
           echo "Installing cargo-valence CLI tool..."
           exec ${rustToolchain}/bin/cargo install \
@@ -282,19 +251,7 @@
           ];
 
           bash.extra = ''
-            # Set macOS deployment target if on Darwin
-            export MACOSX_DEPLOYMENT_TARGET="10.12"
-            
-            # Set SOURCE_DATE_EPOCH for reproducible builds
-            export SOURCE_DATE_EPOCH="1"
-            
-            # Ensure C compiler is available
-            export CC="${pkgs.clang}/bin/clang"
-            
-            # Add library paths for macOS system libraries
-            ${pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
-              export LIBRARY_PATH="${pkgs.darwin.libiconv}/lib:${pkgs.libiconv}/lib:$LIBRARY_PATH"
-            ''}
+            source ${env-setup-script}
             
             echo "🚀 Valence co-processor development environment"
             echo ""
@@ -314,7 +271,7 @@
             echo "  redis-client               - Redis CLI client"
             echo ""
             echo "🌍 Public service: http://prover.timewave.computer:37281/"
-            echo "📱 CLI installation: cargo install --git https://github.com/timewave-computer/valence-coprocessor.git --tag v0.1.13 --locked cargo-valence"
+            echo "📱 CLI installation: cargo install --git https://github.com/timewave-computer/valence-coprocessor.git --locked cargo-valence"
           '';
         };
       };
