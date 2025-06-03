@@ -1,7 +1,8 @@
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio::time::{self, Duration};
 use uuid::Uuid;
-use valence_coprocessor::{Base64, Proof};
+use valence_coprocessor::{Base64, Hash, Proof, ValidatedDomainBlock, Witness};
 
 /// A co-processor client.
 #[derive(Debug, Clone)]
@@ -41,10 +42,152 @@ impl Client {
     }
 
     /// Return the status of the co-processor.
-    pub fn stats(&self) -> anyhow::Result<Value> {
+    pub async fn stats(&self) -> anyhow::Result<Value> {
         let uri = self.uri("stats");
 
-        Ok(reqwest::blocking::Client::new().get(uri).send()?.json()?)
+        Ok(reqwest::Client::new().get(uri).send().await?.json().await?)
+    }
+
+    /// Deploy a controller.
+    ///
+    /// Returns the allocated Id.
+    ///
+    /// # Arguments
+    ///
+    /// - `controller`: the runtime controller code.
+    /// - `circuit`: the ELF circuit code.
+    /// - `nonce`: a nonce to compose the computed Id.
+    pub async fn deploy_controller<T, C>(
+        &self,
+        controller: T,
+        circuit: C,
+        nonce: Option<u64>,
+    ) -> anyhow::Result<String>
+    where
+        T: AsRef<[u8]>,
+        C: AsRef<[u8]>,
+    {
+        let uri = self.uri("registry/controller");
+
+        reqwest::Client::new()
+            .post(uri)
+            .json(&json!({
+                "controller": Base64::encode(controller),
+                "circuit": Base64::encode(circuit),
+                "nonce": nonce,
+            }))
+            .send()
+            .await?
+            .json::<Value>()
+            .await?
+            .get("controller")
+            .and_then(Value::as_str)
+            .map(String::from)
+            .ok_or_else(|| anyhow::anyhow!("invalid response"))
+    }
+
+    /// Deploy a domain.
+    ///
+    /// Returns the allocated Id.
+    ///
+    /// # Arguments
+    ///
+    /// - `domain`: the domain name.
+    /// - `controller`: the runtime controller code.
+    pub async fn deploy_domain<D, T>(&self, domain: D, controller: T) -> anyhow::Result<String>
+    where
+        D: AsRef<str>,
+        T: AsRef<[u8]>,
+    {
+        let uri = self.uri("registry/domain");
+
+        reqwest::Client::new()
+            .post(uri)
+            .json(&json!({
+                "name": domain.as_ref(),
+                "controller": Base64::encode(controller),
+            }))
+            .send()
+            .await?
+            .json::<Value>()
+            .await?
+            .get("domain")
+            .and_then(Value::as_str)
+            .map(String::from)
+            .ok_or_else(|| anyhow::anyhow!("invalid response"))
+    }
+
+    /// Fetch a storage file, returning its contents.
+    ///
+    /// The co-processor storage is a FAT-16 virtual filesystem, and bound to its limitations.
+    ///
+    /// - filenames limited to 8 characters, and 3 for the extension
+    /// - case insensitive
+    pub async fn get_storage_file<T, P>(&self, controller: T, path: P) -> anyhow::Result<Vec<u8>>
+    where
+        T: AsRef<str>,
+        P: AsRef<str>,
+    {
+        let uri = format!("registry/controller/{}/storage/fs", controller.as_ref());
+        let uri = self.uri(uri);
+
+        reqwest::Client::new()
+            .post(uri)
+            .json(&json!({
+                "path": path.as_ref(),
+            }))
+            .send()
+            .await?
+            .json::<Value>()
+            .await?
+            .get("data")
+            .and_then(Value::as_str)
+            .map(String::from)
+            .ok_or_else(|| anyhow::anyhow!("invalid response"))
+            .and_then(Base64::decode)
+    }
+
+    /// Computes the witnesses of a controller for the provided arguments.
+    ///
+    /// This is a dry-run for the prove call, that will use the same components to compute the
+    /// witnesses.
+    ///
+    /// # Arguments
+    ///
+    /// - `circuit`: the deployed circuit ID.
+    /// - `args`: the arguments passed to the controlller.
+    pub async fn get_witnesses<C: AsRef<str>>(
+        &self,
+        circuit: C,
+        args: &Value,
+    ) -> anyhow::Result<Vec<Witness>> {
+        let uri = format!("registry/controller/{}/witnesses", circuit.as_ref());
+        let uri = self.uri(uri);
+
+        let data = reqwest::Client::new()
+            .post(uri)
+            .json(args)
+            .send()
+            .await?
+            .json::<Value>()
+            .await?;
+
+        if let Some(log) = data.get("log").and_then(Value::as_array) {
+            for l in log {
+                if let Some(l) = l.as_str() {
+                    tracing::debug!("{l}");
+                }
+            }
+        }
+
+        Ok(data
+            .get("witnesses")
+            .and_then(Value::as_array)
+            .ok_or_else(|| anyhow::anyhow!("invalid witnesses response"))?
+            .iter()
+            .cloned()
+            .map(serde_json::from_value)
+            .collect::<Result<_, _>>()?)
     }
 
     /// Queues a co-processor circuit proof request.
@@ -195,19 +338,200 @@ impl Client {
             }
         }
     }
+
+    /// Get the verifying key for the provided circuit
+    pub async fn get_vk<C: AsRef<str>>(&self, circuit: C) -> anyhow::Result<Vec<u8>> {
+        let uri = format!("registry/controller/{}/vk", circuit.as_ref());
+        let uri = self.uri(uri);
+
+        let data = reqwest::Client::new()
+            .get(uri)
+            .send()
+            .await?
+            .json::<Value>()
+            .await?;
+
+        if let Some(log) = data.get("log").and_then(Value::as_array) {
+            for l in log {
+                if let Some(l) = l.as_str() {
+                    tracing::debug!("{l}");
+                }
+            }
+        }
+
+        data.get("base64")
+            .and_then(Value::as_str)
+            .ok_or_else(|| anyhow::anyhow!("invalid vk response"))
+            .and_then(Base64::decode)
+    }
+
+    /// Calls the controller entrypoint
+    pub async fn entrypoint<T: AsRef<str>>(
+        &self,
+        controller: T,
+        args: &Value,
+    ) -> anyhow::Result<Value> {
+        let uri = format!("registry/controller/{}/entrypoint", controller.as_ref());
+        let uri = self.uri(uri);
+
+        let data = reqwest::Client::new()
+            .post(uri)
+            .json(args)
+            .send()
+            .await?
+            .json::<Value>()
+            .await?;
+
+        if let Some(log) = data.get("log").and_then(Value::as_array) {
+            for l in log {
+                if let Some(l) = l.as_str() {
+                    tracing::debug!("{l}");
+                }
+            }
+        }
+
+        data.get("ret")
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("no response provided"))
+    }
+
+    /// Returns the latest validated domain block.
+    pub async fn get_latest_domain_block<D: AsRef<str>>(
+        &self,
+        domain: D,
+    ) -> anyhow::Result<ValidatedDomainBlock> {
+        let uri = format!("registry/domain/{}/latest", domain.as_ref());
+        let uri = self.uri(uri);
+
+        Ok(reqwest::Client::new().get(uri).send().await?.json().await?)
+    }
+
+    /// Appends a block to the domain, validating it with the controller.
+    pub async fn add_domain_block<D: AsRef<str>>(
+        &self,
+        domain: D,
+        args: &Value,
+    ) -> anyhow::Result<Value> {
+        let uri = format!("registry/domain/{}", domain.as_ref());
+        let uri = self.uri(uri);
+
+        Ok(reqwest::Client::new()
+            .post(uri)
+            .json(&args)
+            .send()
+            .await?
+            .json()
+            .await?)
+    }
 }
 
-#[test]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AddedDomainBlock {
+    /// Domain to which the block was added.
+    pub domain: String,
+    /// Historical SMT root prior to the mutation.
+    pub prev_smt: Hash,
+    /// Historical SMT root after the mutation.
+    pub smt: Hash,
+    /// Controller execution log.
+    pub log: Vec<String>,
+    /// A block associated number.
+    pub number: u64,
+    /// The hash root of the block.
+    pub root: Hash,
+    /// SMT key to index the payload.
+    pub key: Hash,
+    /// Block blob payload.
+    pub payload: Vec<u8>,
+}
+
+#[tokio::test]
 #[ignore = "depends on remote service"]
-fn remote_stats_works() {
-    Client::default().stats().unwrap();
+async fn stats_works() {
+    Client::default().stats().await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "depends on remote service"]
+async fn deploy_controller_works() {
+    Client::default()
+        .deploy_controller(b"foo", b"bar", Some(15))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+#[ignore = "depends on remote service"]
+async fn deploy_domain_works() {
+    Client::default()
+        .deploy_domain("foo", b"bar")
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 #[ignore = "depends on remote service and deployed circuit"]
-async fn remote_prove_works() {
+async fn get_storage_file_works() {
+    let controller = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let path = "/var/share/proof.bin";
+
+    Client::default()
+        .get_storage_file(controller, path)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+#[ignore = "depends on remote service and deployed circuit"]
+async fn get_witnesses_works() {
+    let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let args = json!({"value": 42});
+
+    Client::default()
+        .get_witnesses(circuit, &args)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+#[ignore = "depends on remote service and deployed circuit"]
+async fn prove_works() {
     let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
     let args = json!({"value": 42});
 
     Client::default().prove(circuit, &args).await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "depends on remote service and deployed circuit"]
+async fn get_vk_works() {
+    let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+
+    Client::default().get_vk(circuit).await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "depends on remote service and deployed circuit"]
+async fn entrypoint_works() {
+    let controller = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let args = json!({
+        "payload": {
+            "cmd": "store",
+            "path": "/etc/foo.bin",
+        }
+    });
+
+    Client::default()
+        .entrypoint(controller, &args)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+#[ignore = "depends on remote service and deployed ethereum-alpha domain"]
+async fn get_latest_domain_block_works() {
+    Client::default()
+        .get_latest_domain_block("ethereum-alpha")
+        .await
+        .unwrap();
 }

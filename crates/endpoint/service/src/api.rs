@@ -284,7 +284,7 @@ impl Api {
         }))
     }
 
-    /// Computes the controller proof.
+    /// Calls the controller entrypoint.
     #[oai(path = "/registry/controller/:controller/entrypoint", method = "post")]
     pub async fn controller_entrypoint(
         &self,
