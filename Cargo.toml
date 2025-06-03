@@ -3,11 +3,12 @@ members = [
   "crates/core",
   "crates/data/redis",
   "crates/domains/ethereum",
-  "crates/runtime/sp1",
-  "crates/runtime/wasm",
   "crates/endpoint/cli",
   "crates/endpoint/prover",
   "crates/endpoint/service",
+  "crates/runtime/sp1",
+  "crates/runtime/wasm",
+  "crates/utils/client",
 ]
 resolver = "2"
 default-members = ["crates/core"]
@@ -16,7 +17,7 @@ default-members = ["crates/core"]
 authors = ["Timewave Labs"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.2.0"
+version = "0.2.1"
 repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]
@@ -33,6 +34,7 @@ msgpacker = { version = "0.4.8", default-features = false, features = [
   "alloc",
   "derive",
 ] }
+reqwest = { version = "0.12.15", features = ["blocking", "json"] }
 serde = { version = "1.0.219", default-features = false, features = [
   "alloc",
   "derive",
@@ -42,6 +44,7 @@ serde_json = { version = "1.0.140", default-features = false, features = [
 ] }
 sp1-sdk = "4.2.1"
 sp1-verifier = "4.2.1"
+tokio = { version = "1.44.2", features = ["full"] }
 tracing = { version = "0.1.41", default-features = false }
 
 [profile.optimized]

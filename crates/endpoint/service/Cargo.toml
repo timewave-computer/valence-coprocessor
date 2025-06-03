@@ -13,7 +13,7 @@ flume = "0.11.1"
 hex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tokio = { version = "1.44.2", features = ["full"] }
+tokio.workspace = true
 toml = "0.8.20"
 valence-coprocessor.path = "../../core"
 valence-coprocessor-prover.path = "../prover"
