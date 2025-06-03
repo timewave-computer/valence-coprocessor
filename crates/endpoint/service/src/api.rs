@@ -2,7 +2,7 @@ use flume::Sender;
 use poem::web::Data;
 use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::{json, Value};
-use valence_coprocessor::Hash;
+use valence_coprocessor::{BlockAdded, Hash, ValidatedDomainBlock};
 use valence_coprocessor::{ControllerData, DomainData};
 
 use crate::{worker::Job, Historical, Registry, ServiceVm, ServiceZkVm};
@@ -71,6 +71,15 @@ pub struct ControllerRawStorageResponse {
 }
 
 #[derive(Object, Debug)]
+pub struct ControllerWitnessesResponse {
+    /// The vector of computed witnesses.
+    pub witnesses: Value,
+
+    /// Logs of the operation.
+    pub log: Vec<String>,
+}
+
+#[derive(Object, Debug)]
 pub struct ControllerProveRequest {
     /// Arguments of the Valence controller.
     pub args: Value,
@@ -101,6 +110,26 @@ pub struct ControllerEntrypointResponse {
 
     /// Logs of the operation.
     pub log: Vec<String>,
+}
+
+#[derive(Object, Debug)]
+pub struct DomainAddBlockResponse {
+    /// Domain to which the block was added.
+    pub domain: String,
+    /// Historical SMT root prior to the mutation.
+    pub prev_smt: Hash,
+    /// Historical SMT root after the mutation.
+    pub smt: Hash,
+    /// Controller execution log.
+    pub log: Vec<String>,
+    /// A block associated number.
+    pub number: u64,
+    /// The hash root of the block.
+    pub root: Hash,
+    /// SMT key to index the payload.
+    pub key: Hash,
+    /// Block blob payload.
+    pub payload: Vec<u8>,
 }
 
 #[OpenApi]
@@ -196,6 +225,24 @@ impl Api {
         Ok(Json(ControllerStorageFileResponse { data }))
     }
 
+    /// Computes the witnesses for a controller proof.
+    #[oai(path = "/registry/controller/:controller/witnesses", method = "post")]
+    pub async fn controller_witnesses(
+        &self,
+        controller: Path<String>,
+        historical: Data<&Historical>,
+        vm: Data<&ServiceVm>,
+        request: Json<Value>,
+    ) -> poem::Result<Json<ControllerWitnessesResponse>> {
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
+        let witnesses = ctx.get_circuit_witnesses(*vm, request.0)?;
+        let witnesses = serde_json::to_value(witnesses).unwrap_or_default();
+        let log = ctx.get_log().unwrap_or_default();
+
+        Ok(Json(ControllerWitnessesResponse { witnesses, log }))
+    }
+
     /// Computes the controller proof.
     #[oai(path = "/registry/controller/:controller/prove", method = "post")]
     pub async fn controller_prove(
@@ -280,12 +327,33 @@ impl Api {
         historical: Data<&Historical>,
         vm: Data<&ServiceVm>,
         args: Json<Value>,
-    ) -> poem::Result<Json<Value>> {
-        let log = historical.add_domain_block(*vm, &domain, args.0)?;
+    ) -> poem::Result<Json<DomainAddBlockResponse>> {
+        let BlockAdded {
+            domain,
+            prev_smt,
+            smt,
+            log,
+            block,
+        } = historical.add_domain_block(*vm, &domain, args.0)?;
 
-        Ok(Json(serde_json::json!({
-            "log": log
-        })))
+        let ValidatedDomainBlock {
+            number,
+            root,
+            key,
+            payload,
+            ..
+        } = block;
+
+        Ok(Json(DomainAddBlockResponse {
+            domain,
+            prev_smt,
+            smt,
+            log,
+            number,
+            root,
+            key,
+            payload,
+        }))
     }
 }
 

@@ -5,8 +5,8 @@ use msgpacker::Packable as _;
 use serde_json::Value;
 
 use crate::{
-    Blake3Hasher, DataBackend, DomainData, ExecutionContext, Hash, Hasher, Smt, ValidatedBlock,
-    ValidatedDomainBlock, Vm,
+    Blake3Hasher, BlockAdded, DataBackend, DomainData, ExecutionContext, Hash, Hasher, Smt,
+    ValidatedBlock, ValidatedDomainBlock, Vm,
 };
 
 /// Historical tree with blake3 hasher.
@@ -36,12 +36,18 @@ where
 
     /// Loads a new instance of the historical tree from the data backend.
     pub fn load(data: D) -> anyhow::Result<Self> {
+        let empty = Smt::<D, H>::empty_tree_root();
         let current = data.get(Self::PREFIX_CURRENT, &[])?;
-        let current = current
+        let mut current = current
             .map(Hash::try_from)
             .transpose()
             .map_err(|_| anyhow::anyhow!("failed to load current tree from the database"))?
-            .unwrap_or_else(|| Smt::<D, H>::empty_tree_root());
+            .unwrap_or(empty);
+
+        if current == empty {
+            current =
+                Smt::<D, H>::from(data.clone()).insert(empty, &H::hash(b"valence"), b"valence")?;
+        }
 
         let next = Arc::new(Mutex::new(current));
         let current = Arc::new(RwLock::new(current));
@@ -79,7 +85,7 @@ where
         vm: &VM,
         domain: &str,
         args: Value,
-    ) -> anyhow::Result<Vec<String>>
+    ) -> anyhow::Result<BlockAdded>
     where
         VM: Vm<H, D>,
     {
@@ -105,6 +111,8 @@ where
 
         let packed = validated.pack_to_vec();
         let smt = Smt::<D, H>::from(self.data.clone());
+        let prev_smt;
+        let post_smt;
 
         // Everything is validated, lock the write
 
@@ -116,7 +124,11 @@ where
                 .lock()
                 .map_err(|e| anyhow::anyhow!("error locking the historical update: {e}"))?;
 
+            prev_smt = *next;
+
             *next = smt.insert(*next, &validated.key, &validated.payload)?;
+
+            post_smt = *next;
 
             {
                 match self.current.try_write() {
@@ -160,6 +172,12 @@ where
             }
         }
 
-        ctx.get_log()
+        Ok(BlockAdded {
+            domain: domain.into(),
+            prev_smt,
+            smt: post_smt,
+            log: ctx.get_log().unwrap_or_default(),
+            block: validated,
+        })
     }
 }

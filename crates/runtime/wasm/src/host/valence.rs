@@ -1,6 +1,6 @@
 use msgpacker::Packable;
 use serde_json::Value;
-use valence_coprocessor::{utils, DataBackend, FileSystem, Hasher, Vm};
+use valence_coprocessor::{utils, DataBackend, FileSystem, Hash, Hasher, Vm, HASH_LEN};
 use wasmtime::{Caller, Extern, Memory};
 
 use super::Runtime;
@@ -24,6 +24,8 @@ pub enum ReturnCodes {
     Http = -13,
     LatestBlock = -14,
     ControllerStorage = -15,
+    HistoricalOpening = -16,
+    HistoricalPayload = -17,
 }
 
 /// Resolves a panic.
@@ -293,6 +295,116 @@ where
     }
 }
 
+/// Returns the current historical tree root.
+pub(super) fn get_historical<H, D, VM>(mut caller: Caller<Runtime<H, D, VM>>, ptr: u32) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    VM: Vm<H, D>,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let root = caller.data().ctx.get_historical();
+
+    match write_buffer(&mut caller, &mem, ptr, &root) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
+/// Returns the opening to the provided root on the historical SMT.
+pub(super) fn get_historical_opening<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
+    tree_ptr: u32,
+    domain_ptr: u32,
+    domain_len: u32,
+    root_ptr: u32,
+    root_len: u32,
+    ptr: u32,
+) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    VM: Vm<H, D>,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let tree = match read_hash(&mut caller, &mem, tree_ptr) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let domain = match read_string(&mut caller, &mem, domain_ptr, domain_len) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let root = match read_buffer(&mut caller, &mem, root_ptr, root_len) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let opening = match caller
+        .data()
+        .ctx
+        .get_historical_opening(tree, &domain, &root)
+    {
+        Ok(o) => o,
+        Err(_) => return ReturnCodes::HistoricalOpening as i32,
+    };
+
+    match serialize(&mut caller, &mem, ptr, &opening) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
+/// Returns the payload of the provided domain root on the historical SMT.
+pub(super) fn get_historical_payload<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
+    domain_ptr: u32,
+    domain_len: u32,
+    root_ptr: u32,
+    root_len: u32,
+    ptr: u32,
+) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    VM: Vm<H, D>,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let domain = match read_string(&mut caller, &mem, domain_ptr, domain_len) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let root = match read_buffer(&mut caller, &mem, root_ptr, root_len) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let payload = match caller.data().ctx.get_historical_payload(&domain, &root) {
+        Ok(o) => o,
+        Err(_) => return ReturnCodes::HistoricalPayload as i32,
+    };
+
+    match serialize(&mut caller, &mem, ptr, &payload) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
 /// Returns the last included block for the provided domain.
 pub fn get_latest_block<H, D, VM>(
     mut caller: Caller<Runtime<H, D, VM>>,
@@ -457,6 +569,21 @@ where
     }
 
     Ok(bytes)
+}
+
+fn read_hash<H, D, VM>(
+    caller: &mut Caller<Runtime<H, D, VM>>,
+    mem: &Memory,
+    ptr: u32,
+) -> Result<Hash, i32>
+where
+    H: Hasher,
+    D: DataBackend,
+    VM: Vm<H, D>,
+{
+    read_buffer(caller, mem, ptr, HASH_LEN as u32).and_then(|buffer| {
+        Hash::try_from(buffer.as_slice()).map_err(|_| ReturnCodes::BufferTooLarge as i32)
+    })
 }
 
 fn read_string<H, D, VM>(

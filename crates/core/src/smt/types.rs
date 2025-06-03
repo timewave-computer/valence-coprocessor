@@ -149,6 +149,11 @@ where
             .map(|o| o.try_into().unwrap_or_default()))
     }
 
+    /// Returns the payload of the provided domain root on the historical SMT.
+    pub fn get_key_data(&self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
+        self.d.get(Self::PREFIX_DATA, key)
+    }
+
     pub(super) fn remove_key_data(&self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
         self.d.remove(Self::PREFIX_DATA, key)
     }

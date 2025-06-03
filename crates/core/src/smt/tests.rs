@@ -10,7 +10,7 @@ fn single_node_opening() -> anyhow::Result<()> {
     let data = b"Two roads diverged in a wood, and I took the one less traveled by";
 
     let tree = MemorySmt::default();
-    let key = MemorySmt::key(context);
+    let key = Blake3Hasher::key(context, &[]);
 
     let root = MemorySmt::empty_tree_root();
     let root = tree.insert(root, &key, data)?;

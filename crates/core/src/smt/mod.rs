@@ -181,7 +181,6 @@ where
 
         let mut node = root;
         let mut opening = Vec::with_capacity(HASH_LEN * 8);
-        let mut is_leaf = false;
 
         // traverse until leaf
         while let Some(SmtChildren { left, right }) = self.get_children(&node)? {
@@ -215,8 +214,6 @@ where
                 node = children.parent::<H>();
 
                 self.insert_children(&node, &children)?;
-
-                is_leaf = true;
 
                 break;
             }
@@ -254,13 +251,9 @@ where
 
                 self.insert_children(&node, &children)?;
 
-                is_leaf = true;
-
                 break;
             }
         }
-
-        anyhow::ensure!(is_leaf, "inconsistent tree state; the root {root:x?} traversed up to {node:x?}, but that node isn't a leaf");
 
         while let Some(sibling) = opening.pop() {
             depth -= 1;
@@ -281,11 +274,6 @@ where
         }
 
         Ok(node)
-    }
-
-    /// A helper to compute the key from arbitrary bytes.
-    pub fn key<K: AsRef<[u8]>>(data: K) -> Hash {
-        H::hash(data.as_ref())
     }
 
     /// Verifies a Merkle opening generated via [`Smt::get_opening`].

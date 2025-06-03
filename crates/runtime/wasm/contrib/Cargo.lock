@@ -182,9 +182,9 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "msgpacker"
-version = "0.4.7"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db10f6b26b3a8b743c088b3a80e6ebc78ac052e0ee11ca6e261d678ad09e3b41"
+checksum = "134a72ec3a6d034e9c767344ce8aebde228eef4e1343fff3ea209993f12920b3"
 dependencies = [
  "msgpacker-derive",
 ]
@@ -317,7 +317,7 @@ checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.1.11"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -333,7 +333,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm"
-version = "0.1.11"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "dlmalloc",

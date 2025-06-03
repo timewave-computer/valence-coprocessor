@@ -81,6 +81,17 @@ where
         linker.func_wrap(HOST_CONTROLLER, "get_raw_storage", valence::get_raw_storage)?;
         linker.func_wrap(HOST_CONTROLLER, "set_raw_storage", valence::set_raw_storage)?;
         linker.func_wrap(HOST_CONTROLLER, "get_controller", valence::get_controller)?;
+        linker.func_wrap(HOST_CONTROLLER, "get_historical", valence::get_historical)?;
+        linker.func_wrap(
+            HOST_CONTROLLER,
+            "get_historical_opening",
+            valence::get_historical_opening,
+        )?;
+        linker.func_wrap(
+            HOST_CONTROLLER,
+            "get_historical_payload",
+            valence::get_historical_payload,
+        )?;
         linker.func_wrap(
             HOST_CONTROLLER,
             "get_latest_block",

@@ -1,5 +1,5 @@
 use alloc::{string::String, vec, vec::Vec};
-use msgpacker::{MsgPacker, Packable as _, Unpackable as _};
+use msgpacker::{MsgPacker, Packable as _, Unpackable};
 use serde::{Deserialize, Serialize};
 
 use crate::{Base64, Blake3Hasher, DataBackend, Hash, Hasher};
@@ -112,7 +112,7 @@ pub struct StateProof {
 }
 
 /// A circuit witness data obtained via Valence API.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
 pub enum Witness {
     /// A domain opening of a state argument to its root.
     StateProof(StateProof),
@@ -225,6 +225,23 @@ impl<D: DataBackend> From<D> for Registry<D> {
     fn from(data: D) -> Self {
         Self { data }
     }
+}
+
+/// A confirmation of an added block.
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
+)]
+pub struct BlockAdded {
+    /// Domain to which the block was added.
+    pub domain: String,
+    /// Historical SMT root prior to the mutation.
+    pub prev_smt: Hash,
+    /// Historical SMT root after the mutation.
+    pub smt: Hash,
+    /// Controller execution log.
+    pub log: Vec<String>,
+    /// Block data.
+    pub block: ValidatedDomainBlock,
 }
 
 #[test]
