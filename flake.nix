@@ -28,11 +28,11 @@
 
       systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
 
-      # Configuration constants
-      proverHostDefault = "104.171.203.127:37282";
-
       perSystem = { config, pkgs, system, ... }:
       let
+        # Configuration constants
+        proverHostDefault = "104.171.203.127:37282";
+        
         # Add rust-overlay
         overlays = [ rust-overlay.overlays.default ];
         pkgsWithOverlays = import nixpkgs {
