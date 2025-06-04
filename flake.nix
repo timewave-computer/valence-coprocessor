@@ -28,6 +28,9 @@
 
       systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
 
+      # Configuration constants
+      proverHostDefault = "104.171.203.127:37282";
+
       perSystem = { config, pkgs, system, ... }:
       let
         # Add rust-overlay
@@ -85,7 +88,7 @@
           source ${env-setup-script}
           
           # Default values with configurable prover host
-          PROVER_HOST="''${VALENCE_PROVER_HOST:-104.171.203.127:37282}"
+          PROVER_HOST="''${VALENCE_PROVER_HOST:-${proverHostDefault}}"
           RUST_LOG_DEFAULT="info,valence_coprocessor=debug,valence_coprocessor_wasm=debug"
           
           # Use provided RUST_LOG or default
@@ -116,7 +119,7 @@
           
           source ${env-setup-script}
           
-          PROVER_HOST="''${VALENCE_PROVER_HOST:-104.171.203.127:37282}"
+          PROVER_HOST="''${VALENCE_PROVER_HOST:-${proverHostDefault}}"
           export RUST_LOG="''${RUST_LOG:-info,valence_coprocessor=debug,valence_coprocessor_wasm=debug}"
           
           echo "🚀 Starting Valence co-processor service (release mode)..."
