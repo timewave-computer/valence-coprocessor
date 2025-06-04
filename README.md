@@ -38,3 +38,18 @@ VALENCE_PROVER_SECRET=secret \
   RUST_LOG=info,valence_coprocessor=debug,valence_coprocessor_wasm=debug \
   cargo run-service
 ```
+
+#### Nix
+
+Alternatively, use Nix for a reproducible development environment:
+
+```sh
+# Enter development shell
+nix develop
+
+# Start service (equivalent to cargo run-service)
+VALENCE_PROVER_SECRET=secret start-service
+
+# Or run directly
+nix run .#service
+```
