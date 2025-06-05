@@ -365,6 +365,23 @@ impl Client {
             .and_then(Base64::decode)
     }
 
+    /// Get the circuit bytecode.
+    pub async fn get_circuit<C: AsRef<str>>(&self, circuit: C) -> anyhow::Result<Vec<u8>> {
+        let uri = format!("registry/controller/{}/circuit", circuit.as_ref());
+        let uri = self.uri(uri);
+
+        reqwest::Client::new()
+            .get(uri)
+            .send()
+            .await?
+            .json::<Value>()
+            .await?
+            .get("base64")
+            .and_then(Value::as_str)
+            .ok_or_else(|| anyhow::anyhow!("invalid circuit response"))
+            .and_then(Base64::decode)
+    }
+
     /// Calls the controller entrypoint
     pub async fn entrypoint<T: AsRef<str>>(
         &self,
@@ -508,6 +525,14 @@ async fn get_vk_works() {
     let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
 
     Client::default().get_vk(circuit).await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "depends on remote service and deployed circuit"]
+async fn get_circuit_works() {
+    let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+
+    Client::default().get_circuit(circuit).await.unwrap();
 }
 
 #[tokio::test]
