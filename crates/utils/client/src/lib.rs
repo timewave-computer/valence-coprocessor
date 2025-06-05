@@ -200,12 +200,18 @@ impl Client {
     /// # Return
     ///
     /// Returns the path allocated for this proof.
-    pub async fn queue_proof<C: AsRef<str>>(
+    pub async fn queue_proof<C, R>(
         &self,
         circuit: C,
+        root: Option<R>,
         args: &Value,
-    ) -> anyhow::Result<String> {
-        let uri = format!("registry/controller/{}/prove", circuit.as_ref());
+    ) -> anyhow::Result<String>
+    where
+        C: AsRef<str>,
+        R: AsRef<str>,
+    {
+        let uri = root.map(|r| format!("/{}", r.as_ref())).unwrap_or_default();
+        let uri = format!("registry/controller/{}/prove{}", circuit.as_ref(), uri);
         let uri = self.uri(uri);
 
         let output = Uuid::new_v4();
@@ -307,20 +313,45 @@ impl Client {
         let retries = 25;
         let frequency = 2000;
 
-        self.prove_with_params(circuit, retries, frequency, args)
+        self.prove_with_params::<_, String>(circuit, None, retries, frequency, args)
             .await
     }
 
     /// Computes a proof for the given circuit, with the provided controller arguments.
-    pub async fn prove_with_params<C: AsRef<str>>(
+    ///
+    /// Overrides the latest co-processor root with the provided root.
+    pub async fn prove_with_root<C, R>(
         &self,
         circuit: C,
+        root: R,
+        args: &Value,
+    ) -> anyhow::Result<Proof>
+    where
+        C: AsRef<str>,
+        R: AsRef<str>,
+    {
+        let retries = 25;
+        let frequency = 2000;
+
+        self.prove_with_params(circuit, Some(root), retries, frequency, args)
+            .await
+    }
+
+    /// Computes a proof for the given circuit, with the provided controller arguments.
+    pub async fn prove_with_params<C, R>(
+        &self,
+        circuit: C,
+        root: Option<R>,
         retries: u64,
         frequency: u64,
         args: &Value,
-    ) -> anyhow::Result<Proof> {
+    ) -> anyhow::Result<Proof>
+    where
+        C: AsRef<str>,
+        R: AsRef<str>,
+    {
         let circuit = circuit.as_ref();
-        let path = self.queue_proof(circuit, args).await?;
+        let path = self.queue_proof(circuit, root, args).await?;
 
         let duration = retries * frequency;
         let duration = Duration::from_millis(duration);
@@ -517,6 +548,24 @@ async fn prove_works() {
     let args = json!({"value": 42});
 
     Client::default().prove(circuit, &args).await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "depends on remote service and deployed circuit"]
+async fn prove_with_root_works() {
+    let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let root = "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d";
+    let args = json!({"value": 42});
+
+    let inputs = Client::default()
+        .prove_with_root(circuit, root, &args)
+        .await
+        .unwrap()
+        .decode()
+        .unwrap()
+        .1;
+
+    assert_eq!(hex::encode(&inputs[..32]), root);
 }
 
 #[tokio::test]
