@@ -270,6 +270,30 @@ impl Api {
         Ok(Json(json!({"status": "received"})))
     }
 
+    /// Computes the controller proof for the provided co-processor root.
+    #[oai(path = "/registry/controller/:controller/prove/:root", method = "post")]
+    pub async fn controller_prove_root(
+        &self,
+        controller: Path<String>,
+        root: Path<String>,
+        pool: Data<&Sender<Job>>,
+        request: Json<ControllerProveRequest>,
+    ) -> poem::Result<Json<Value>> {
+        let controller = try_str_to_hash(&controller)?;
+        let root = try_str_to_hash(&root)?;
+        let ControllerProveRequest { args, payload } = request.0;
+
+        pool.send(Job::ProveWithRoot {
+            controller,
+            root,
+            args,
+            payload,
+        })
+        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))?;
+
+        Ok(Json(json!({"status": "received"})))
+    }
+
     /// Returns the controller verifying key.
     #[oai(path = "/registry/controller/:controller/vk", method = "get")]
     pub async fn controller_vk(
