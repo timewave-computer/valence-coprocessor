@@ -98,6 +98,12 @@ pub struct ControllerVkResponse {
 }
 
 #[derive(Object, Debug)]
+pub struct ControllerCircuitResponse {
+    /// The circuit bytecode in base64.
+    pub base64: Base64<Vec<u8>>,
+}
+
+#[derive(Object, Debug)]
 pub struct ControllerEntrypointRequest {
     /// Arguments of the Valence controller.
     pub args: Value,
@@ -281,6 +287,24 @@ impl Api {
         Ok(Json(ControllerVkResponse {
             base64: Base64(vk),
             log,
+        }))
+    }
+
+    /// Returns the controller circuit bytecode.
+    #[oai(path = "/registry/controller/:controller/circuit", method = "get")]
+    pub async fn controller_circuit(
+        &self,
+        controller: Path<String>,
+        historical: Data<&Historical>,
+    ) -> poem::Result<Json<ControllerCircuitResponse>> {
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
+        let circuit = ctx
+            .get_zkvm()?
+            .ok_or_else(|| anyhow::anyhow!("no circuit data available"))?;
+
+        Ok(Json(ControllerCircuitResponse {
+            base64: Base64(circuit),
         }))
     }
 

@@ -411,7 +411,7 @@ impl Client {
         &self,
         domain: D,
         args: &Value,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<AddedDomainBlock> {
         let uri = format!("registry/domain/{}", domain.as_ref());
         let uri = self.uri(uri);
 
