@@ -77,6 +77,11 @@ where
         ExecutionContext::init(controller, current, self.data.clone())
     }
 
+    /// Initializes a new context with the provided historical root.
+    pub fn context_with_root(&self, controller: Hash, root: Hash) -> ExecutionContext<H, D> {
+        ExecutionContext::init(controller, root, self.data.clone())
+    }
+
     /// Adds a new block.
     ///
     /// It will be validated on the domain controller.

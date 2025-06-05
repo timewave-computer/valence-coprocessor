@@ -98,6 +98,12 @@ pub struct ControllerVkResponse {
 }
 
 #[derive(Object, Debug)]
+pub struct ControllerCircuitResponse {
+    /// The circuit bytecode in base64.
+    pub base64: Base64<Vec<u8>>,
+}
+
+#[derive(Object, Debug)]
 pub struct ControllerEntrypointRequest {
     /// Arguments of the Valence controller.
     pub args: Value,
@@ -264,6 +270,30 @@ impl Api {
         Ok(Json(json!({"status": "received"})))
     }
 
+    /// Computes the controller proof for the provided co-processor root.
+    #[oai(path = "/registry/controller/:controller/prove/:root", method = "post")]
+    pub async fn controller_prove_root(
+        &self,
+        controller: Path<String>,
+        root: Path<String>,
+        pool: Data<&Sender<Job>>,
+        request: Json<ControllerProveRequest>,
+    ) -> poem::Result<Json<Value>> {
+        let controller = try_str_to_hash(&controller)?;
+        let root = try_str_to_hash(&root)?;
+        let ControllerProveRequest { args, payload } = request.0;
+
+        pool.send(Job::ProveWithRoot {
+            controller,
+            root,
+            args,
+            payload,
+        })
+        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))?;
+
+        Ok(Json(json!({"status": "received"})))
+    }
+
     /// Returns the controller verifying key.
     #[oai(path = "/registry/controller/:controller/vk", method = "get")]
     pub async fn controller_vk(
@@ -281,6 +311,24 @@ impl Api {
         Ok(Json(ControllerVkResponse {
             base64: Base64(vk),
             log,
+        }))
+    }
+
+    /// Returns the controller circuit bytecode.
+    #[oai(path = "/registry/controller/:controller/circuit", method = "get")]
+    pub async fn controller_circuit(
+        &self,
+        controller: Path<String>,
+        historical: Data<&Historical>,
+    ) -> poem::Result<Json<ControllerCircuitResponse>> {
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
+        let circuit = ctx
+            .get_zkvm()?
+            .ok_or_else(|| anyhow::anyhow!("no circuit data available"))?;
+
+        Ok(Json(ControllerCircuitResponse {
+            base64: Base64(circuit),
         }))
     }
 
