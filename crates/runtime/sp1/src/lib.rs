@@ -9,11 +9,12 @@ mod host;
 #[cfg(feature = "host")]
 pub use host::*;
 
-#[cfg(feature = "ark-groth16")]
-mod groth16;
-
-#[cfg(feature = "ark-groth16")]
-pub use groth16::*;
+// disabled for 5.0.0
+//#[cfg(feature = "ark-groth16")]
+//mod groth16;
+//
+//#[cfg(feature = "ark-groth16")]
+//pub use groth16::*;
 
 #[derive(Debug, Clone)]
 pub struct Sp1Hasher;

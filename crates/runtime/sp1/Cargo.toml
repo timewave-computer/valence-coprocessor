@@ -10,7 +10,7 @@ anyhow = { workspace = true, optional = true }
 ark-bn254 = "0.5.0"
 ark-ec = "0.5.0"
 ark-ff = "0.5.0"
-ark-groth16 = { workspace = true, optional = true }
+#ark-groth16 = { workspace = true, optional = true }
 ark-serialize = "0.5.0"
 bincode = { workspace = true, optional = true }
 lru = { workspace = true, optional = true }
@@ -29,10 +29,10 @@ sp1-verifier = { workspace = true, features = ["ark"] }
 valence-coprocessor = { path = "../../core", features = ["mocks", "std"] }
 
 [features]
-default = ["ark-groth16", "host", "std"]
-ark-groth16 = ["anyhow", "dep:ark-groth16"]
+default = ["host", "std"]
+#ark-groth16 = ["anyhow", "dep:ark-groth16"]
 host = ["anyhow", "bincode", "lru", "sp1-sdk", "std", "valence-coprocessor/std"]
-std = ["ark-groth16?/default", "sha2-v0-10-8/std"]
+std = ["sha2-v0-10-8/std"]
 
 [[test]]
 name = "zkvm"

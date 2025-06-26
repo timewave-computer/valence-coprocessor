@@ -7,4 +7,4 @@ edition = "2021"
 valence-coprocessor.workspace = true
 valence-coprocessor-integrated-tests-domain.path = "/home/vlopes/dev/timewave/valence-coprocessor/tests/service/domain"
 valence-coprocessor-sp1.workspace = true
-sp1-zkvm = "4.2.1"
+sp1-zkvm = "5.0.0"
