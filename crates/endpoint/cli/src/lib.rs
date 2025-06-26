@@ -37,7 +37,7 @@ impl Default for App {
 }
 
 impl App {
-    pub const DEFAULT_DOCKER: &str = "vtw11/valence:0.1.2";
+    pub const DEFAULT_DOCKER: &str = concat!("vtw11/valence:", env!("CARGO_PKG_VERSION"));
     pub const DEFAULT_PORT: u16 = 37281;
     pub const DEFAULT_SOCKET: &str = "127.0.0.1:37281";
     pub const DEFAULT_TAG: &str = concat!("v", env!("CARGO_PKG_VERSION"));
