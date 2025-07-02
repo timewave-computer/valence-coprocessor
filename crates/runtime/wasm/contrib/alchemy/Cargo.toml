@@ -1,0 +1,11 @@
+[package]
+name = "valence-coprocessor-wasm-alchemy"
+edition = "2021"
+license = "Apache-2.0"
+version = "0.1.0"
+
+[dependencies]
+valence-coprocessor-wasm.workspace = true
+
+[lib]
+crate-type = ["cdylib"]

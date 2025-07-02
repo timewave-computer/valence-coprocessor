@@ -51,6 +51,15 @@ mod host {
         ) -> i32;
         pub(super) fn http(args_ptr: u32, args_len: u32, ptr: u32) -> i32;
         pub(super) fn log(ptr: u32, len: u32) -> i32;
+        pub(super) fn alchemy(
+            chain_ptr: u32,
+            chain_len: u32,
+            method_ptr: u32,
+            method_len: u32,
+            params_ptr: u32,
+            params_len: u32,
+            ptr: u32,
+        ) -> i32;
     }
 }
 
@@ -172,6 +181,10 @@ pub(crate) mod use_std {
         valence_coprocessor::utils::http(args)
     }
 
+    pub fn alchemy(_chain: &str, _method: &str, _params: &Value) -> anyhow::Result<Value> {
+        todo!()
+    }
+
     pub fn __value_to_context_log(log: &str) -> anyhow::Result<()> {
         RUNTIME.lock().unwrap().log.push(log.to_string());
 
@@ -182,7 +195,7 @@ pub(crate) mod use_std {
 #[cfg(feature = "tests-runtime")]
 pub use use_std::{initialize_default_runtime, initialize_runtime, runtime};
 
-pub const BUF_LEN: usize = 1024 * 1024;
+pub const BUF_LEN: usize = 4 * 1024 * 1024;
 
 static mut BUF: &mut [u8] = &mut [0u8; BUF_LEN];
 
@@ -489,7 +502,43 @@ pub fn http(args: &Value) -> anyhow::Result<Value> {
 
         let len = host::http(args_ptr, args_len, ptr);
 
-        anyhow::ensure!(len >= 0, "failed to read state proof");
+        anyhow::ensure!(len >= 0, "failed to read http response");
+        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
+
+        Ok(serde_json::from_slice(&BUF[..len as usize])?)
+    }
+}
+
+/// Performs an Alchemy API request.
+///
+/// # Params
+///
+/// - `chain`: the chain to be called on alchemy (ex: `eth-mainnet`)
+/// - `method`: the method to be called for the node (ex: `eth_getProof`)
+/// - `params`: the parameters to be passed to the request.
+pub fn alchemy(chain: &str, method: &str, params: &Value) -> anyhow::Result<Value> {
+    #[cfg(feature = "std")]
+    return use_std::alchemy(chain, method, params);
+
+    #[cfg(not(feature = "std"))]
+    unsafe {
+        let chain_ptr = chain.as_ptr() as u32;
+        let chain_len = chain.len() as u32;
+
+        let method_ptr = method.as_ptr() as u32;
+        let method_len = method.len() as u32;
+
+        let params = serde_json::to_vec(params)?;
+        let params_ptr = params.as_ptr() as u32;
+        let params_len = params.len() as u32;
+
+        let ptr = BUF.as_ptr() as u32;
+
+        let len = host::alchemy(
+            chain_ptr, chain_len, method_ptr, method_len, params_ptr, params_len, ptr,
+        );
+
+        anyhow::ensure!(len >= 0, "failed to read alchemy result");
         anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
 
         Ok(serde_json::from_slice(&BUF[..len as usize])?)

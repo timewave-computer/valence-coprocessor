@@ -211,6 +211,43 @@ fn deploy_http() {
 }
 
 #[test]
+#[ignore = "ALCHEMY_API_KEY required"]
+fn deploy_alchemy() {
+    let alchemy = get_controller_bytes("alchemy");
+    let data = MemoryBackend::default();
+    let registry = Registry::from(data.clone());
+
+    let capacity = 500;
+    let vm = ValenceWasm::new(capacity).unwrap();
+    let zkvm = MockZkVm::default();
+
+    let controller = ControllerData::default().with_controller(alchemy);
+    let controller = registry
+        .register_controller(&vm, &zkvm, controller)
+        .unwrap();
+
+    let ctx = Blake3Historical::load(data).unwrap().context(controller);
+
+    let ret = ctx
+        .entrypoint(
+            &vm,
+            json!({
+                "chain": "eth-mainnet",
+                "method": "eth_getStorageAt",
+                "params": [
+              "0xf2B85C389A771035a9Bd147D4BF87987A7F9cf98",
+              "0xa",
+              "latest"
+            ]
+            }),
+        )
+        .unwrap();
+    let ret = ret.as_str().unwrap().strip_prefix("0x").unwrap();
+
+    hex::decode(ret).unwrap();
+}
+
+#[test]
 fn deploy_log() {
     let hello = get_controller_bytes("log");
     let data = MemoryBackend::default();
