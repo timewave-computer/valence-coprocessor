@@ -1,3 +1,5 @@
+use std::env;
+
 use msgpacker::Packable;
 use serde_json::Value;
 use valence_coprocessor::{utils, DataBackend, FileSystem, Hash, Hasher, Vm, HASH_LEN};
@@ -26,6 +28,8 @@ pub enum ReturnCodes {
     ControllerStorage = -15,
     HistoricalOpening = -16,
     HistoricalPayload = -17,
+    AlchemyApiKey = -18,
+    AlchemyResult = -19,
 }
 
 /// Resolves a panic.
@@ -507,6 +511,102 @@ where
     let ret = match utils::http(&args) {
         Ok(r) => r,
         Err(_) => return ReturnCodes::Http as i32,
+    };
+
+    let ret = match serde_json::to_vec(&ret) {
+        Ok(r) => r,
+        Err(_) => return ReturnCodes::Http as i32,
+    };
+
+    match write_buffer(&mut caller, &mem, ptr, &ret) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
+/// Perform an Alchemy API request.
+#[allow(clippy::too_many_arguments)]
+pub fn alchemy<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
+    chain_ptr: u32,
+    chain_len: u32,
+    method_ptr: u32,
+    method_len: u32,
+    params_ptr: u32,
+    params_len: u32,
+    ptr: u32,
+) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    VM: Vm<H, D>,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let key = match env::var("ALCHEMY_API_KEY") {
+        Ok(k) => k,
+        Err(e) => {
+            tracing::warn!("alchemy key not set: {e}");
+            return ReturnCodes::AlchemyApiKey as i32;
+        }
+    };
+
+    let chain = match read_string(&mut caller, &mem, chain_ptr, chain_len) {
+        Ok(a) => a,
+        Err(e) => return e,
+    };
+
+    let method = match read_string(&mut caller, &mem, method_ptr, method_len) {
+        Ok(a) => a,
+        Err(e) => return e,
+    };
+
+    let params = match read_json(&mut caller, &mem, params_ptr, params_len) {
+        Ok(a) => a,
+        Err(e) => return e,
+    };
+
+    let url = format!("https://{chain}.g.alchemy.com/v2/{key}");
+    let args = serde_json::json!({
+        "url": url,
+        "method": "post",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "json": {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": 1
+        }
+    });
+
+    let ret = match utils::http(&args) {
+        Ok(r) => r,
+        Err(_) => return ReturnCodes::AlchemyResult as i32,
+    };
+
+    let ret = match ret.get("body").cloned() {
+        Some(r) => r,
+        None => return ReturnCodes::AlchemyResult as i32,
+    };
+
+    let ret: Vec<u8> = match serde_json::from_value(ret) {
+        Ok(r) => r,
+        Err(_) => return ReturnCodes::AlchemyResult as i32,
+    };
+
+    let ret: Value = match serde_json::from_slice(&ret) {
+        Ok(r) => r,
+        Err(_) => return ReturnCodes::AlchemyResult as i32,
+    };
+
+    let ret = match ret.get("result") {
+        Some(r) => r,
+        None => return ReturnCodes::AlchemyResult as i32,
     };
 
     let ret = match serde_json::to_vec(&ret) {

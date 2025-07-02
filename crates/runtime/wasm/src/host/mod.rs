@@ -99,6 +99,7 @@ where
         )?;
         linker.func_wrap(HOST_CONTROLLER, "get_state_proof", valence::get_state_proof)?;
         linker.func_wrap(HOST_CONTROLLER, "http", valence::http)?;
+        linker.func_wrap(HOST_CONTROLLER, "alchemy", valence::alchemy)?;
         linker.func_wrap(HOST_CONTROLLER, "log", valence::log)?;
 
         let capacity = std::num::NonZeroUsize::new(capacity)

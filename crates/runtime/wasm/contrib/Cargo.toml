@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "alchemy",
   "controller",
   "domain",
   "hello",
