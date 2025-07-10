@@ -3,7 +3,7 @@ mod cli;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
 };
 
 pub use cli::*;
@@ -12,10 +12,11 @@ use valence_coprocessor::{Base64, Proof};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct App {
+    /// Docker image
     pub docker: String,
-    pub port: u16,
     pub socket: String,
     pub tag: String,
+    pub docker_host: bool,
 }
 
 struct ProjectStructure {
@@ -29,26 +30,21 @@ impl Default for App {
     fn default() -> Self {
         Self {
             docker: Self::DEFAULT_DOCKER.into(),
-            port: Self::DEFAULT_PORT,
             socket: Self::DEFAULT_SOCKET.into(),
             tag: Self::DEFAULT_TAG.into(),
+            docker_host: Self::DEFAULT_DOCKER_HOST,
         }
     }
 }
 
 impl App {
     pub const DEFAULT_DOCKER: &str = concat!("vtw11/valence:", env!("CARGO_PKG_VERSION"));
-    pub const DEFAULT_PORT: u16 = 37281;
     pub const DEFAULT_SOCKET: &str = "127.0.0.1:37281";
     pub const DEFAULT_TAG: &str = concat!("v", env!("CARGO_PKG_VERSION"));
+    pub const DEFAULT_DOCKER_HOST: bool = false;
 
     pub fn with_docker<V: AsRef<str>>(mut self, docker: V) -> Self {
         self.docker = docker.as_ref().into();
-        self
-    }
-
-    pub fn with_port(mut self, port: u16) -> Self {
-        self.port = port;
         self
     }
 
@@ -60,6 +56,47 @@ impl App {
     pub fn with_tag<V: AsRef<str>>(mut self, tag: V) -> Self {
         self.tag = tag.as_ref().into();
         self
+    }
+
+    pub fn with_docker_host(mut self, docker_host: bool) -> Self {
+        self.docker_host = docker_host;
+        self
+    }
+
+    fn run_docker(
+        &self,
+        cmd: &str,
+        wsroot: &str,
+        package: &str,
+        pkrelative: &str,
+        args: &[&str],
+    ) -> anyhow::Result<Output> {
+        let mut command = Command::new("docker");
+
+        command.args(["run", "--rm", "-i"]);
+
+        if self.docker_host {
+            command.args(["--network", "host"]);
+        }
+
+        command.args([
+            "-v",
+            format!("{wsroot}:/mnt").as_str(),
+            &self.docker,
+            cmd,
+            &self.tag,
+            package,
+            format!("/mnt{pkrelative}").as_str(),
+            &self.socket,
+        ]);
+
+        for a in args {
+            command.arg(a);
+        }
+
+        let output = command.stderr(Stdio::inherit()).output()?;
+
+        Ok(output)
     }
 
     /// Deploys a domain.
@@ -77,25 +114,7 @@ impl App {
             ..
         } = TryFrom::try_from(path)?;
 
-        let output = Command::new("docker")
-            .args([
-                "run",
-                "--rm",
-                "-i",
-                "-p",
-                format!("{}:{}", self.port, self.port).as_str(),
-                "-v",
-                format!("{wsroot}:/mnt").as_str(),
-                &self.docker,
-                "domain",
-                &self.tag,
-                &package,
-                format!("/mnt{pkrelative}").as_str(),
-                &self.socket,
-                name.as_ref(),
-            ])
-            .stderr(Stdio::inherit())
-            .output()?;
+        let output = self.run_docker("domain", &wsroot, &package, &pkrelative, &[name.as_ref()])?;
 
         anyhow::ensure!(output.status.success(), "failed to deploy domain");
 
@@ -143,26 +162,13 @@ impl App {
             .to_string()
             .split_off(wsroot.len());
 
-        let output = Command::new("docker")
-            .args([
-                "run",
-                "--rm",
-                "-i",
-                "-p",
-                format!("{}:{}", self.port, self.port).as_str(),
-                "-v",
-                format!("{wsroot}:/mnt").as_str(),
-                &self.docker,
-                "controller",
-                &self.tag,
-                &package,
-                format!("/mnt{pkrelative}").as_str(),
-                &self.socket,
-                circuit,
-                format!("/mnt{}", circuit_dir.as_str()).as_str(),
-            ])
-            .stderr(Stdio::inherit())
-            .output()?;
+        let output = self.run_docker(
+            "controller",
+            &wsroot,
+            &package,
+            &pkrelative,
+            &[circuit, format!("/mnt{}", circuit_dir.as_str()).as_str()],
+        )?;
 
         anyhow::ensure!(output.status.success(), "failed to deploy circuit");
 
