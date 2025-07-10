@@ -4,15 +4,15 @@ use clap::Parser as _;
 fn main() -> anyhow::Result<()> {
     let Cli {
         cmd,
-        port,
         socket,
         tag,
+        docker_host,
     } = Cli::parse();
 
     let app = App::default()
         .with_tag(tag)
         .with_socket(socket)
-        .with_port(port);
+        .with_docker_host(docker_host);
 
     let response = match cmd {
         Commands::Deploy(d) => match d {

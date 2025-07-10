@@ -11,13 +11,13 @@ pub struct Cli {
     #[arg(short, long, value_name = "SOCKET", default_value = App::DEFAULT_SOCKET)]
     pub socket: String,
 
-    /// A port to be shared from the host to the docker container.
-    #[arg(short, long, value_name = "PORT", default_value_t = App::DEFAULT_PORT)]
-    pub port: u16,
-
     /// Co-processor version tag.
     #[arg(short, long, value_name = "TAG", default_value = App::DEFAULT_TAG)]
     pub tag: String,
+
+    /// Enable docker host access to 127.0.0.1 (requires Linux)
+    #[arg(short, long, value_name = "DOCKER_HOST", default_value_t = App::DEFAULT_DOCKER_HOST)]
+    pub docker_host: bool,
 
     #[command(subcommand)]
     pub cmd: Commands,
