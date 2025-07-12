@@ -25,6 +25,7 @@ struct JsonRpcRequest {
 }
 
 /// Generic JSON-RPC response
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse {
     jsonrpc: String,
@@ -34,6 +35,7 @@ struct JsonRpcResponse {
 }
 
 /// JSON-RPC error
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct JsonRpcError {
     code: i64,
@@ -42,6 +44,7 @@ struct JsonRpcError {
 }
 
 /// Block information structure (Ethereum example)
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct BlockInfo {
     number: String,
@@ -56,6 +59,7 @@ struct BlockInfo {
 }
 
 /// Account balance information (Ethereum example)
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct AccountInfo {
     balance: String,
