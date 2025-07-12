@@ -75,6 +75,50 @@ impl HttpRequest {
         }
     }
 
+    /// Create a new PUT request
+    pub fn put(url: impl Into<String>) -> Self {
+        Self {
+            url: url.into(),
+            method: HttpMethod::Put,
+            headers: Vec::new(),
+            body: None,
+            timeout_secs: Some(30),
+        }
+    }
+
+    /// Create a new DELETE request
+    pub fn delete(url: impl Into<String>) -> Self {
+        Self {
+            url: url.into(),
+            method: HttpMethod::Delete,
+            headers: Vec::new(),
+            body: None,
+            timeout_secs: Some(30),
+        }
+    }
+
+    /// Create a new PATCH request
+    pub fn patch(url: impl Into<String>) -> Self {
+        Self {
+            url: url.into(),
+            method: HttpMethod::Patch,
+            headers: Vec::new(),
+            body: None,
+            timeout_secs: Some(30),
+        }
+    }
+
+    /// Create a new HEAD request
+    pub fn head(url: impl Into<String>) -> Self {
+        Self {
+            url: url.into(),
+            method: HttpMethod::Head,
+            headers: Vec::new(),
+            body: None,
+            timeout_secs: Some(30),
+        }
+    }
+
     /// Add a header
     pub fn header(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.headers.push((key.into(), value.into()));
@@ -170,6 +214,7 @@ impl fmt::Display for HttpError {
 
 fn execute_valence_host(request: HttpRequest) -> Result<HttpResponse, HttpError> {
     use crate::abi;
+    use crate::core::Base64;
     
     // Convert headers to JSON object
     let headers: serde_json::Map<String, Value> = request
@@ -185,9 +230,9 @@ fn execute_valence_host(request: HttpRequest) -> Result<HttpResponse, HttpError>
         "headers": headers,
     });
 
-    // Add body if present
+    // Add body if present - use efficient Base64 encoding
     if let Some(body) = request.body {
-        req_json["body"] = Value::Array(body.iter().map(|&b| Value::Number(b.into())).collect());
+        req_json["body"] = Value::String(Base64::encode(&body));
     }
 
     // Make the HTTP request through Valence host function
@@ -205,11 +250,21 @@ fn execute_valence_host(request: HttpRequest) -> Result<HttpResponse, HttpError>
         .collect();
 
     let body = match &response["body"] {
-        Value::Array(arr) => arr
-            .iter()
-            .map(|v| v.as_u64().unwrap_or(0) as u8)
-            .collect(),
-        Value::String(s) => s.as_bytes().to_vec(),
+        Value::Array(arr) => {
+            // Legacy format: array of numbers
+            arr.iter()
+                .map(|v| v.as_u64().unwrap_or(0) as u8)
+                .collect()
+        },
+        Value::String(s) => {
+            // Check if it's base64 encoded or plain text
+            if let Ok(decoded) = Base64::decode(s) {
+                decoded
+            } else {
+                // Fallback to treating as plain text
+                s.as_bytes().to_vec()
+            }
+        },
         _ => Vec::new(),
     };
 
@@ -228,6 +283,26 @@ pub fn get(url: impl Into<String>) -> Result<HttpResponse, HttpError> {
 /// Convenience function for making POST requests
 pub fn post(url: impl Into<String>) -> Result<HttpResponse, HttpError> {
     HttpClient::execute(HttpRequest::post(url))
+}
+
+/// Convenience function for making PUT requests
+pub fn put(url: impl Into<String>) -> Result<HttpResponse, HttpError> {
+    HttpClient::execute(HttpRequest::put(url))
+}
+
+/// Convenience function for making DELETE requests
+pub fn delete(url: impl Into<String>) -> Result<HttpResponse, HttpError> {
+    HttpClient::execute(HttpRequest::delete(url))
+}
+
+/// Convenience function for making PATCH requests
+pub fn patch(url: impl Into<String>) -> Result<HttpResponse, HttpError> {
+    HttpClient::execute(HttpRequest::patch(url))
+}
+
+/// Convenience function for making HEAD requests
+pub fn head(url: impl Into<String>) -> Result<HttpResponse, HttpError> {
+    HttpClient::execute(HttpRequest::head(url))
 }
 
 /// Convenience function for making JSON POST requests with serde_json::Value

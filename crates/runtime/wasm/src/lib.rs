@@ -14,4 +14,4 @@ pub mod portable;
 pub const HOST_CONTROLLER: &str = "valence";
 
 // Re-export portable HTTP types
-pub use portable::{HttpClient, HttpRequest, HttpResponse, HttpError, HttpMethod, get, post, post_json_value};
+pub use portable::{HttpClient, HttpRequest, HttpResponse, HttpError, HttpMethod, get, post, put, delete, patch, head, post_json_value};

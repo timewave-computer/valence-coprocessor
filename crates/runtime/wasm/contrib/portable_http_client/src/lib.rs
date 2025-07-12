@@ -65,7 +65,17 @@ struct AccountInfo {
 /// Main entrypoint for the HTTP client
 #[no_mangle]
 pub extern "C" fn entrypoint() {
-    let args = abi::args().unwrap();
+    let args = match abi::args() {
+        Ok(args) => args,
+        Err(e) => {
+            let response = json!({
+                "success": false,
+                "error": format!("Failed to parse arguments: {}", e),
+            });
+            let _ = abi::ret(&response);
+            return;
+        }
+    };
     
     let command = args["command"].as_str().unwrap_or("help");
     
@@ -97,7 +107,15 @@ pub extern "C" fn entrypoint() {
         })
     };
 
-    abi::ret(&response).unwrap();
+    // Return the response, handling potential serialization errors
+    if let Err(e) = abi::ret(&response) {
+        // If we can't return the response, try to return a minimal error
+        let fallback_response = json!({
+            "success": false,
+            "error": format!("Failed to serialize response: {}", e)
+        });
+        let _ = abi::ret(&fallback_response);
+    }
 }
 
 /// Make a generic HTTP GET request
@@ -112,6 +130,8 @@ fn make_http_get(args: &Value) -> Result<Value, String> {
         for (key, value) in headers {
             if let Some(value_str) = value.as_str() {
                 request = request.header(key, value_str);
+            } else {
+                return Err(format!("Header value for key '{}' must be a string, got: {:?}", key, value));
             }
         }
     }
@@ -122,7 +142,7 @@ fn make_http_get(args: &Value) -> Result<Value, String> {
     Ok(json!({
         "status": response.status,
         "headers": response.headers,
-        "body": response.text().unwrap_or_default()
+        "body": response.text().map_err(|_| String::from("Response body contains invalid UTF-8"))?
     }))
 }
 
@@ -138,6 +158,8 @@ fn make_http_post(args: &Value) -> Result<Value, String> {
         for (key, value) in headers {
             if let Some(value_str) = value.as_str() {
                 request = request.header(key, value_str);
+            } else {
+                return Err(format!("Header value for key '{}' must be a string, got: {:?}", key, value));
             }
         }
     }
@@ -156,7 +178,7 @@ fn make_http_post(args: &Value) -> Result<Value, String> {
     Ok(json!({
         "status": response.status,
         "headers": response.headers,
-        "body": response.text().unwrap_or_default()
+        "body": response.text().map_err(|_| String::from("Response body contains invalid UTF-8"))?
     }))
 }
 
@@ -167,13 +189,45 @@ fn call_rest_api(args: &Value) -> Result<Value, String> {
     
     let method = args["method"].as_str().unwrap_or("GET");
     
-    let request = match method.to_uppercase().as_str() {
+    let mut request = match method.to_uppercase().as_str() {
         "GET" => HttpRequest::get(url),
         "POST" => HttpRequest::post(url),
-        _ => return Err(format!("Unsupported HTTP method: {}", method)),
+        "PUT" => HttpRequest::put(url),
+        "DELETE" => HttpRequest::delete(url),
+        "PATCH" => HttpRequest::patch(url),
+        "HEAD" => HttpRequest::head(url),
+        _ => return Err(format!("Unsupported HTTP method: {}. Supported methods: GET, POST, PUT, DELETE, PATCH, HEAD", method)),
     };
     
-    // This would be extended to handle various REST API patterns
+    // Add headers if provided
+    if let Some(headers) = args["headers"].as_object() {
+        for (key, value) in headers {
+            if let Some(value_str) = value.as_str() {
+                request = request.header(key, value_str);
+            } else {
+                return Err(format!("Header value for key '{}' must be a string, got: {:?}", key, value));
+            }
+        }
+    }
+    
+    // Add body if provided (for methods that support it)
+    match method.to_uppercase().as_str() {
+        "POST" | "PUT" | "PATCH" => {
+            if let Some(body) = args["body"].as_str() {
+                request = request.body(body.as_bytes());
+            } else if let Some(json_body) = args.get("json") {
+                request = request.json_value(json_body)
+                    .map_err(|e| format!("Failed to serialize JSON body: {}", e))?;
+            }
+        },
+        _ => {
+            // For GET, DELETE, HEAD methods, warn if body is provided
+            if args.get("body").is_some() || args.get("json").is_some() {
+                return Err(format!("{} method does not support request body", method.to_uppercase()));
+            }
+        }
+    }
+    
     let response = HttpClient::execute(request)
         .map_err(|e| format!("REST API call failed: {}", e))?;
     
@@ -182,7 +236,7 @@ fn call_rest_api(args: &Value) -> Result<Value, String> {
         match response.json_value() {
             Ok(json_data) => Ok(json_data),
             Err(_) => Ok(json!({
-                "text": response.text().unwrap_or_default()
+                "text": response.text().map_err(|_| String::from("Response body contains invalid UTF-8"))?
             }))
         }
     } else {
@@ -360,7 +414,10 @@ fn show_help() -> Result<Value, String> {
                 "description": "Call a REST API with flexible parameters",
                 "parameters": {
                     "url": "API endpoint URL",
-                    "method": "HTTP method (GET, POST, etc.)"
+                    "method": "HTTP method (GET, POST, PUT, DELETE, PATCH, HEAD) - defaults to GET",
+                    "headers": "Optional headers object",
+                    "body": "Request body (string) - only for POST, PUT, PATCH",
+                    "json": "Request body (JSON object) - only for POST, PUT, PATCH"
                 }
             },
             "blockchain_examples": {
