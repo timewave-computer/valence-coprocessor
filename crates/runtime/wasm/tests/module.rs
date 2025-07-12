@@ -211,6 +211,43 @@ fn deploy_http() {
 }
 
 #[test]
+fn deploy_portable_http_client() {
+    let portable_http_client = get_controller_bytes("portable_http_client");
+    let data = MemoryBackend::default();
+    let registry = Registry::from(data.clone());
+
+    let capacity = 500;
+    let vm = ValenceWasm::new(capacity).unwrap();
+    let zkvm = MockZkVm::default();
+
+    let controller = ControllerData::default().with_controller(portable_http_client);
+    let controller = registry
+        .register_controller(&vm, &zkvm, controller)
+        .unwrap();
+
+    let ctx = Blake3Historical::load(data).unwrap().context(controller);
+
+    // Test help command
+    let ret = ctx.entrypoint(&vm, json!({"command": "help"})).unwrap();
+    
+    assert!(ret["success"].as_bool().unwrap());
+    assert!(ret["data"]["commands"].is_object());
+    
+    // Test the response structure - check for generic HTTP commands
+    let commands = &ret["data"]["commands"];
+    assert!(commands["http_get"].is_object());
+    assert!(commands["http_post"].is_object());
+    assert!(commands["rest_api"].is_object());
+    
+    // Check for blockchain examples section
+    assert!(commands["blockchain_examples"].is_object());
+    let blockchain_commands = &commands["blockchain_examples"];
+    assert!(blockchain_commands["get_block"].is_object());
+    assert!(blockchain_commands["get_balance"].is_object());
+    assert!(blockchain_commands["test_connection"].is_object());
+}
+
+#[test]
 #[ignore = "ALCHEMY_API_KEY required"]
 fn deploy_alchemy() {
     let alchemy = get_controller_bytes("alchemy");

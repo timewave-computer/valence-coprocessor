@@ -94,7 +94,7 @@
           # Use provided RUST_LOG or default
           export RUST_LOG="''${RUST_LOG:-$RUST_LOG_DEFAULT}"
           
-          echo "🚀 Starting Valence co-processor service..."
+          echo "Starting Valence co-processor service..."
           echo "RUST_LOG: $RUST_LOG"
           echo "VALENCE_PROVER_SECRET: ''${VALENCE_PROVER_SECRET:-"[not set - using public service]"}"
           echo "Prover host: $PROVER_HOST"
@@ -102,7 +102,7 @@
           
           # Check if VALENCE_PROVER_SECRET is set
           if [ -z "''${VALENCE_PROVER_SECRET:-}" ]; then
-            echo "⚠️  Warning: VALENCE_PROVER_SECRET not set. Using public prover service."
+            echo "Warning: VALENCE_PROVER_SECRET not set. Using public prover service."
             echo "   To use dedicated prover, set: export VALENCE_PROVER_SECRET=your_secret"
             echo ""
           fi
@@ -122,7 +122,7 @@
           PROVER_HOST="''${VALENCE_PROVER_HOST:-${proverHostDefault}}"
           export RUST_LOG="''${RUST_LOG:-info,valence_coprocessor=debug,valence_coprocessor_wasm=debug}"
           
-          echo "🚀 Starting Valence co-processor service (release mode)..."
+          echo "Starting Valence co-processor service (release mode)..."
           echo "RUST_LOG: $RUST_LOG"
           echo "VALENCE_PROVER_SECRET: ''${VALENCE_PROVER_SECRET:-"[not set]"}"
           echo ""
@@ -256,25 +256,25 @@
           bash.extra = ''
             source ${env-setup-script}
             
-            echo "🚀 Valence co-processor development environment"
+            echo "Valence co-processor development environment"
             echo ""
-            echo "📋 Available commands (use 'menu' to see all):"
+            echo "Available commands (use 'menu' to see all):"
             echo "  start-service              - Start the service (VALENCE_PROVER_SECRET=secret start-service)"
             echo "  start-service-release      - Start service in release mode"
             echo "  lint-code                  - Run clippy linting"
             echo "  install-cli                - Install cargo-valence CLI tool globally"
             echo "  test-service               - Check if service is responding"
             echo ""
-            echo "📖 README examples:"
+            echo "README examples:"
             echo "  VALENCE_PROVER_SECRET=secret start-service"
             echo "  RUST_LOG=info,valence_coprocessor=debug,valence_coprocessor_wasm=debug start-service"
             echo ""
-            echo "🗄️  Redis (for local development):"
+            echo "Redis (for local development):"
             echo "  redis-start                - Start Redis server"
             echo "  redis-client               - Redis CLI client"
             echo ""
-            echo "🌍 Public service: http://prover.timewave.computer:37281/"
-            echo "📱 CLI installation: cargo install --git https://github.com/timewave-computer/valence-coprocessor.git --locked cargo-valence"
+            echo "Public service: http://prover.timewave.computer:37281/"
+            echo "CLI installation: cargo install --git https://github.com/timewave-computer/valence-coprocessor.git --locked cargo-valence"
           '';
         };
       };

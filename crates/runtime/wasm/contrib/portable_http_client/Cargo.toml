@@ -1,0 +1,13 @@
+[package]
+name = "valence-coprocessor-wasm-portable_http_client"
+edition = "2021"
+license = "Business Source License"
+version = "0.1.0"
+
+[dependencies]
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+serde_json.workspace = true
+valence-coprocessor-wasm = { path = "../..", default-features = false, features = ["abi-handlers"] }
+
+[lib]
+crate-type = ["cdylib"] 

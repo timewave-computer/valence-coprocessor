@@ -6,6 +6,7 @@ members = [
   "hello",
   "http",
   "log",
+  "portable_http_client",
   "raw_storage",
   "storage",
 ]
