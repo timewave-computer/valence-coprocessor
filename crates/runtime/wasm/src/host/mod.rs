@@ -153,11 +153,16 @@ where
 
         tracing::debug!("controller loaded...");
 
-        instance
+        let err = instance
             .get_typed_func::<(), ()>(&mut store, f)?
-            .call(&mut store, ())?;
+            .call(&mut store, ())
+            .err();
 
-        let Runtime { ret, log, .. } = store.into_data();
+        let Runtime { ret, mut log, .. } = store.into_data();
+
+        if let Some(e) = err {
+            log.push(e.to_string());
+        }
 
         tracing::debug!("function executed; ret `{ret:?}`...");
 

@@ -1,17 +1,14 @@
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
 
-use crate::{DataBackend, ExecutionContext, Hash, Hasher, Opening, Proof, Witness};
+use crate::{DataBackend, ExecutionContext, Hash, Hasher, Opening, Proof, StateProof, Witness};
 
 /// A domain opening co-processor witness.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
 pub struct DomainOpening {
-    /// Domain name.
-    pub domain: String,
-
-    /// Proven domain root opening argument.
-    pub root: Hash,
+    /// Proven state.
+    pub proof: StateProof,
 
     /// Block payload.
     pub payload: Vec<u8>,
@@ -35,9 +32,9 @@ pub struct WitnessCoprocessor {
 
 impl WitnessCoprocessor {
     /// Validates the co-processor witness, yielding verified state proofs & data for the circuit.
-    pub fn validate<H: Hasher>(self) -> anyhow::Result<ValidatedWitnesses> {
+    pub fn validate<H: Hasher>(mut self) -> anyhow::Result<ValidatedWitnesses> {
         for o in &self.proofs {
-            let key = H::key(&o.domain, &o.root);
+            let key = H::key(&o.proof.domain, &o.proof.root);
             let value = H::hash(&o.payload);
 
             tracing::debug!("verifying domain opening for {key:x?}, {value:x?}");
@@ -45,12 +42,13 @@ impl WitnessCoprocessor {
             anyhow::ensure!(o.opening.verify::<H>(&self.root, &key, &value));
         }
 
-        for w in &self.witnesses {
+        let mut proofs = self.proofs.into_iter().map(|o| o.proof);
+
+        for w in self.witnesses.iter_mut() {
             if let Witness::StateProof(s) = w {
-                anyhow::ensure!(self
-                    .proofs
-                    .iter()
-                    .any(|o| o.domain == s.domain && o.root == s.root && o.payload == s.payload));
+                *s = proofs
+                    .next()
+                    .ok_or_else(|| anyhow::anyhow!("no state proof available"))?;
             }
         }
 

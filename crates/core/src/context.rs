@@ -4,8 +4,8 @@ use msgpacker::Unpackable as _;
 use serde_json::Value;
 
 use crate::{
-    Blake3Hasher, DataBackend, DomainData, DomainOpening, Hash, Hasher, Opening, Proof, Registry,
-    Smt, StateProof, ValidatedDomainBlock, Vm, Witness, WitnessCoprocessor, ZkVm,
+    Blake3Hasher, DataBackend, DomainData, DomainOpening, Hash, Hasher, Opening, Registry, Smt,
+    StateProof, ValidatedDomainBlock, Vm, Witness, WitnessCoprocessor, ZkVm,
 };
 
 pub use buf_fs::{File, FileSystem};
@@ -108,21 +108,20 @@ where
 
         let witnesses = vm.execute(self, controller, Self::CONTROLLER_GET_WITNESSES, args)?;
 
-        tracing::debug!("inner controller executed; parsing...");
+        tracing::debug!("inner controller executed; parsing `{witnesses:?}`...");
 
-        Ok(serde_json::from_value(witnesses)?)
+        let witnesses = serde_json::from_value(witnesses)?;
+
+        tracing::debug!("witnesses vector parsed...");
+
+        Ok(witnesses)
     }
 
     /// Compute the ZK proof of the provided circuit.
-    pub fn get_proof<VM, ZK>(&self, vm: &VM, zkvm: &ZK, args: Value) -> anyhow::Result<Proof>
-    where
-        VM: Vm<H, D>,
-        ZK: ZkVm<Hasher = H>,
-    {
-        let witnesses = self.get_circuit_witnesses(vm, args)?;
-
-        tracing::debug!("witnesses computed from controller...");
-
+    pub fn get_coprocessor_witness(
+        &self,
+        witnesses: Vec<Witness>,
+    ) -> anyhow::Result<WitnessCoprocessor> {
         let root = self.inner.historical_root;
         let proofs = witnesses
             .iter()
@@ -132,29 +131,29 @@ where
             })
             .map(|p| {
                 let key = H::key(&p.domain, &p.root);
+                let payload = self
+                    .inner
+                    .historical
+                    .get_key_data(&key)?
+                    .unwrap_or_default();
 
                 self.inner
                     .historical
                     .get_opening(root, &key)?
                     .map(|opening| DomainOpening {
-                        domain: p.domain.clone(),
-                        root: p.root,
-                        payload: p.payload.clone(),
+                        proof: p.clone(),
+                        payload,
                         opening,
                     })
                     .ok_or_else(|| anyhow::anyhow!("failed to compute the domain proof"))
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
-        let witness = WitnessCoprocessor {
+        Ok(WitnessCoprocessor {
             root,
             proofs,
             witnesses,
-        };
-
-        tracing::debug!("co-processor witnesses computed...");
-
-        zkvm.prove(self, witness)
+        })
     }
 
     /// Returns the circuit verifying key.

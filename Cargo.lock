@@ -77,16 +77,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alloy-rlp"
-version = "0.3.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f70d83b765fdc080dbcd4f4db70d8d23fe4761f2f02ebfa9146b833900634b4"
-dependencies = [
- "arrayvec",
- "bytes",
-]
-
-[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -809,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-valence"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -976,15 +966,6 @@ checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
 dependencies = [
  "bytes",
  "memchr",
-]
-
-[[package]]
-name = "common"
-version = "0.1.0"
-source = "git+https://github.com/timewave-computer/zk-merkle-proofs.git?rev=f474311c62df0011b549b48ea515d0d45dd1a4cc#f474311c62df0011b549b48ea515d0d45dd1a4cc"
-dependencies = [
- "anyhow",
- "serde",
 ]
 
 [[package]]
@@ -1227,9 +1208,9 @@ checksum = "823558b0a406b7f7d5dad0c925b29e8192792476faaa71615d40cb5a842a9040"
 
 [[package]]
 name = "crc32fast"
-version = "1.4.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a97769d94ddab943e4510d138150169a2758b5ef3eb191a9ee688de3e23ef7b3"
+checksum = "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511"
 dependencies = [
  "cfg-if",
 ]
@@ -1786,28 +1767,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ethereum"
-version = "0.1.0"
-source = "git+https://github.com/timewave-computer/zk-merkle-proofs.git?rev=f474311c62df0011b549b48ea515d0d45dd1a4cc#f474311c62df0011b549b48ea515d0d45dd1a4cc"
-dependencies = [
- "anyhow",
- "arrayvec",
- "bytes",
- "common",
- "const-hex",
- "hash-db",
- "hex-literal",
- "nybbles",
- "plain_hasher",
- "serde",
- "serde_json",
- "tiny-keccak",
- "tracing",
- "tracing-subscriber 0.3.19",
- "triehash",
-]
-
-[[package]]
 name = "eventsource-stream"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2187,12 +2146,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hash-db"
-version = "0.15.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d23bd4e7b5eda0d0f3a307e8b381fdc8ba9000f26fbe912250c0a4cc3956364a"
-
-[[package]]
 name = "hash32"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2290,12 +2243,6 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 dependencies = [
  "serde",
 ]
-
-[[package]]
-name = "hex-literal"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
 
 [[package]]
 name = "hkdf"
@@ -3258,19 +3205,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
-name = "nybbles"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8983bb634df7248924ee0c4c3a749609b5abcb082c28fffe3254b3eb3602b307"
-dependencies = [
- "alloy-rlp",
- "const-hex",
- "proptest",
- "serde",
- "smallvec",
-]
-
-[[package]]
 name = "object"
 version = "0.36.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3772,15 +3706,6 @@ name = "pkg-config"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
-
-[[package]]
-name = "plain_hasher"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e19e6491bdde87c2c43d70f4c194bc8a758f2eb732df00f61e43f7362e3b4cc"
-dependencies = [
- "crunchy",
-]
 
 [[package]]
 name = "poem"
@@ -4453,16 +4378,6 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "rlp"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb919243f34364b6bd2fc10ef797edbfa75f33c252e7998527479c6d6b47e1ec"
-dependencies = [
- "bytes",
- "rustc-hex",
 ]
 
 [[package]]
@@ -5922,7 +5837,7 @@ dependencies = [
  "serde_spanned",
  "toml_datetime",
  "toml_write",
- "winnow 0.7.11",
+ "winnow 0.7.12",
 ]
 
 [[package]]
@@ -6138,16 +6053,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "triehash"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1631b201eb031b563d2e85ca18ec8092508e262a3196ce9bd10a67ec87b9f5c"
-dependencies = [
- "hash-db",
- "rlp",
-]
-
-[[package]]
 name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6285,7 +6190,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "base64",
@@ -6304,7 +6209,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-client"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "hex",
@@ -6318,22 +6223,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "valence-coprocessor-ethereum"
-version = "0.3.4"
-dependencies = [
- "anyhow",
- "common",
- "ethereum",
- "msgpacker",
- "serde",
- "serde_json",
- "valence-coprocessor",
- "valence-coprocessor-wasm",
-]
-
-[[package]]
 name = "valence-coprocessor-prover"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "bincode",
@@ -6355,7 +6246,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-redis"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "r2d2",
@@ -6365,7 +6256,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-service"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -6389,7 +6280,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-sp1"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -6409,7 +6300,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "dlmalloc",
@@ -7305,9 +7196,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "0.7.11"
+version = "0.7.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74c7b26e3480b707944fc872477815d29a8e429d2f93a1ce000f5fa84a15cbcd"
+checksum = "f3edebf492c8125044983378ecb5766203ad3b4c2f7a922bd7dd207f6d443e95"
 dependencies = [
  "memchr",
 ]

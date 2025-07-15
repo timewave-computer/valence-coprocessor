@@ -1,7 +1,7 @@
 use std::{env, fs, path::PathBuf, process::Command};
 
 use valence_coprocessor::{
-    mocks::MockVm, ControllerData, Historical, MemoryBackend, Registry, Witness,
+    mocks::MockVm, ControllerData, Historical, MemoryBackend, Registry, Witness, ZkVm as _,
 };
 use valence_coprocessor_sp1::{Mode, Sp1ZkVm};
 
@@ -52,7 +52,9 @@ fn deploy_hello() {
     let witness = Witness::Data(witness.as_bytes().to_vec());
     let witness = serde_json::to_value(vec![witness]).unwrap();
 
-    let proof = ctx.get_proof(&vm, &zkvm, witness).unwrap();
+    let witness = ctx.get_circuit_witnesses(&vm, witness).unwrap();
+    let witness = ctx.get_coprocessor_witness(witness).unwrap();
+    let proof = zkvm.prove(&ctx, witness).unwrap();
     let output: String = zkvm.outputs(&proof).unwrap();
 
     assert_eq!(output, "Hello, Valence!");
