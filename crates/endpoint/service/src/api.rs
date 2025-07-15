@@ -238,11 +238,14 @@ impl Api {
         controller: Path<String>,
         historical: Data<&Historical>,
         vm: Data<&ServiceVm>,
-        request: Json<Value>,
+        request: Json<ControllerProveRequest>,
     ) -> poem::Result<Json<ControllerWitnessesResponse>> {
+        let ControllerProveRequest { args, .. } = request.0;
+
         let controller = try_str_to_hash(&controller)?;
         let ctx = historical.context(controller);
-        let witnesses = ctx.get_circuit_witnesses(*vm, request.0)?;
+        let witnesses = ctx.get_circuit_witnesses(*vm, args)?;
+        let witnesses = ctx.get_coprocessor_witness(witnesses)?;
         let witnesses = serde_json::to_value(witnesses).unwrap_or_default();
         let log = ctx.get_log().unwrap_or_default();
 
@@ -255,38 +258,22 @@ impl Api {
         &self,
         controller: Path<String>,
         pool: Data<&Sender<Job>>,
+        vm: Data<&ServiceVm>,
+        historical: Data<&Historical>,
         request: Json<ControllerProveRequest>,
     ) -> poem::Result<Json<Value>> {
-        let controller = try_str_to_hash(&controller)?;
         let ControllerProveRequest { args, payload } = request.0;
+
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
+        let witnesses = ctx.get_circuit_witnesses(*vm, args)?;
+        let witness = ctx.get_coprocessor_witness(witnesses)?;
+
+        tracing::debug!("coprocessor witness computed; submitting job...");
 
         pool.send(Job::Prove {
             controller,
-            args,
-            payload,
-        })
-        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))?;
-
-        Ok(Json(json!({"status": "received"})))
-    }
-
-    /// Computes the controller proof for the provided co-processor root.
-    #[oai(path = "/registry/controller/:controller/prove/:root", method = "post")]
-    pub async fn controller_prove_root(
-        &self,
-        controller: Path<String>,
-        root: Path<String>,
-        pool: Data<&Sender<Job>>,
-        request: Json<ControllerProveRequest>,
-    ) -> poem::Result<Json<Value>> {
-        let controller = try_str_to_hash(&controller)?;
-        let root = try_str_to_hash(&root)?;
-        let ControllerProveRequest { args, payload } = request.0;
-
-        pool.send(Job::ProveWithRoot {
-            controller,
-            root,
-            args,
+            witness,
             payload,
         })
         .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))?;

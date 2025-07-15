@@ -2,21 +2,15 @@ use std::{thread, time::Duration};
 
 use flume::{Receiver, Sender};
 use serde_json::{json, Value};
-use valence_coprocessor::Hash;
+use valence_coprocessor::{Hash, WitnessCoprocessor, ZkVm as _};
 
-use crate::{Context, Historical, ServiceVm, ServiceZkVm};
+use crate::{Historical, ServiceVm, ServiceZkVm};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Job {
     Prove {
         controller: Hash,
-        args: Value,
-        payload: Option<Value>,
-    },
-    ProveWithRoot {
-        controller: Hash,
-        root: Hash,
-        args: Value,
+        witness: WitnessCoprocessor,
         payload: Option<Value>,
     },
     Quit,
@@ -182,10 +176,11 @@ pub struct Worker {
 }
 
 impl Worker {
-    fn _prove(&self, ctx: Context, controller: Hash, args: Value, payload: Option<Value>) {
+    pub fn prove(&self, controller: Hash, witness: WitnessCoprocessor, payload: Option<Value>) {
         tracing::debug!("worker recv: {}", hex::encode(controller));
 
-        let res = ctx.get_proof(&self.vm, &self.zkvm, args.clone());
+        let ctx = self.historical.context(controller);
+        let res = self.zkvm.prove(&ctx, witness);
 
         tracing::debug!(
             "worker received proof: {}, {}",
@@ -196,7 +191,6 @@ impl Worker {
         let log = ctx.get_log().unwrap_or_default();
         let mut args = json!({
             "success": res.is_ok(),
-            "args": args,
             "log": log,
             "payload": payload,
         });
@@ -214,39 +208,15 @@ impl Worker {
         }
     }
 
-    pub fn prove(&self, controller: Hash, args: Value, payload: Option<Value>) {
-        let ctx = self.historical.context(controller);
-
-        self._prove(ctx, controller, args, payload);
-    }
-
-    pub fn prove_with_root(
-        &self,
-        root: Hash,
-        controller: Hash,
-        args: Value,
-        payload: Option<Value>,
-    ) {
-        let ctx = self.historical.context_with_root(controller, root);
-
-        self._prove(ctx, controller, args, payload);
-    }
-
     pub fn spawn(self) {
         thread::spawn(move || {
             while let Ok(j) = self.rx.recv() {
                 match j {
                     Job::Prove {
                         controller,
-                        args,
+                        witness,
                         payload,
-                    } => self.prove(controller, args, payload),
-                    Job::ProveWithRoot {
-                        controller,
-                        root,
-                        args,
-                        payload,
-                    } => self.prove_with_root(root, controller, args, payload),
+                    } => self.prove(controller, witness, payload),
                     Job::Quit => {
                         self.tx.send(Ack::Kill).ok();
                         break;

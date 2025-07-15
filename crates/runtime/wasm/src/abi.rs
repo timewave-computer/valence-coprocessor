@@ -601,6 +601,6 @@ mod handlers {
 
         panic(ptr, len);
 
-        panic!("{msg}")
+        core::arch::wasm32::unreachable();
     }
 }
