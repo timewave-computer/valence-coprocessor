@@ -1,0 +1,35 @@
+name: Update Cargo.nix
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  gomod2nix-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Install nix
+        uses: nixbuild/nix-quick-install-action@v28
+
+      - name: Update gomod2nix
+        run: nix develop -c 'update-cargo-nix'
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: Update Cargo.nix
+          file_pattern: Cargo.nix
+          branch: ${{ github.head_ref }}
+          commit_user_name: dependabot[bot]
+          commit_user_email: support@github.com
+          commit_options: '--signoff'
