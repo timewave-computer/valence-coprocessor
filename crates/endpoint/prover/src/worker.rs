@@ -15,6 +15,7 @@ use crate::{
 /// A worker instance.
 pub struct Worker {
     cache: KeysCache,
+    sp1mock: CpuProver,
     sp1cpu: CpuProver,
     sp1gpu: Option<Arc<Mutex<CudaProver>>>,
     rx: Receiver<Task>,
@@ -92,13 +93,20 @@ impl Worker {
                 tracing::debug!("environment prepared...");
 
                 let proof = match &self.sp1gpu {
-                    Some(c) => c
-                        .lock()
-                        .await
-                        .prove(&pk, &stdin)
-                        .compressed()
-                        .groth16()
-                        .run(),
+                    Some(c) => {
+                        // the SP1 prover crashes in case of invalid witnesses. to avoid that, we
+                        // do a dry-run
+
+                        if let Err(e) = self.sp1mock.prove(&pk, &stdin).run() {
+                            return Response::Err(format!("proof dry-run failed: {e}"));
+                        }
+                        c.lock()
+                            .await
+                            .prove(&pk, &stdin)
+                            .compressed()
+                            .groth16()
+                            .run()
+                    }
                     None => self.sp1cpu.prove(&pk, &stdin).compressed().groth16().run(),
                 };
 
@@ -144,10 +152,12 @@ impl Worker {
     ) {
         tracing::debug!("spawning a new worker thread...");
 
+        let sp1mock = ProverClient::builder().mock().build();
         let sp1cpu = ProverClient::builder().cpu().build();
 
         let worker = Self {
             cache,
+            sp1mock,
             sp1cpu,
             sp1gpu,
             rx,
