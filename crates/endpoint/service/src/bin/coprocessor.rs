@@ -73,9 +73,11 @@ async fn main() -> anyhow::Result<()> {
 
     let api_service = OpenApiService::new(Api, env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
         .server(format!("http://{}/api", &bind));
-    let ui = api_service.swagger_ui();
+
     let app = Route::new()
-        .nest("/", ui)
+        .nest("/", api_service.swagger_ui())
+        .nest("/spec", api_service.spec_endpoint())
+        .nest("/spec/yaml", api_service.spec_endpoint_yaml())
         .nest("/api", api_service)
         .data(registry)
         .data(vm)
