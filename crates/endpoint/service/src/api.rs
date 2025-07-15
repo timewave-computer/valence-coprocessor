@@ -281,6 +281,37 @@ impl Api {
         Ok(Json(json!({"status": "received"})))
     }
 
+    /// Computes the controller proof for the provided co-processor root.
+    #[oai(path = "/registry/controller/:controller/prove/:root", method = "post")]
+    pub async fn controller_prove_root(
+        &self,
+        controller: Path<String>,
+        root: Path<String>,
+        pool: Data<&Sender<Job>>,
+        vm: Data<&ServiceVm>,
+        historical: Data<&Historical>,
+        request: Json<ControllerProveRequest>,
+    ) -> poem::Result<Json<Value>> {
+        let ControllerProveRequest { args, payload } = request.0;
+
+        let controller = try_str_to_hash(&controller)?;
+        let root = try_str_to_hash(&root)?;
+        let ctx = historical.context_with_root(controller, root);
+        let witnesses = ctx.get_circuit_witnesses(*vm, args)?;
+        let witness = ctx.get_coprocessor_witness(witnesses)?;
+
+        tracing::debug!("coprocessor witness computed; submitting job...");
+
+        pool.send(Job::Prove {
+            controller,
+            witness,
+            payload,
+        })
+        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))?;
+
+        Ok(Json(json!({"status": "received"})))
+    }
+
     /// Returns the controller verifying key.
     #[oai(path = "/registry/controller/:controller/vk", method = "get")]
     pub async fn controller_vk(
@@ -346,12 +377,26 @@ impl Api {
     ) -> poem::Result<Json<Value>> {
         let id = DomainData::identifier_from_parts(&domain);
         let ctx = historical.context(id);
+        let coprocessor = ctx.get_historical();
 
-        let latest = ctx.get_latest_block(&domain)?;
-        let latest = serde_json::to_value(latest)
-            .map_err(|e| anyhow::anyhow!("failed to convert latest block: {e}"))?;
+        let ValidatedDomainBlock {
+            domain,
+            number,
+            root,
+            key,
+            payload,
+        } = ctx
+            .get_latest_block(&domain)?
+            .ok_or_else(|| anyhow::anyhow!("no block data available for the domain"))?;
 
-        Ok(Json(latest))
+        Ok(Json(json!({
+            "coprocessor": hex::encode(coprocessor),
+            "domain": hex::encode(domain),
+            "number": number,
+            "root": hex::encode(root),
+            "key": hex::encode(key),
+            "payload": hex::encode(payload),
+        })))
     }
 
     /// Adds a new block to the domain.
