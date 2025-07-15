@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio::time::{self, Duration};
 use uuid::Uuid;
-use valence_coprocessor::{Base64, Hash, Proof, ValidatedDomainBlock, WitnessCoprocessor};
+use valence_coprocessor::{Base64, Hash, Proof, WitnessCoprocessor};
 
 /// A co-processor client.
 #[derive(Debug, Clone)]
@@ -442,10 +442,7 @@ impl Client {
     }
 
     /// Returns the latest validated domain block.
-    pub async fn get_latest_domain_block<D: AsRef<str>>(
-        &self,
-        domain: D,
-    ) -> anyhow::Result<ValidatedDomainBlock> {
+    pub async fn get_latest_domain_block<D: AsRef<str>>(&self, domain: D) -> anyhow::Result<Value> {
         let uri = format!("registry/domain/{}/latest", domain.as_ref());
         let uri = self.uri(uri);
 
@@ -492,13 +489,11 @@ pub struct AddedDomainBlock {
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service"]
 async fn stats_works() {
     Client::default().stats().await.unwrap();
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service"]
 async fn deploy_controller_works() {
     Client::default()
         .deploy_controller(b"foo", b"bar", Some(15))
@@ -507,7 +502,6 @@ async fn deploy_controller_works() {
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service"]
 async fn deploy_domain_works() {
     Client::default()
         .deploy_domain("foo", b"bar")
@@ -516,7 +510,6 @@ async fn deploy_domain_works() {
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service and deployed circuit"]
 async fn get_storage_file_works() {
     let controller = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
     let path = "/var/share/proof.bin";
@@ -528,7 +521,6 @@ async fn get_storage_file_works() {
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service and deployed circuit"]
 async fn get_witnesses_works() {
     let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
     let args = json!({"value": 42});
@@ -540,7 +532,6 @@ async fn get_witnesses_works() {
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service and deployed circuit"]
 async fn prove_works() {
     let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
     let args = json!({"value": 42});
@@ -548,18 +539,19 @@ async fn prove_works() {
     Client::default().prove(circuit, &args).await.unwrap();
 }
 
-
 #[tokio::test]
-#[ignore = "depends on remote service and deployed circuit"]
 async fn prove_with_root_works() {
     let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
+    let root = "e288ef4c66587475ea0d4478e2ab0ca9a7f90e6f59bc7af6bf7d0c3931f96b92";
     let args = json!({"value": 42});
 
-    Client::default().prove(circuit, &args).await.unwrap();
+    Client::default()
+        .prove_with_root(circuit, root, &args)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service and deployed circuit"]
 async fn get_vk_works() {
     let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
 
@@ -567,7 +559,6 @@ async fn get_vk_works() {
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service and deployed circuit"]
 async fn get_circuit_works() {
     let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
 
@@ -575,7 +566,6 @@ async fn get_circuit_works() {
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service and deployed circuit"]
 async fn entrypoint_works() {
     let controller = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
     let args = json!({
@@ -592,10 +582,9 @@ async fn entrypoint_works() {
 }
 
 #[tokio::test]
-#[ignore = "depends on remote service and deployed ethereum-alpha domain"]
 async fn get_latest_domain_block_works() {
     Client::default()
-        .get_latest_domain_block("ethereum-alpha")
+        .get_latest_domain_block("ethereum-electra-alpha")
         .await
         .unwrap();
 }
