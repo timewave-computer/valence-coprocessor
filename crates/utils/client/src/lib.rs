@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio::time::{self, Duration};
 use uuid::Uuid;
-use valence_coprocessor::{Base64, Hash, Proof, ValidatedDomainBlock, Witness};
+use valence_coprocessor::{Base64, Hash, Proof, ValidatedDomainBlock, WitnessCoprocessor};
 
 /// A co-processor client.
 #[derive(Debug, Clone)]
@@ -160,13 +160,15 @@ impl Client {
         &self,
         circuit: C,
         args: &Value,
-    ) -> anyhow::Result<Vec<Witness>> {
+    ) -> anyhow::Result<WitnessCoprocessor> {
         let uri = format!("registry/controller/{}/witnesses", circuit.as_ref());
         let uri = self.uri(uri);
 
         let data = reqwest::Client::new()
             .post(uri)
-            .json(args)
+            .json(&json!({
+                "args": args
+            }))
             .send()
             .await?
             .json::<Value>()
@@ -180,14 +182,10 @@ impl Client {
             }
         }
 
-        Ok(data
-            .get("witnesses")
-            .and_then(Value::as_array)
-            .ok_or_else(|| anyhow::anyhow!("invalid witnesses response"))?
-            .iter()
+        data.get("witnesses")
             .cloned()
-            .map(serde_json::from_value)
-            .collect::<Result<_, _>>()?)
+            .and_then(|w| serde_json::from_value(w).ok())
+            .ok_or_else(|| anyhow::anyhow!("invalid witnesses response"))
     }
 
     /// Queues a co-processor circuit proof request.
@@ -314,26 +312,6 @@ impl Client {
         let frequency = 2000;
 
         self.prove_with_params::<_, String>(circuit, None, retries, frequency, args)
-            .await
-    }
-
-    /// Computes a proof for the given circuit, with the provided controller arguments.
-    ///
-    /// Overrides the latest co-processor root with the provided root.
-    pub async fn prove_with_root<C, R>(
-        &self,
-        circuit: C,
-        root: R,
-        args: &Value,
-    ) -> anyhow::Result<Proof>
-    where
-        C: AsRef<str>,
-        R: AsRef<str>,
-    {
-        let retries = 25;
-        let frequency = 2000;
-
-        self.prove_with_params(circuit, Some(root), retries, frequency, args)
             .await
     }
 
@@ -520,7 +498,7 @@ async fn deploy_domain_works() {
 #[tokio::test]
 #[ignore = "depends on remote service and deployed circuit"]
 async fn get_storage_file_works() {
-    let controller = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let controller = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
     let path = "/var/share/proof.bin";
 
     Client::default()
@@ -532,7 +510,7 @@ async fn get_storage_file_works() {
 #[tokio::test]
 #[ignore = "depends on remote service and deployed circuit"]
 async fn get_witnesses_works() {
-    let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
     let args = json!({"value": 42});
 
     Client::default()
@@ -544,7 +522,7 @@ async fn get_witnesses_works() {
 #[tokio::test]
 #[ignore = "depends on remote service and deployed circuit"]
 async fn prove_works() {
-    let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
     let args = json!({"value": 42});
 
     Client::default().prove(circuit, &args).await.unwrap();
@@ -552,26 +530,8 @@ async fn prove_works() {
 
 #[tokio::test]
 #[ignore = "depends on remote service and deployed circuit"]
-async fn prove_with_root_works() {
-    let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
-    let root = "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d";
-    let args = json!({"value": 42});
-
-    let inputs = Client::default()
-        .prove_with_root(circuit, root, &args)
-        .await
-        .unwrap()
-        .decode()
-        .unwrap()
-        .1;
-
-    assert_eq!(hex::encode(&inputs[..32]), root);
-}
-
-#[tokio::test]
-#[ignore = "depends on remote service and deployed circuit"]
 async fn get_vk_works() {
-    let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
 
     Client::default().get_vk(circuit).await.unwrap();
 }
@@ -579,7 +539,7 @@ async fn get_vk_works() {
 #[tokio::test]
 #[ignore = "depends on remote service and deployed circuit"]
 async fn get_circuit_works() {
-    let circuit = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
 
     Client::default().get_circuit(circuit).await.unwrap();
 }
@@ -587,7 +547,7 @@ async fn get_circuit_works() {
 #[tokio::test]
 #[ignore = "depends on remote service and deployed circuit"]
 async fn entrypoint_works() {
-    let controller = "7e0207a1fa0a979282b7246c028a6a87c25bc60f7b6d5230e943003634e897fd";
+    let controller = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
     let args = json!({
         "payload": {
             "cmd": "store",
