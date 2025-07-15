@@ -316,6 +316,26 @@ impl Client {
     }
 
     /// Computes a proof for the given circuit, with the provided controller arguments.
+    ///
+    /// Overrides the latest co-processor root with the provided root.
+    pub async fn prove_with_root<C, R>(
+        &self,
+        circuit: C,
+        root: R,
+        args: &Value,
+    ) -> anyhow::Result<Proof>
+    where
+        C: AsRef<str>,
+        R: AsRef<str>,
+    {
+        let retries = 25;
+        let frequency = 2000;
+
+        self.prove_with_params(circuit, Some(root), retries, frequency, args)
+            .await
+    }
+
+    /// Computes a proof for the given circuit, with the provided controller arguments.
     pub async fn prove_with_params<C, R>(
         &self,
         circuit: C,
@@ -522,6 +542,16 @@ async fn get_witnesses_works() {
 #[tokio::test]
 #[ignore = "depends on remote service and deployed circuit"]
 async fn prove_works() {
+    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
+    let args = json!({"value": 42});
+
+    Client::default().prove(circuit, &args).await.unwrap();
+}
+
+
+#[tokio::test]
+#[ignore = "depends on remote service and deployed circuit"]
+async fn prove_with_root_works() {
     let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
     let args = json!({"value": 42});
 
