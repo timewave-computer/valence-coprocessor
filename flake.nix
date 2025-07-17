@@ -21,6 +21,7 @@
     crate2nix.url = "github:timewave-computer/crate2nix";
     sp1-nix.url = "github:timewave-computer/sp1.nix";
     fp-addons.url = "github:timewave-computer/flake-parts-addons";
+    system-manager.url = "github:numtide/system-manager";
   };
 
   outputs = { self, flake-parts, ... }@inputs:
@@ -124,5 +125,60 @@
           ];
         };
       };
+
+      flake.systemModules.prover = moduleWithSystem (
+        { self', ... }:
+        { lib, ...}:
+        {
+          systemd.services = {
+            valence-coprocessor-prover = {
+              enable = true;
+              serviceConfig = {
+                Type = "simple";
+                DynamicUser = true;
+                StateDirectory = "valence-coprocessor-prover";
+                ExecStart = lib.getExe self'.packages.prover;
+              };
+              wantedBy = [ "system-manager.target" ];
+            };
+          };
+        }
+      );
+
+      flake.systemModules.service = moduleWithSystem (
+        { self', ... }:
+        { config, lib, ... }:
+        let
+          cfg = config.services.valence-coprocessor.service;
+        in
+        {
+          options = {
+            services.valence-coprocessor.service = {
+              package = lib.mkOption {
+                type = lib.types.package;
+                default = self'.packages.service;
+              };
+              flags = lib.mkOption {
+                type = lib.types.listOf (lib.types.str);
+                default = [];
+              };
+            };
+          };
+          config = {
+            systemd.services = {
+              valence-coprocessor = {
+                enable = true;
+                serviceConfig = {
+                  Type = "simple";
+                  DynamicUser = true;
+                  StateDirectory = "valence-coprocessor";
+                  ExecStart = "${lib.getExe cfg.package} ${lib.concatStringsSep " " cfg.flags}";
+                };
+                wantedBy = [ "system-manager.target" ];
+              };
+            };
+          };
+        }
+      );
     });
 } 
