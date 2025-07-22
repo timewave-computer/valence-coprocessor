@@ -132,11 +132,6 @@
         { self', ... }:
         { lib, ...}:
         {
-          users.users.valence = {
-            isSystemUser = true;
-            group = "valence";
-            extraGroups = [ "docker" ];
-          };
           systemd.services = {
             valence-coprocessor-prover = {
               enable = true;
@@ -178,7 +173,7 @@
                 enable = true;
                 serviceConfig = {
                   Type = "simple";
-                  DynamicUser = true;
+                  User = "valence-coprocessor";
                   SupplementaryGroups = [ "docker" ];
                   StateDirectory = "valence-coprocessor";
                   ExecStart = "${lib.getExe cfg.package} ${lib.concatStringsSep " " cfg.flags}";
