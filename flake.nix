@@ -137,7 +137,7 @@
               enable = true;
               serviceConfig = {
                 Type = "simple";
-                DynamicUser = true;
+                User = "valence-coprocessor";
                 SupplementaryGroups = [ "docker" ];
                 StateDirectory = "valence-coprocessor-prover";
                 ExecStart = lib.getExe self'.packages.prover;
@@ -173,8 +173,7 @@
                 enable = true;
                 serviceConfig = {
                   Type = "simple";
-                  User = "valence-coprocessor";
-                  SupplementaryGroups = [ "docker" ];
+                  DynamicUser = true;
                   StateDirectory = "valence-coprocessor";
                   ExecStart = "${lib.getExe cfg.package} ${lib.concatStringsSep " " cfg.flags}";
                 };
