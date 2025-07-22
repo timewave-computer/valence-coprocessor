@@ -132,6 +132,11 @@
         { self', ... }:
         { lib, ...}:
         {
+          users.users.valence = {
+            isSystemUser = true;
+            group = "valence";
+            extraGroups = [ "docker" ];
+          };
           systemd.services = {
             valence-coprocessor-prover = {
               enable = true;
