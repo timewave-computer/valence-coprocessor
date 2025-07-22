@@ -142,7 +142,10 @@
                 StateDirectory = "valence-coprocessor-prover";
                 ExecStart = lib.getExe self'.packages.prover;
               };
-              path = [ "/usr/bin" "/usr/sbin" ]; # to get access to docker
+              # Ensure access to docker binary
+              # /usr is treated as a nix backage path
+              # and /usr/bin and /usr/sbin will be added to $PATH
+              path = [ "/usr" ]; # to get access to docker
               wantedBy = [ "system-manager.target" ];
             };
           };
