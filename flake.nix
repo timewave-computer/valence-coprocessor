@@ -142,6 +142,7 @@
                 StateDirectory = "valence-coprocessor-prover";
                 ExecStart = lib.getExe self'.packages.prover;
               };
+              path = [ "/usr/bin" "/usr/sbin" ]; # to get access to docker
               wantedBy = [ "system-manager.target" ];
             };
           };
