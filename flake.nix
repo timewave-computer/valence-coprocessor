@@ -173,6 +173,7 @@
                 serviceConfig = {
                   Type = "simple";
                   DynamicUser = true;
+                  SupplementaryGroups = [ "docker" ];
                   StateDirectory = "valence-coprocessor";
                   ExecStart = "${lib.getExe cfg.package} ${lib.concatStringsSep " " cfg.flags}";
                 };
