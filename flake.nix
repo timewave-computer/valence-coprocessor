@@ -138,6 +138,7 @@
               serviceConfig = {
                 Type = "simple";
                 DynamicUser = true;
+                SupplementaryGroups = [ "docker" ];
                 StateDirectory = "valence-coprocessor-prover";
                 ExecStart = lib.getExe self'.packages.prover;
               };
