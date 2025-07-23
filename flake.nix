@@ -4,9 +4,9 @@
   nixConfig = {
     extra-experimental-features = "nix-command flakes";
     allow-import-from-derivation = true;
-    extra-substituters = "https://coffeetables.cachix.org";
+    extra-substituters = "https://timewave.cachix.org";
     extra-trusted-public-keys = ''
-      coffeetables.cachix.org-1:BCQXDtLGFVo/rTG/J4omlyP/jbtNtsZIKHBMTjAWt8g=
+      timewave.cachix.org-1:nu3Uqsm3sikI9xFK3Mt4AD4Q6z+j6eS9+kND1vtznq4=
     '';
   };
 
