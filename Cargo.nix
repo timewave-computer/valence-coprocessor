@@ -19,8 +19,12 @@
   # (separated by `,`, prefixed with `+`).
   # Used for conditional compilation based on CPU feature detection.
 , targetFeatures ? []
-  # Whether to perform release builds: longer compile times, faster binaries.
-, release ? true
+  # Any custom profile configuration from Cargo.toml
+, profiles ? {}
+  # Which cargo profile to build with
+, profile ? "release"
+  # Opts to pass in all rustc invocations
+, globalRustcOpts ? []
   # Additional crate2nix configuration if it exists.
 , crateConfig
   ? if builtins.pathExists ./crate-config.nix
@@ -27515,6 +27519,13 @@ even WASM!
               "resolvedDefaultFeatures"
               "devDependencies"
             ];
+            targetFeaturesRustcOpts = lib.lists.optional (targetFeatures != [ ])
+              "-C target-feature=${lib.concatMapStringsSep "," (x: "+${x}") targetFeatures}";
+
+            profileCfg = allProfiles.${profile};
+            depProfileRustcOpts = profileToRustcOpts profileCfg true;
+            buildProfileRustcOpts = profileToRustcOpts
+              (profileCfg // (profileCfg.build-override or {})) true;
             devDependencies = lib.optionals (runTests && packageId == rootPackageId) (
               crateConfig'.devDependencies or [ ]
             );
@@ -27524,16 +27535,23 @@ even WASM!
               buildByPackageId =
                 depPackageId:
                 # proc_macro crates must be compiled for the build architecture
-                if crateConfigs.${depPackageId}.procMacro or false then
+                (if crateConfigs.${depPackageId}.procMacro or false then
                   self.build.crates.${depPackageId}
                 else
-                  self.crates.${depPackageId};
+                  self.crates.${depPackageId}
+                ).override {
+                  extraRustcOpts = depProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+                  extraRustcOptsForBuildRs = buildProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+                };
               dependencies = (crateConfig.dependencies or [ ]) ++ devDependencies;
             };
             buildDependencies = dependencyDerivations {
               inherit features;
               inherit (self.build) target;
-              buildByPackageId = depPackageId: self.build.crates.${depPackageId};
+              buildByPackageId = depPackageId: self.build.crates.${depPackageId}.override {
+                extraRustcOpts = buildProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+                extraRustcOptsForBuildRs = buildProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+              };
               dependencies = crateConfig.buildDependencies or [ ];
             };
             dependenciesWithRenames =
@@ -27589,9 +27607,6 @@ even WASM!
                     assert (lib.assertMsg (crateConfig ? sha256) "Missing sha256 for ${name}");
                     crateConfig.sha256;
                 });
-              extraRustcOpts =
-                lib.lists.optional (targetFeatures != [ ])
-                  "-C target-feature=${lib.concatMapStringsSep "," (x: "+${x}") targetFeatures}";
               meta = {
                 inherit (crateConfig) description;
               };
@@ -27600,9 +27615,14 @@ even WASM!
                 dependencies
                 buildDependencies
                 crateRenames
-                release
                 ;
             }
+            // (lib.optionalAttrs (packageId == rootPackageId) {
+              extraRustcOpts = (profileToRustcOpts allProfiles.${profile} false) ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+              extraRustcOptsForBuildRs =
+                (profileToRustcOpts (profileCfg // (profileCfg.build-override or {})) false)
+                ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+            })
           );
       in
       builtByPackageIdByPkgs;
@@ -27955,6 +27975,78 @@ even WASM!
       builtins.throw "strictDeprecation enabled, aborting: ${message}"
     else
       builtins.trace message value;
+
+  profileToRustcOpts = profileCfg: isDep:
+    let
+      filterNull = lib.filterAttrs (_: v: v != null);
+      finalProfileCfg = filterNull (lib.mapAttrs' (name: cfg: {
+        name =
+          if name == "debug"
+          then "debuginfo"
+          else name;
+        value =
+          if name == "lto" && isDep
+            # disable lto on dependency crates
+          then null
+          else if name == "debug" && lib.isBool cfg
+          then if cfg then "2" else "0"
+          # Remove non-rustc opts
+          else if (name == "build-override") || (name == "package")
+          then null
+          else cfg;
+      }) profileCfg);
+    in
+    lib.mapAttrsToList (name: cfg:
+      "-C ${name}=${if lib.isBool cfg then lib.boolToString cfg else (toString cfg)}"
+    ) finalProfileCfg;
+
+  allProfiles = cargoProfiles //
+    (lib.mapAttrs (name: value:
+      if value ? inherits
+      then lib.recursiveUpdate allProfiles.${value.inherits} (lib.removeAttrs value ["inherits"])
+      else
+        if cargoProfiles ? ${name}
+        then lib.recursiveUpdate cargoProfiles.${name} value
+        else value
+    ) profiles);
+
+  cargoProfiles = {
+    dev = {
+      opt-level = 0;
+      debug-assertions = true;
+      overflow-checks = true;
+      lto = false;
+      incremental = true;
+      codegen-units = 256;
+      rpath = false;
+      debug = true;
+      # split-debuginfo = "...";
+      strip = "none";
+      panic = "unwind";
+      build-override = {
+        opt-level = 0;
+        codegen-units = 256;
+        debug = false;
+      };
+    };
+    release = {
+      overflow-checks = false;
+      incremental = false;
+      rpath = false;
+      opt-level = 3;
+      debug = false;
+      # split-debuginfo = "...";
+      strip = "none";
+      lto = false;
+      panic = "unwind";
+      codegen-units = 16;
+      debug-assertions = false;
+      build-override = {
+        opt-level = 0;
+        codegen-units = 256;
+      };
+    };
+  };
 
   hasAtomicData = {
     # Architectures that always have a specific max atomic size
