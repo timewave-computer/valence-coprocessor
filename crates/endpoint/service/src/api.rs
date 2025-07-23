@@ -149,6 +149,17 @@ impl Api {
         })))
     }
 
+    /// Co-processor root.
+    #[oai(path = "/root", method = "get")]
+    pub async fn root(&self, historical: Data<&Historical>) -> poem::Result<Json<Value>> {
+        let historical = historical.current();
+        let historical = hex::encode(historical);
+
+        Ok(Json(json!({
+            "historical": historical,
+        })))
+    }
+
     /// Register a new controller, returning its allocated id.
     #[oai(path = "/registry/controller", method = "post")]
     pub async fn registry_controller(

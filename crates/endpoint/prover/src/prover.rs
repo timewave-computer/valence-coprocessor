@@ -1,5 +1,3 @@
-use std::net::ToSocketAddrs;
-
 use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Proof, WitnessCoprocessor, ZkVm};
 use valence_coprocessor_sp1::Sp1Hasher;
 
@@ -11,13 +9,13 @@ pub struct ProverService {
 }
 
 impl ProverService {
-    pub fn new<A>(addr: A) -> anyhow::Result<Self>
+    pub fn new<A>(addr: A) -> Self
     where
-        A: ToSocketAddrs,
+        A: ToString,
     {
-        let client = Client::new(addr)?;
-
-        Ok(Self { client })
+        Self {
+            client: Client::new(addr),
+        }
     }
 }
 

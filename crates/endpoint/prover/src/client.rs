@@ -1,7 +1,4 @@
-use std::{
-    env,
-    net::{TcpStream, ToSocketAddrs},
-};
+use std::{env, net::TcpStream};
 
 use msgpacker::{Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
@@ -17,18 +14,13 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<A>(addr: A) -> anyhow::Result<Self>
+    pub fn new<A>(addr: A) -> Self
     where
-        A: ToSocketAddrs,
+        A: ToString,
     {
-        let addr = addr
-            .to_socket_addrs()?
-            .next()
-            .ok_or_else(|| anyhow::anyhow!("failed to define socket address"))?;
-
-        let addr = format!("ws://{addr}/");
-
-        Ok(Self { addr })
+        Self {
+            addr: addr.to_string(),
+        }
     }
 
     fn connect(&self) -> anyhow::Result<WebSocket<MaybeTlsStream<TcpStream>>> {
@@ -52,9 +44,14 @@ impl Client {
         F: FnOnce(&Hash) -> anyhow::Result<Vec<u8>>,
         W: AsRef<[u8]>,
     {
-        tracing::debug!("sending SP1 prove with GPU request to remove prover...");
+        tracing::debug!(
+            "sending SP1 prove with GPU request to remove prover on {}...",
+            &self.addr
+        );
 
         let mut socket = self.connect()?;
+
+        tracing::debug!("prover socket connected on {}...", &self.addr);
 
         socket.send(
             Request::Sp1Proof {

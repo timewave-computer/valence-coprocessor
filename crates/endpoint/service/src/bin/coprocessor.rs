@@ -18,11 +18,11 @@ struct Cli {
 
     /// Socket to the Redis data backend. Fallback to memory data.
     #[arg(short, long, value_name = "REDIS")]
-    redis: Option<SocketAddr>,
+    redis: Option<String>,
 
     /// Socket to the Prover service backend. Fallback to SP1 mock prover.
     #[arg(short, long, value_name = "PROVER")]
-    prover: Option<SocketAddr>,
+    prover: Option<String>,
 
     /// Cache capacity
     #[arg(short, long, value_name = "CAPACITY", default_value_t = 100)]
@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
     let vm = ServiceVm::new(capacity)?;
 
     let zkvm = match prover {
-        Some(addr) => ServiceZkVm::service(addr)?,
+        Some(addr) => ServiceZkVm::service(addr),
         None => ServiceZkVm::mock(capacity)?,
     };
 
