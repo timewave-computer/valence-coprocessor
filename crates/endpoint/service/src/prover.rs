@@ -1,5 +1,3 @@
-use std::net::ToSocketAddrs;
-
 use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Proof, WitnessCoprocessor, ZkVm};
 use valence_coprocessor_prover::prover::ProverService;
 use valence_coprocessor_sp1::{Mode, Sp1Hasher, Sp1ZkVm};
@@ -17,13 +15,13 @@ impl ServiceZkVm {
         Ok(Self::Mock(zkvm))
     }
 
-    pub fn service<A>(addr: A) -> anyhow::Result<Self>
+    pub fn service<A>(addr: A) -> Self
     where
-        A: ToSocketAddrs,
+        A: ToString,
     {
-        let zkvm = ProverService::new(addr)?;
+        let zkvm = ProverService::new(addr);
 
-        Ok(Self::Service(zkvm))
+        Self::Service(zkvm)
     }
 }
 

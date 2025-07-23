@@ -39,7 +39,7 @@ impl Default for App {
 
 impl App {
     pub const DEFAULT_DOCKER: &str = concat!("vtw11/valence:", env!("CARGO_PKG_VERSION"));
-    pub const DEFAULT_SOCKET: &str = "127.0.0.1:37281";
+    pub const DEFAULT_SOCKET: &str = "https://service.coprocessor.valence.zone";
     pub const DEFAULT_TAG: &str = concat!("v", env!("CARGO_PKG_VERSION"));
     pub const DEFAULT_DOCKER_HOST: bool = false;
 
@@ -187,7 +187,7 @@ impl App {
             None => Value::Null,
         };
         let uri = format!(
-            "http://{}/api/registry/controller/{}/prove",
+            "{}/api/registry/controller/{}/prove",
             self.socket,
             circuit.as_ref(),
         );
@@ -213,7 +213,7 @@ impl App {
         P: AsRef<Path>,
     {
         let uri = format!(
-            "http://{}/api/registry/controller/{}/storage/fs",
+            "{}/api/registry/controller/{}/storage/fs",
             self.socket,
             circuit.as_ref()
         );
@@ -240,7 +240,7 @@ impl App {
         C: AsRef<str>,
     {
         let uri = format!(
-            "http://{}/api/registry/controller/{}/vk",
+            "{}/api/registry/controller/{}/vk",
             self.socket,
             circuit.as_ref()
         );
@@ -265,7 +265,7 @@ impl App {
         P: AsRef<Path>,
     {
         let uri = format!(
-            "http://{}/api/registry/controller/{}/storage/fs",
+            "{}/api/registry/controller/{}/storage/fs",
             self.socket,
             circuit.as_ref()
         );

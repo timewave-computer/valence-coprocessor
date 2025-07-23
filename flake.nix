@@ -112,7 +112,8 @@
             echo "  redis-server               - Start Redis server"
             echo "  redis-cli                  - Redis CLI client"
             echo ""
-            echo "🌍 Public service: http://prover.timewave.computer:37281/"
+            echo "🌍 Public service: https://service.coprocessor.valence.zone/"
+            echo "📱 CLI installation: cargo install --git https://github.com/timewave-computer/valence-coprocessor.git --locked cargo-valence"
           '';
         };
         devshells.coprocessor = {

@@ -4,7 +4,7 @@ The Valence co-processor functions over zkVMs (Zero-Knowledge Virtual Machines),
 
 Its main objective is to be user-friendly, ensuring a seamless experience by abstracting the complexities of the zkVMs while maintaining transparency about circuits and witnesses concepts. This allows users to access cross-chain data via light client-verified state proofs.
 
-The service is available publicly at http://prover.timewave.computer:37281/
+The service is available publicly at https://service.coprocessor.valence.zone/
 
 #### CLI helper
 
@@ -35,7 +35,7 @@ This process aims to deploy the circuit into a locally running co-processor inst
 To deploy a circuit to the public co-processor:
 
 ```sh
-cargo-valence --socket prover.timewave.computer:37281 \
+cargo-valence --socket https://service.coprocessor.valence.zone \
   deploy circuit \
   --controller ./crates/controller \
   --circuit valence-coprocessor-app-vault-circuit

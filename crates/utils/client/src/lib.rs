@@ -21,12 +21,12 @@ impl Default for Client {
 
 impl Client {
     /// The default co-processor public address.
-    pub const DEFAULT_COPROCESSOR: &str = "prover.timewave.computer:37281";
+    pub const DEFAULT_COPROCESSOR: &str = "https://service.coprocessor.valence.zone";
 
     /// Creates a client with a localhost co-processor.
     pub fn local() -> Self {
         Self {
-            coprocessor: "127.0.0.1:37281".into(),
+            coprocessor: "http://127.0.0.1:37281".into(),
         }
     }
 
@@ -38,7 +38,7 @@ impl Client {
 
     /// Computes the URI of the co-processor.
     pub fn uri<P: AsRef<str>>(&self, path: P) -> String {
-        format!("http://{}/api/{}", self.coprocessor, path.as_ref(),)
+        format!("{}/api/{}", self.coprocessor, path.as_ref(),)
     }
 
     /// Return the status of the co-processor.
@@ -511,7 +511,7 @@ async fn deploy_domain_works() {
 
 #[tokio::test]
 async fn get_storage_file_works() {
-    let controller = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
+    let controller = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
     let path = "/var/share/proof.bin";
 
     Client::default()
@@ -522,7 +522,7 @@ async fn get_storage_file_works() {
 
 #[tokio::test]
 async fn get_witnesses_works() {
-    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
+    let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
     let args = json!({"value": 42});
 
     Client::default()
@@ -533,7 +533,7 @@ async fn get_witnesses_works() {
 
 #[tokio::test]
 async fn prove_works() {
-    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
+    let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
     let args = json!({"value": 42});
 
     Client::default().prove(circuit, &args).await.unwrap();
@@ -541,8 +541,8 @@ async fn prove_works() {
 
 #[tokio::test]
 async fn prove_with_root_works() {
-    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
-    let root = "e288ef4c66587475ea0d4478e2ab0ca9a7f90e6f59bc7af6bf7d0c3931f96b92";
+    let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
+    let root = "5f2f6b0dc5211dc53b6eb955c8e83193e58408d52ce03a0693c6db721f57f302";
     let args = json!({"value": 42});
 
     Client::default()
@@ -553,21 +553,21 @@ async fn prove_with_root_works() {
 
 #[tokio::test]
 async fn get_vk_works() {
-    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
+    let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
 
     Client::default().get_vk(circuit).await.unwrap();
 }
 
 #[tokio::test]
 async fn get_circuit_works() {
-    let circuit = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
+    let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
 
     Client::default().get_circuit(circuit).await.unwrap();
 }
 
 #[tokio::test]
 async fn entrypoint_works() {
-    let controller = "d840ffde7bc7ad6004b4b0c2a7d66f5f87d5f9d7b649a9e75ab55becf55609c8";
+    let controller = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
     let args = json!({
         "payload": {
             "cmd": "store",
@@ -582,6 +582,7 @@ async fn entrypoint_works() {
 }
 
 #[tokio::test]
+#[ignore = "depends on deployed domain"]
 async fn get_latest_domain_block_works() {
     Client::default()
         .get_latest_domain_block("ethereum-electra-alpha")
