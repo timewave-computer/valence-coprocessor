@@ -144,6 +144,9 @@
                 StateDirectory = "valence-coprocessor-prover";
                 ExecStart = lib.getExe self'.packages.prover;
               };
+              environment = {
+                HOME = "/var/lib/valence-coprocessor-prover";
+              };
               # Ensure access to docker binary
               # /usr is treated as a nix backage path
               # and /usr/bin and /usr/sbin will be added to $PATH
