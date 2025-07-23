@@ -38,12 +38,14 @@
         crate2nix = {
           cargoNix = ./Cargo.nix;
           devshell.name = "default"; # adds update-cargo-nix command to devshells.default
+          profile = "optimized";
           crateOverrides = inputs'.sp1-nix.tools.crateOverrides // {
             valence-coprocessor-service = attrs: {
               meta.mainProgram = "coprocessor";
             };
             valence-coprocessor-prover = attrs: {
               meta.mainProgram = "prover";
+              globalRustcOpts = [ "-C target-cpu=native" ];
             };
           };
         };
