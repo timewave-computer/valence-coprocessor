@@ -18,11 +18,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
+          # We pass the "PAT" secret to the checkout action; if no PAT secret is available to the workflow runner (eg. Dependabot) we fall back to the default "GITHUB_TOKEN".
+          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
 
       - name: Install nix
         uses: nixbuild/nix-quick-install-action@v28
 
-      - name: Update gomod2nix
+      - name: Update Cargo.nix
         run: nix develop -c 'update-cargo-nix'
 
       - uses: stefanzweifel/git-auto-commit-action@v5
@@ -30,6 +32,6 @@ jobs:
           commit_message: Update Cargo.nix
           file_pattern: Cargo.nix
           branch: ${{ github.head_ref }}
-          commit_user_name: dependabot[bot]
-          commit_user_email: support@github.com
+          commit_user_name: timewave-bot[bot]
+          commit_user_email: parthiv@timewave.computer
           commit_options: '--signoff'
