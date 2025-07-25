@@ -6,6 +6,9 @@ on:
     paths:
       - 'Cargo.toml'
       - 'Cargo.lock'
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -23,11 +26,13 @@ jobs:
 
       - name: Install nix
         uses: nixbuild/nix-quick-install-action@v28
-
+      - uses: nixbuild/nixbuild-action@v19
+        with:
+          nixbuild_token: ${{ secrets.NIXBUILD_TOKEN }}
       - name: Update Cargo.nix
         run: nix develop -c 'update-cargo-nix'
-
       - uses: stefanzweifel/git-auto-commit-action@v5
+        if: github.event_name == 'push'
         with:
           commit_message: Update Cargo.nix
           file_pattern: Cargo.nix
