@@ -1,5 +1,5 @@
 NAME := "valence-coprocessor-utils"
-VERSION := "0.3.8"
+VERSION := "0.3.9"
 HUB := "vtw11/valence"
 
 all: build ## Build all targets.

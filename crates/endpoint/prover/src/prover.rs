@@ -1,7 +1,7 @@
 use valence_coprocessor::{DataBackend, ExecutionContext, Hash, Proof, WitnessCoprocessor, ZkVm};
 use valence_coprocessor_sp1::Sp1Hasher;
 
-use crate::client::Client;
+use crate::{client::Client, types::ProofType};
 
 #[derive(Clone)]
 pub struct ProverService {
@@ -40,7 +40,9 @@ impl ZkVm for ProverService {
             hex::encode(circuit)
         );
 
-        let proof = self.client.get_sp1_proof(circuit, &w, |_| {
+        let t = ProofType::Groth16;
+        let recursive = Vec::new();
+        let proof = self.client.get_sp1_proof(circuit, t, &w, &recursive, |_| {
             ctx.get_zkvm()
                 .transpose()
                 .ok_or_else(|| anyhow::anyhow!("failed to fetch ELF contents from context"))?

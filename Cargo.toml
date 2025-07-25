@@ -16,7 +16,7 @@ default-members = ["crates/core"]
 authors = ["Timewave Labs"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.3.8"
+version = "0.3.9"
 repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]
@@ -38,10 +38,13 @@ serde = { version = "1.0.219", default-features = false, features = [
   "alloc",
   "derive",
 ] }
+serde_cbor = "0.11.2"
 serde_json = { version = "1.0.140", default-features = false, features = [
   "alloc",
 ] }
+sp1-core-executor = "5.0.0"
 sp1-sdk = "5.0.0"
+sp1-stark = "5.0.0"
 sp1-verifier = "5.0.0"
 tokio = { version = "1.44.2", features = ["full"] }
 tracing = { version = "0.1.41", default-features = false }

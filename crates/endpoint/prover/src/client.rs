@@ -6,7 +6,7 @@ use sp1_sdk::SP1VerifyingKey;
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
 use valence_coprocessor::{Base64, Blake3Hasher, Hash, Hasher as _, Proof};
 
-use crate::types::{Circuit, Request, Response};
+use crate::types::{Circuit, ProofType, RecursiveProof, Request, Response};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Client {
@@ -39,7 +39,14 @@ impl Client {
     ///
     /// The `circuit` argument will be used to index the proving key. If the proving key cannot be
     /// found, `elf` will be evaluated to return the elf binary so the key can be computed and stored.
-    pub fn get_sp1_proof<F, W>(&self, circuit: Hash, witnesses: &W, elf: F) -> anyhow::Result<Proof>
+    pub fn get_sp1_proof<F, W>(
+        &self,
+        circuit: Hash,
+        t: ProofType,
+        witnesses: &W,
+        recursive: &[RecursiveProof],
+        elf: F,
+    ) -> anyhow::Result<Proof>
     where
         F: FnOnce(&Hash) -> anyhow::Result<Vec<u8>>,
         W: AsRef<[u8]>,
@@ -50,6 +57,7 @@ impl Client {
         );
 
         let mut socket = self.connect()?;
+        let recursive = RecursiveProof::encode(recursive.to_vec());
 
         tracing::debug!("prover socket connected on {}...", &self.addr);
 
@@ -57,6 +65,8 @@ impl Client {
             Request::Sp1Proof {
                 circuit: circuit.into(),
                 witnesses: Base64::encode(witnesses.as_ref()),
+                t,
+                recursive: recursive.clone(),
             }
             .pack_to_vec()
             .into(),
@@ -97,6 +107,8 @@ impl Client {
                     bytes: elf,
                 },
                 witnesses: Base64::encode(witnesses.as_ref()),
+                t,
+                recursive,
             }
             .pack_to_vec()
             .into(),
