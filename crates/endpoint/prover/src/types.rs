@@ -138,9 +138,12 @@ impl ProofRequestBuilder {
 
     pub fn with_recursive_proof(
         mut self,
-        proof: SP1ProofWithPublicValues,
+        proof: Proof,
         vk: SP1VerifyingKey,
     ) -> anyhow::Result<Self> {
+        let proof = proof.decode()?.0;
+        let proof: SP1ProofWithPublicValues = serde_cbor::from_slice(&proof)?;
+
         let proof = match proof.proof {
             SP1Proof::Compressed(p) => *p,
             _ => anyhow::bail!("unsupported proof type"),
@@ -162,6 +165,14 @@ impl ProofRequestBuilder {
     pub fn with_type(mut self, t: ProofType) -> Self {
         self.t = t;
         self
+    }
+
+    pub fn with_type_compressed(self) -> Self {
+        self.with_type(ProofType::Compressed)
+    }
+
+    pub fn with_type_groth16(self) -> Self {
+        self.with_type(ProofType::Groth16)
     }
 
     pub fn prove<F>(self, client: &Client, elf: F) -> anyhow::Result<Proof>

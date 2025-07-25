@@ -2,7 +2,9 @@ use std::{net::TcpStream, sync::Arc, thread, time::Duration};
 
 use flume::{Receiver, Sender};
 use msgpacker::{Packable as _, Unpackable as _};
-use sp1_sdk::{CpuProver, CudaProver, Prover as _, ProverClient, SP1ProvingKey, SP1Stdin};
+use sp1_sdk::{
+    CpuProver, CudaProver, Prover as _, ProverClient, SP1Proof, SP1ProvingKey, SP1Stdin,
+};
 use tokio::sync::Mutex;
 use tungstenite::WebSocket;
 use valence_coprocessor::{Base64, Proof};
@@ -145,7 +147,12 @@ impl Worker {
 
                 tracing::debug!("proof verified");
 
-                let proof = Proof::new(proof.bytes(), proof.public_values.to_vec()).to_base64();
+                let public = proof.public_values.to_vec();
+                let proof = match proof.proof {
+                    SP1Proof::Plonk(_) | SP1Proof::Groth16(_) => proof.bytes(),
+                    _ => serde_cbor::to_vec(&proof).unwrap(),
+                };
+                let proof = Proof::new(proof, public).to_base64();
 
                 tracing::debug!("proof serialized.");
 
