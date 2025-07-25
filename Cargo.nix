@@ -2757,7 +2757,7 @@ constant-time operation and embedded-friendly no_std support
       };
       "cargo-valence" = rec {
         crateName = "cargo-valence";
-        version = "0.3.8";
+        version = "0.3.9";
         edition = "2021";
         description = "The Valence co-processor cargo subcommand.";
         crateBin = [
@@ -7104,6 +7104,24 @@ composability, and iterator-like interfaces.
           }
         ];
         features = {
+        };
+      };
+      "half" = rec {
+        crateName = "half";
+        version = "1.8.3";
+        edition = "2018";
+        description = "Half-precision floating point f16 and bf16 types for Rust implementing the IEEE 754-2008 standard binary16 and bfloat16 types.";
+        sha256 = "00q4ki8ycdswapw6xn1q89vr7rzi1c8m99igps0lx1i1gzhyshqv";
+        authors = [
+          "Kathryn Long <squeeself@gmail.com>"
+        ];
+        features = {
+          "bytemuck" = [ "dep:bytemuck" ];
+          "num-traits" = [ "dep:num-traits" ];
+          "serde" = [ "dep:serde" ];
+          "serialize" = [ "serde" ];
+          "std" = [ "alloc" ];
+          "zerocopy" = [ "dep:zerocopy" ];
         };
       };
       "halo2" = rec {
@@ -12472,10 +12490,10 @@ Cargo build scripts.
       };
       "postcard" = rec {
         crateName = "postcard";
-        version = "1.1.2";
+        version = "1.1.3";
         edition = "2021";
         description = "A no_std + serde compatible message library for Rust";
-        sha256 = "0ynip6riqihal0kxnn9jh16qai70j13crbrwlx6g47gm41pfj7bc";
+        sha256 = "094srff139n7m8g5ssq36ag6s29ikf7fgpz660x2hkj5vnsw6r37";
         authors = [
           "James Munns <james@onevariable.com>"
         ];
@@ -12592,11 +12610,11 @@ Cargo build scripts.
       };
       "prettyplease" = rec {
         crateName = "prettyplease";
-        version = "0.2.35";
+        version = "0.2.36";
         edition = "2021";
         description = "A minimal `syn` syntax tree pretty-printer";
         links = "prettyplease02";
-        sha256 = "16jklwmgqfzi6izcs6c4mqbmkzjv4zrbn9cx8wk9n1qycchi4706";
+        sha256 = "1lj4rrjqbywjm82i3g7ilbskzdqvgqid8k7zdy0vjlj4lk6xy97z";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -15724,6 +15742,34 @@ Elliptic-Curve-Point-to-Octet-String encoding
           "serde_derive" = [ "dep:serde_derive" ];
         };
         resolvedDefaultFeatures = [ "alloc" "default" "derive" "rc" "serde_derive" "std" ];
+      };
+      "serde_cbor" = rec {
+        crateName = "serde_cbor";
+        version = "0.11.2";
+        edition = "2018";
+        description = "CBOR support for serde.";
+        sha256 = "1xf1bq7ixha30914pd5jl3yw9v1x6car7xgrpimvfvs5vszjxvrb";
+        authors = [
+          "Pyfisch <pyfisch@posteo.org>"
+          "Steven Fackler <sfackler@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "half";
+            packageId = "half";
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            usesDefaultFeatures = false;
+          }
+        ];
+        features = {
+          "alloc" = [ "serde/alloc" ];
+          "default" = [ "std" ];
+          "std" = [ "serde/std" ];
+        };
+        resolvedDefaultFeatures = [ "default" "std" ];
       };
       "serde_derive" = rec {
         crateName = "serde_derive";
@@ -21128,7 +21174,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor" = rec {
         crateName = "valence-coprocessor";
-        version = "0.3.8";
+        version = "0.3.9";
         edition = "2021";
         description = "The Valence co-processor definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/core; };
@@ -21216,7 +21262,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-client" = rec {
         crateName = "valence-coprocessor-client";
-        version = "0.3.8";
+        version = "0.3.9";
         edition = "2021";
         description = "The Valence co-processor client";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/utils/client; };
@@ -21275,7 +21321,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-prover" = rec {
         crateName = "valence-coprocessor-prover";
-        version = "0.3.8";
+        version = "0.3.9";
         edition = "2021";
         description = "The Valence co-processor prover service.";
         crateBin = [
@@ -21333,8 +21379,20 @@ Unicode Standard Annex #31.
             features = [ "alloc" "derive" ];
           }
           {
+            name = "serde_cbor";
+            packageId = "serde_cbor";
+          }
+          {
+            name = "sp1-core-executor";
+            packageId = "sp1-core-executor";
+          }
+          {
             name = "sp1-sdk";
             packageId = "sp1-sdk";
+          }
+          {
+            name = "sp1-stark";
+            packageId = "sp1-stark";
           }
           {
             name = "tokio";
@@ -21372,7 +21430,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-redis" = rec {
         crateName = "valence-coprocessor-redis";
-        version = "0.3.8";
+        version = "0.3.9";
         edition = "2021";
         description = "The Valence co-processor Redis data backend implementation.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/data/redis; };
@@ -21404,7 +21462,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-service" = rec {
         crateName = "valence-coprocessor-service";
-        version = "0.3.8";
+        version = "0.3.9";
         edition = "2021";
         description = "The Valence co-processor service application.";
         crateBin = [
@@ -21508,7 +21566,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-sp1" = rec {
         crateName = "valence-coprocessor-sp1";
-        version = "0.3.8";
+        version = "0.3.9";
         edition = "2021";
         description = "The Valence co-processor SP1 prover backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/sp1; };
@@ -21613,7 +21671,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-wasm" = rec {
         crateName = "valence-coprocessor-wasm";
-        version = "0.3.8";
+        version = "0.3.9";
         edition = "2021";
         description = "The Valence co-processor WASM module backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/wasm; };
