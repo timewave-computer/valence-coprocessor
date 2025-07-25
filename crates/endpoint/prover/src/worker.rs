@@ -102,6 +102,8 @@ impl Worker {
 
                 let mut stdin = SP1Stdin::new();
 
+                let is_recursive = recursive.is_empty();
+
                 for r in recursive {
                     stdin.write_proof(r.proof, r.vk);
                 }
@@ -115,15 +117,18 @@ impl Worker {
                         // the SP1 prover crashes in case of invalid witnesses. to avoid that, we
                         // do a dry-run
 
-                        if let Err(e) = self.sp1mock.prove(&pk, &stdin).run() {
-                            return Response::Err(format!("proof dry-run failed: {e}"));
+                        if !is_recursive {
+                            if let Err(e) = self.sp1mock.prove(&pk, &stdin).run() {
+                                return Response::Err(format!("proof dry-run failed: {e}"));
+                            }
                         }
 
                         let p = c.lock().await;
+                        let proof = p.prove(&pk, &stdin).compressed();
 
                         match t {
-                            ProofType::Compressed => p.prove(&pk, &stdin).compressed().run(),
-                            ProofType::Groth16 => p.prove(&pk, &stdin).compressed().groth16().run(),
+                            ProofType::Compressed => proof.run(),
+                            ProofType::Groth16 => proof.groth16().run(),
                         }
                     }
                     None => match t {
