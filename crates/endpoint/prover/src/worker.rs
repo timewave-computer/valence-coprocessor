@@ -102,7 +102,7 @@ impl Worker {
 
                 let mut stdin = SP1Stdin::new();
 
-                let is_recursive = recursive.is_empty();
+                let is_recursive = !recursive.is_empty();
 
                 for r in recursive {
                     stdin.write_proof(r.proof, r.vk);
