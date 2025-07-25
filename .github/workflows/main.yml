@@ -15,7 +15,6 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
