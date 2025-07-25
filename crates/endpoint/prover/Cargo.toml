@@ -15,7 +15,10 @@ lru.workspace = true
 msgpacker = { workspace = true, default-features = true }
 rand = "0.9.1"
 serde.workspace = true
+serde_cbor.workspace = true
+sp1-core-executor.workspace = true
 sp1-sdk.workspace = true
+sp1-stark.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber = { version = "0.3.19", default-features = true, features = [

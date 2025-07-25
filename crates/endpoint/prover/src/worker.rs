@@ -9,7 +9,7 @@ use valence_coprocessor::{Base64, Proof};
 
 use crate::{
     cache::KeysCache,
-    types::{Circuit, Request, Response, Task},
+    types::{Circuit, ProofType, RecursiveProof, Request, Response, Task},
 };
 
 /// A worker instance.
@@ -75,7 +75,12 @@ impl Worker {
         tracing::debug!("worker received {req:?}");
 
         match req {
-            Request::Sp1Proof { circuit, witnesses } => {
+            Request::Sp1Proof {
+                circuit,
+                witnesses,
+                t,
+                recursive,
+            } => {
                 let pk = match self.sp1pk(circuit).await {
                     Some(pk) => pk,
                     None => return Response::ProvingKeyNotCached,
@@ -86,7 +91,18 @@ impl Worker {
                     Err(e) => return Response::Err(format!("error decoding the witnesses: {e}")),
                 };
 
+                let recursive = match RecursiveProof::decode(recursive) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        return Response::Err(format!("error decoding the recursive proofs: {e}"))
+                    }
+                };
+
                 let mut stdin = SP1Stdin::new();
+
+                for r in recursive {
+                    stdin.write_proof(r.proof, r.vk);
+                }
 
                 stdin.write_slice(&witnesses);
 
@@ -100,14 +116,20 @@ impl Worker {
                         if let Err(e) = self.sp1mock.prove(&pk, &stdin).run() {
                             return Response::Err(format!("proof dry-run failed: {e}"));
                         }
-                        c.lock()
-                            .await
-                            .prove(&pk, &stdin)
-                            .compressed()
-                            .groth16()
-                            .run()
+
+                        let p = c.lock().await;
+
+                        match t {
+                            ProofType::Compressed => p.prove(&pk, &stdin).compressed().run(),
+                            ProofType::Groth16 => p.prove(&pk, &stdin).compressed().groth16().run(),
+                        }
                     }
-                    None => self.sp1cpu.prove(&pk, &stdin).compressed().groth16().run(),
+                    None => match t {
+                        ProofType::Compressed => self.sp1cpu.prove(&pk, &stdin).compressed().run(),
+                        ProofType::Groth16 => {
+                            self.sp1cpu.prove(&pk, &stdin).compressed().groth16().run()
+                        }
+                    },
                 };
 
                 let proof = match proof {
