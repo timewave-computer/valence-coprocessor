@@ -132,7 +132,7 @@
 
       flake.systemModules.prover = moduleWithSystem (
         { self', ... }:
-        { lib, ...}:
+        { lib, pkgs, ...}:
         {
           systemd.services = {
             valence-coprocessor-prover = {
@@ -144,13 +144,16 @@
                 StateDirectory = "valence-coprocessor-prover";
                 ExecStart = lib.getExe self'.packages.prover;
               };
+              preStop = ''
+                docker kill $(docker ps | grep moongate | awk '{print $1}')
+              '';
               environment = {
                 HOME = "/var/lib/valence-coprocessor-prover";
               };
               # Ensure access to docker binary
               # /usr is treated as a nix backage path
               # and /usr/bin and /usr/sbin will be added to $PATH
-              path = [ "/usr" ]; # to get access to docker
+              path = with pkgs; [ "/usr" gawk gnugrep ]; # to get access to docker
               wantedBy = [ "system-manager.target" ];
             };
           };
