@@ -45,7 +45,6 @@
             };
             valence-coprocessor-prover = attrs: {
               meta.mainProgram = "prover";
-              globalRustcOpts = [ "-C target-cpu=native" ];
             };
           };
         };
