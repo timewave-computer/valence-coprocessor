@@ -97,12 +97,16 @@ where
         let id = DomainData::identifier_from_parts(domain);
         let ctx = self.context(id);
 
+        tracing::debug!("calling domain controller for {}...", domain);
+
         let validated = vm.execute(
             &ctx,
             &id,
             ExecutionContext::<H, D>::CONTROLLER_VALIDATE_BLOCK,
             args,
         )?;
+
+        tracing::debug!("block validated for domain {}...", domain);
 
         let validated: ValidatedBlock = serde_json::from_value(validated)?;
         let key = H::key(domain, &validated.root);

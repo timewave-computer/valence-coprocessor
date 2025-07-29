@@ -7,7 +7,8 @@ RUN apt-get update && \
   jq \
   git \
   gcc \
-  curl && \
+  curl \
+  clang && \
   rm -rf /var/lib/apt/lists/*
 
 RUN rustup target add wasm32-unknown-unknown && \

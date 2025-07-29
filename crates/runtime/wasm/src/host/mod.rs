@@ -140,16 +140,36 @@ where
 
         let mut store = Store::new(&self.engine, runtime);
 
-        let instance = self
-            .modules
-            .lock()
-            .map_err(|e| anyhow::anyhow!("error locking modules: {e}"))?
-            .try_get_or_insert(*controller, || {
+        tracing::debug!("executing args allocated to store...");
+
+        let instance = {
+            let mut modules = self
+                .modules
+                .lock()
+                .map_err(|e| anyhow::anyhow!("error locking modules: {e}"))?;
+
+            tracing::debug!("modules locked...");
+
+            let instance = modules.try_get_or_insert(*controller, || {
                 ctx.get_controller(controller)?
                     .ok_or_else(|| anyhow::anyhow!("controller not found"))
                     .and_then(|b| Module::from_binary(&self.engine, &b))
-            })
-            .and_then(|i| self.linker.instantiate(&mut store, i))?;
+            })?;
+
+            tracing::debug!("instance loaded...");
+
+            let mut linker = self.linker.clone();
+
+            linker.define_unknown_imports_as_traps(instance)?;
+
+            match linker.instantiate(&mut store, instance) {
+                Ok(i) => i,
+                Err(e) => {
+                    tracing::debug!("error loading runtime instance: {e}");
+                    return Err(e);
+                }
+            }
+        };
 
         tracing::debug!("controller loaded...");
 

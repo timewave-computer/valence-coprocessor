@@ -419,6 +419,8 @@ impl Api {
         vm: Data<&ServiceVm>,
         args: Json<Value>,
     ) -> poem::Result<Json<DomainAddBlockResponse>> {
+        tracing::debug!("adding domain block for {}...", &*domain);
+
         let BlockAdded {
             domain,
             prev_smt,

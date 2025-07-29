@@ -195,7 +195,7 @@ pub(crate) mod use_std {
 #[cfg(feature = "tests-runtime")]
 pub use use_std::{initialize_default_runtime, initialize_runtime, runtime};
 
-pub const BUF_LEN: usize = 4 * 1024 * 1024;
+pub const BUF_LEN: usize = 16 * 1024 * 1024;
 
 static mut BUF: &mut [u8] = &mut [0u8; BUF_LEN];
 
