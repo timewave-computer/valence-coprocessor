@@ -105,11 +105,11 @@
         "pre-commit-hooks": "pre-commit-hooks_3"
       },
       "locked": {
-        "lastModified": 1753258371,
-        "narHash": "sha256-W98jrHjWHYf4icn6y58U+n1RN6QyICAav0hA5j44mPU=",
+        "lastModified": 1753770375,
+        "narHash": "sha256-SsYJwfwWvHfjGtJIzCH7d8mkVSe2EnPKwjkBx4uCzHs=",
         "owner": "timewave-computer",
         "repo": "crate2nix",
-        "rev": "4d979526872099f484ad60942690af56caaaa321",
+        "rev": "cd4ce3bc8b4a3abeed32973ace74a13f49948616",
         "type": "github"
       },
       "original": {

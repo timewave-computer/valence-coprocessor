@@ -27627,7 +27627,9 @@ even WASM!
             targetFeaturesRustcOpts = lib.lists.optional (targetFeatures != [ ])
               "-C target-feature=${lib.concatMapStringsSep "," (x: "+${x}") targetFeatures}";
 
-            profileCfg = allProfiles.${profile};
+            profileCfg = allProfiles.${profile} // (lib.optionalAttrs runTests {
+              panic = "unwind"; # tests require panic=unwind
+            });
             depProfileRustcOpts = profileToRustcOpts profileCfg true;
             buildProfileRustcOpts = profileToRustcOpts
               (profileCfg // (profileCfg.build-override or {})) true;
@@ -27723,7 +27725,7 @@ even WASM!
                 ;
             }
             // (lib.optionalAttrs (packageId == rootPackageId) {
-              extraRustcOpts = (profileToRustcOpts allProfiles.${profile} false) ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+              extraRustcOpts = (profileToRustcOpts profileCfg false) ++ targetFeaturesRustcOpts ++ globalRustcOpts;
               extraRustcOptsForBuildRs =
                 (profileToRustcOpts (profileCfg // (profileCfg.build-override or {})) false)
                 ++ targetFeaturesRustcOpts ++ globalRustcOpts;
