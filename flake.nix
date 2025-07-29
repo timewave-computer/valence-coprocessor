@@ -149,6 +149,7 @@
                 SupplementaryGroups = [ "docker" ];
                 StateDirectory = "valence-coprocessor-prover";
                 ExecStart = lib.getExe self'.packages.prover;
+                Restart = "on-failure";
               };
               preStop = ''
                 docker kill $(docker ps | grep moongate | awk '{print $1}')
