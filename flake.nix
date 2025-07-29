@@ -49,6 +49,12 @@
           };
         };
         
+        checks = with config.crate2nix.checks; {
+          inherit cargo-valence;
+          prover = valence-coprocessor-prover;
+          service = valence-coprocessor-service;
+        };
+
         packages = {
           prover = config.crate2nix.packages.valence-coprocessor-prover.override {
             features = [ "gpu" ];
