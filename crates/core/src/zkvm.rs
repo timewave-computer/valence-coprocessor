@@ -1,8 +1,44 @@
 use alloc::vec::Vec;
 use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
+use valence_coprocessor_merkle::Opening;
+use valence_coprocessor_types::{StateProof, ValidatedWitnesses, Witness};
 
-use crate::{DataBackend, ExecutionContext, Hash, Hasher, Opening, Proof, StateProof, Witness};
+use crate::{DataBackend, ExecutionContext, Hash, Hasher, Proof};
+
+/// A zkVM definition.
+pub trait ZkVm: Clone + Sized {
+    /// Friendly hasher of the zkVM.
+    type Hasher: Hasher;
+
+    /// Prove a given circuit.
+    ///
+    /// ## Arguments
+    ///
+    /// - `ctx`: Execution context to fetch the controller bytes from.
+    /// - `circuit`: Circuit unique identifier.
+    /// - `witnesses`: Circuit arguments.
+    fn prove<D>(
+        &self,
+        ctx: &ExecutionContext<Self::Hasher, D>,
+        w: WitnessCoprocessor,
+    ) -> anyhow::Result<Proof>
+    where
+        D: DataBackend;
+
+    /// Returns the verifying key for the given circuit.
+    ///
+    /// ## Arguments
+    ///
+    /// - `ctx`: Execution context to fetch the controller bytes from.
+    /// - `circuit`: Circuit unique identifier.
+    fn verifying_key<D>(&self, ctx: &ExecutionContext<Self::Hasher, D>) -> anyhow::Result<Vec<u8>>
+    where
+        D: DataBackend;
+
+    /// A notification that the circuit has been updated.
+    fn updated(&self, circuit: &Hash);
+}
 
 /// A domain opening co-processor witness.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
@@ -57,48 +93,4 @@ impl WitnessCoprocessor {
             witnesses: self.witnesses,
         })
     }
-}
-
-/// Co-processor validated witnesses.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct ValidatedWitnesses {
-    /// Co-processor historical commitments root.
-    pub root: Hash,
-
-    /// Witness data for the circuit.
-    pub witnesses: Vec<Witness>,
-}
-
-/// A zkVM definition.
-pub trait ZkVm: Clone + Sized {
-    /// Friendly hasher of the zkVM.
-    type Hasher: Hasher;
-
-    /// Prove a given circuit.
-    ///
-    /// ## Arguments
-    ///
-    /// - `ctx`: Execution context to fetch the controller bytes from.
-    /// - `circuit`: Circuit unique identifier.
-    /// - `witnesses`: Circuit arguments.
-    fn prove<D>(
-        &self,
-        ctx: &ExecutionContext<Self::Hasher, D>,
-        w: WitnessCoprocessor,
-    ) -> anyhow::Result<Proof>
-    where
-        D: DataBackend;
-
-    /// Returns the verifying key for the given circuit.
-    ///
-    /// ## Arguments
-    ///
-    /// - `ctx`: Execution context to fetch the controller bytes from.
-    /// - `circuit`: Circuit unique identifier.
-    fn verifying_key<D>(&self, ctx: &ExecutionContext<Self::Hasher, D>) -> anyhow::Result<Vec<u8>>
-    where
-        D: DataBackend;
-
-    /// A notification that the circuit has been updated.
-    fn updated(&self, circuit: &Hash);
 }

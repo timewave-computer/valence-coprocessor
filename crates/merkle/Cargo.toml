@@ -1,0 +1,17 @@
+[package]
+name = "valence-coprocessor-merkle"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Valence co-processor Merkle primitives"
+
+[dependencies]
+anyhow.workspace = true
+msgpacker.workspace = true
+serde.workspace = true
+zerocopy.workspace = true
+valence-coprocessor-types.path = "../types"
+
+[dev-dependencies]
+proptest.workspace = true
+valence-coprocessor.path = "../core"

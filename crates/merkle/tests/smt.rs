@@ -1,8 +1,9 @@
 use proptest::collection;
-use proptest::prelude::*;
+use valence_coprocessor::MemorySmt;
+use valence_coprocessor_merkle::Opening;
+use valence_coprocessor_types::{Blake3Hasher, Hasher};
 
-use crate::Opening;
-use crate::{Blake3Hasher, Hasher, MemorySmt};
+use proptest::prelude::*;
 
 #[test]
 fn single_node_opening() -> anyhow::Result<()> {

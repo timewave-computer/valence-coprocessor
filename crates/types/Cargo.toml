@@ -1,0 +1,18 @@
+[package]
+name = "valence-coprocessor-types"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The Valence co-processor types definition"
+
+[dependencies]
+anyhow.workspace = true
+base64.workspace = true
+blake3 = { workspace = true, optional = true }
+msgpacker.workspace = true
+serde.workspace = true
+tracing.workspace = true
+zerocopy.workspace = true
+
+[features]
+default = ["blake3"]

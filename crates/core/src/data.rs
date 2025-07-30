@@ -1,109 +1,80 @@
-use alloc::vec::Vec;
+use std::sync::{Arc, Mutex};
 
-/// A generic data backend to support multiple contexts.
-pub trait DataBackend: Clone {
-    /// Returns the underlying data from the backend.
-    fn get(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
+use hashbrown::HashMap;
+use valence_coprocessor_merkle::Smt;
 
-    /// Returns `true` if the provided data exists within the set.
-    fn has(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<bool>;
+use crate::{Blake3Hasher, DataBackend, Hash, Hasher as _};
 
-    /// Removes the underlying data from the backend.
-    ///
-    /// Returns the previous data, if existed.
-    fn remove(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
-
-    /// Replaces the underlying data from the backend.
-    ///
-    /// Returns the previous data, if existed.
-    fn set(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
-
-    /// Returns the underlying bulk data from the backend.
-    fn get_bulk(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
-
-    /// Replaces the underlying bulk data from the backend.
-    fn set_bulk(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<()>;
+/// A memory data backend.
+#[derive(Debug, Clone, Default)]
+pub struct MemoryBackend {
+    data: Arc<Mutex<HashMap<Hash, Vec<u8>>>>,
+    bulk: Arc<Mutex<HashMap<Hash, Vec<u8>>>>,
 }
 
-#[cfg(feature = "std")]
-pub use use_std::*;
+impl DataBackend for MemoryBackend {
+    fn get(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        let key = Blake3Hasher::digest([b"data", prefix, key]);
+        let data = self
+            .data
+            .lock()
+            .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
 
-#[cfg(feature = "std")]
-mod use_std {
-    use std::sync::{Arc, Mutex};
-
-    use hashbrown::HashMap;
-
-    use crate::{Blake3Hasher, DataBackend, Hash, Hasher as _};
-
-    /// A memory data backend.
-    #[derive(Debug, Clone, Default)]
-    pub struct MemoryBackend {
-        data: Arc<Mutex<HashMap<Hash, Vec<u8>>>>,
-        bulk: Arc<Mutex<HashMap<Hash, Vec<u8>>>>,
+        Ok(data.get(&key).cloned())
     }
 
-    impl DataBackend for MemoryBackend {
-        fn get(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
-            let key = Blake3Hasher::digest([b"data", prefix, key]);
-            let data = self
-                .data
-                .lock()
-                .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
+    fn has(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<bool> {
+        let key = Blake3Hasher::digest([b"data", prefix, key]);
+        let data = self
+            .data
+            .lock()
+            .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
 
-            Ok(data.get(&key).cloned())
-        }
+        Ok(data.get(&key).is_some())
+    }
 
-        fn has(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<bool> {
-            let key = Blake3Hasher::digest([b"data", prefix, key]);
-            let data = self
-                .data
-                .lock()
-                .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
+    fn remove(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        let key = Blake3Hasher::digest([b"data", prefix, key]);
+        let mut data = self
+            .data
+            .lock()
+            .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
 
-            Ok(data.get(&key).is_some())
-        }
+        Ok(data.remove(&key))
+    }
 
-        fn remove(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
-            let key = Blake3Hasher::digest([b"data", prefix, key]);
-            let mut data = self
-                .data
-                .lock()
-                .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
+    fn set(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        let key = Blake3Hasher::digest([b"data", prefix, key]);
+        let mut d = self
+            .data
+            .lock()
+            .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
 
-            Ok(data.remove(&key))
-        }
+        Ok(d.insert(key, data.to_vec()))
+    }
 
-        fn set(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
-            let key = Blake3Hasher::digest([b"data", prefix, key]);
-            let mut d = self
-                .data
-                .lock()
-                .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
+    fn get_bulk(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        let key = Blake3Hasher::digest([b"data", prefix, key]);
+        let data = self
+            .bulk
+            .lock()
+            .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
 
-            Ok(d.insert(key, data.to_vec()))
-        }
+        Ok(data.get(&key).cloned())
+    }
 
-        fn get_bulk(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
-            let key = Blake3Hasher::digest([b"data", prefix, key]);
-            let data = self
-                .bulk
-                .lock()
-                .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
+    fn set_bulk(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<()> {
+        let key = Blake3Hasher::digest([b"data", prefix, key]);
+        let mut d = self
+            .bulk
+            .lock()
+            .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
 
-            Ok(data.get(&key).cloned())
-        }
+        d.insert(key, data.to_vec());
 
-        fn set_bulk(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<()> {
-            let key = Blake3Hasher::digest([b"data", prefix, key]);
-            let mut d = self
-                .bulk
-                .lock()
-                .map_err(|e| anyhow::anyhow!("failed to lock data backend: {e}"))?;
-
-            d.insert(key, data.to_vec());
-
-            Ok(())
-        }
+        Ok(())
     }
 }
+
+/// An in-memory SMT implementation.
+pub type MemorySmt = Smt<MemoryBackend, Blake3Hasher>;

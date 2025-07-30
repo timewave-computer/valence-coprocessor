@@ -8,24 +8,23 @@ description = "The Valence co-processor definition"
 [dependencies]
 anyhow.workspace = true
 buf-fs.workspace = true
-base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
+base64.workspace = true
 hashbrown.workspace = true
-blake3.workspace = true
 msgpacker.workspace = true
-reqwest = { version = "0.12.15", optional = true, features = [
-  "blocking",
-  "json",
-] }
+reqwest = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
-zerocopy = { version = "0.8.23", features = ["alloc", "derive"] }
+zerocopy.workspace = true
+
+valence-coprocessor-merkle.path = "../merkle"
+valence-coprocessor-types.path = "../types"
 
 [dev-dependencies]
-proptest = "1.6.0"
+proptest.workspace = true
 valence-coprocessor = { path = ".", features = ["mocks"] }
 
 [features]
 default = ["std"]
 mocks = []
-std = ["base64/std", "blake3/std", "serde/std", "reqwest"]
+std = ["base64/std", "serde/std", "reqwest"]

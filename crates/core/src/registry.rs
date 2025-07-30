@@ -1,10 +1,7 @@
 use alloc::vec::Vec;
+use valence_coprocessor_types::{ControllerData, DomainData};
 
 use crate::{DataBackend, Hash, Hasher, Vm, ZkVm};
-
-mod types;
-
-pub use types::*;
 
 /// Artifacts repository.
 pub struct Registry<D: DataBackend> {
@@ -78,5 +75,11 @@ impl<D: DataBackend> Registry<D> {
     /// Returns the associated circuit, if present.
     pub fn get_zkvm(&self, id: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
         self.data.get(Self::PREFIX_CIRCUIT, id)
+    }
+}
+
+impl<D: DataBackend> From<D> for Registry<D> {
+    fn from(data: D) -> Self {
+        Self { data }
     }
 }
