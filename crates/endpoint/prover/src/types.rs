@@ -1,6 +1,6 @@
 use std::net::TcpStream;
 
-use msgpacker::{MsgPacker, Unpackable};
+use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
 use sp1_core_executor::SP1ReduceProof;
 use sp1_sdk::{SP1Proof, SP1ProofWithPublicValues, SP1VerifyingKey};

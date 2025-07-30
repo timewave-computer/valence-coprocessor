@@ -1,13 +1,38 @@
 use alloc::{string::String, vec, vec::Vec};
-use msgpacker::{MsgPacker, Packable as _, Unpackable};
+use msgpacker::{MsgPacker, Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
 
-use crate::{Base64, Blake3Hasher, DataBackend, Hash, Hasher};
+use crate::{Base64, Blake3Hasher, Hash};
 
-use super::Registry;
+/// A generic data backend to support multiple contexts.
+pub trait DataBackend: Clone {
+    /// Returns the underlying data from the backend.
+    fn get(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
+
+    /// Returns `true` if the provided data exists within the set.
+    fn has(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<bool>;
+
+    /// Removes the underlying data from the backend.
+    ///
+    /// Returns the previous data, if existed.
+    fn remove(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
+
+    /// Replaces the underlying data from the backend.
+    ///
+    /// Returns the previous data, if existed.
+    fn set(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
+
+    /// Returns the underlying bulk data from the backend.
+    fn get_bulk(&self, prefix: &[u8], key: &[u8]) -> anyhow::Result<Option<Vec<u8>>>;
+
+    /// Replaces the underlying bulk data from the backend.
+    fn set_bulk(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<()>;
+}
 
 /// The unique identifier of a domain that is supported by Valence programs.
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
+)]
 pub struct DomainData {
     /// Name of the domain
     pub name: String,
@@ -42,13 +67,16 @@ impl DomainData {
     }
 
     /// Computes the domain identifier from its parts.
+    #[cfg(feature = "blake3")]
     pub fn identifier_from_parts(name: &str) -> Hash {
-        Blake3Hasher::digest([Self::ID_PREFIX, name.as_bytes()])
+        <Blake3Hasher as crate::Hasher>::digest([Self::ID_PREFIX, name.as_bytes()])
     }
 }
 
 /// Controller data of the registry.
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
+)]
 pub struct ControllerData {
     /// Controller containing the witness computation functions.
     pub controller: Vec<u8>,
@@ -71,11 +99,6 @@ impl ControllerData {
         Self::identifier_from_parts(&self.circuit, self.nonce)
     }
 
-    /// Computes the controller identifier from its parts.
-    pub fn identifier_from_parts(circuit: &[u8], nonce: u64) -> Hash {
-        Blake3Hasher::digest([Self::ID_PREFIX, circuit, &nonce.to_le_bytes()])
-    }
-
     /// Set the controller execution definition.
     pub fn with_controller(mut self, controller: Vec<u8>) -> Self {
         self.controller = controller;
@@ -92,6 +115,12 @@ impl ControllerData {
     pub fn with_nonce(mut self, nonce: u64) -> Self {
         self.nonce = nonce;
         self
+    }
+
+    /// Computes the controller identifier from its parts.
+    #[cfg(feature = "blake3")]
+    pub fn identifier_from_parts(circuit: &[u8], nonce: u64) -> Hash {
+        <Blake3Hasher as crate::Hasher>::digest([Self::ID_PREFIX, circuit, &nonce.to_le_bytes()])
     }
 }
 
@@ -140,7 +169,7 @@ impl Witness {
 }
 
 /// A ZK proven circuit.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, MsgPacker)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
 pub struct Proof {
     /// The base64 encoded ZK proof.
     pub proof: String,
@@ -221,12 +250,6 @@ pub struct ValidatedDomainBlock {
     pub payload: Vec<u8>,
 }
 
-impl<D: DataBackend> From<D> for Registry<D> {
-    fn from(data: D) -> Self {
-        Self { data }
-    }
-}
-
 /// A confirmation of an added block.
 #[derive(
     Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
@@ -242,6 +265,16 @@ pub struct BlockAdded {
     pub log: Vec<String>,
     /// Block data.
     pub block: ValidatedDomainBlock,
+}
+
+/// Co-processor validated witnesses.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
+pub struct ValidatedWitnesses {
+    /// Co-processor historical commitments root.
+    pub root: Hash,
+
+    /// Witness data for the circuit.
+    pub witnesses: Vec<Witness>,
 }
 
 #[test]
