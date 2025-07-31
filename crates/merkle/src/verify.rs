@@ -4,8 +4,8 @@ use valence_coprocessor_types::{DataBackend, Hash, Hasher, HASH_LEN};
 use crate::{Opening, Smt, SmtChildren};
 
 impl Opening {
-    /// Verifies a Merkle opening proof to a known root.
-    pub fn verify<H: Hasher>(&self, root: &Hash, key: &Hash, value: &Hash) -> bool {
+    /// Computes the root for the opening.
+    pub fn root<H: Hasher>(&self, key: &Hash, value: &Hash) -> Hash {
         let mut node = *value;
         let mut depth = self.path.len();
 
@@ -17,7 +17,7 @@ impl Opening {
 
             if i == HASH_LEN {
                 // The provided key is larger than the bits context.
-                return false;
+                break;
             }
 
             let bit = (key[i] >> (7 - j)) & 1;
@@ -29,7 +29,12 @@ impl Opening {
             };
         }
 
-        &node == root
+        node
+    }
+
+    /// Verifies a Merkle opening proof to a known root.
+    pub fn verify<H: Hasher>(&self, root: &Hash, key: &Hash, value: &Hash) -> bool {
+        *root == self.root::<H>(key, value)
     }
 }
 
@@ -40,6 +45,15 @@ where
 {
     /// Computes a Merkle opening proof for the provided leaf to the root.
     pub fn get_opening(&self, root: Hash, key: &Hash) -> anyhow::Result<Option<Opening>> {
+        Ok(self.get_opening_with_node(root, key)?.0)
+    }
+
+    /// Computes a Merkle opening proof for the provided leaf to the root.
+    pub fn get_opening_with_node(
+        &self,
+        root: Hash,
+        key: &Hash,
+    ) -> anyhow::Result<(Option<Opening>, Hash)> {
         let (mut i, mut j) = (0, 0);
         let mut leaf_node = root;
         let mut opening = Vec::with_capacity(HASH_LEN * 8);
@@ -74,7 +88,7 @@ where
 
         opening.reverse();
 
-        Ok(Some(Opening::new(opening)))
+        Ok((Some(Opening::new(opening)), leaf_node))
     }
 
     /// Verifies a Merkle opening generated via [`Smt::get_opening`].

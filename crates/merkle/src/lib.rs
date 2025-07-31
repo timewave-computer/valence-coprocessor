@@ -5,8 +5,10 @@
 extern crate alloc;
 
 mod boilerplate;
+mod compound;
 mod mutate;
-mod types;
+mod smt;
 mod verify;
 
-pub use types::*;
+pub use compound::*;
+pub use smt::*;

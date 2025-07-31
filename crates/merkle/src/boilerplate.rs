@@ -20,6 +20,9 @@ where
     /// Prefix used for key nodes.
     pub const PREFIX_KEY: &[u8] = b"smt-key";
 
+    /// Default namespace.
+    pub const DEFAULT_NAMESPACE: &[u8] = b"smt";
+
     /// Returns a stateless empty root to be used for newly allocated sparse Merkle trees.
     ///
     /// This is a cryptographic stateless computation and won't touch the data backend.
@@ -33,7 +36,7 @@ where
     }
 
     pub(crate) fn get_children(&self, parent: &Hash) -> anyhow::Result<Option<SmtChildren>> {
-        let data = match self.d.get(Self::PREFIX_NODE, parent)? {
+        let data = match self.d.get(&self.namespace_node, parent)? {
             Some(d) => d,
             None => return Ok(None),
         };
@@ -52,7 +55,7 @@ where
         let children = children.as_bytes();
 
         self.d
-            .set(Self::PREFIX_NODE, parent, children)?
+            .set(&self.namespace_node, parent, children)?
             .map(|d| {
                 SmtChildren::try_read_from_bytes(d.as_slice())
                     .map_err(|_| anyhow::anyhow!("inconsistent children bytes"))
@@ -61,7 +64,7 @@ where
     }
 
     pub(crate) fn remove_children(&self, parent: &Hash) -> anyhow::Result<Option<SmtChildren>> {
-        let data = match self.d.remove(Self::PREFIX_NODE, parent)? {
+        let data = match self.d.remove(&self.namespace_node, parent)? {
             Some(d) => d,
             None => return Ok(None),
         };
@@ -74,7 +77,7 @@ where
 
     pub(crate) fn remove_node_key(&self, node: &Hash) -> anyhow::Result<Option<Hash>> {
         self.d
-            .remove(Self::PREFIX_KEY, node)?
+            .remove(&self.namespace_key, node)?
             .map(Hash::try_from)
             .transpose()
             .map_err(|_| anyhow::anyhow!("failed to read hash from smt nodes"))
@@ -82,25 +85,25 @@ where
 
     pub(crate) fn get_node_key(&self, node: &Hash) -> anyhow::Result<Option<Hash>> {
         self.d
-            .get(Self::PREFIX_KEY, node)?
+            .get(&self.namespace_key, node)?
             .map(|o| o.try_into())
             .transpose()
             .map_err(|_| anyhow::anyhow!("error converting bytes to hash"))
     }
 
     pub(crate) fn has_node_key(&self, node: &Hash) -> anyhow::Result<bool> {
-        self.d.has(Self::PREFIX_KEY, node)
+        self.d.has(&self.namespace_key, node)
     }
 
     pub(crate) fn insert_node_key(&self, node: &Hash, key: &Hash) -> anyhow::Result<Option<Hash>> {
         Ok(self
             .d
-            .set(Self::PREFIX_KEY, node, key)?
+            .set(&self.namespace_key, node, key)?
             .map(|o| o.try_into().unwrap_or_default()))
     }
 
     pub(crate) fn remove_key_data(&self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
-        self.d.remove(Self::PREFIX_DATA, key)
+        self.d.remove(&self.namespace_data, key)
     }
 
     pub(crate) fn insert_key_data(
@@ -108,12 +111,12 @@ where
         key: &Hash,
         data: &[u8],
     ) -> anyhow::Result<Option<Vec<u8>>> {
-        self.d.set(Self::PREFIX_DATA, key, data)
+        self.d.set(&self.namespace_data, key, data)
     }
 
     /// Returns the payload of the provided domain root on the historical SMT.
     pub fn get_key_data(&self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
-        self.d.get(Self::PREFIX_DATA, key)
+        self.d.get(&self.namespace_data, key)
     }
 }
 
@@ -160,9 +163,13 @@ where
 {
     fn default() -> Self {
         Self {
+            namespace_node: Hash::default(),
+            namespace_data: Hash::default(),
+            namespace_key: Hash::default(),
             d: Default::default(),
             h: PhantomData,
         }
+        .with_namespace(Self::DEFAULT_NAMESPACE)
     }
 }
 
@@ -173,9 +180,13 @@ where
 {
     fn clone(&self) -> Self {
         Self {
+            namespace_node: Hash::default(),
+            namespace_data: Hash::default(),
+            namespace_key: Hash::default(),
             d: self.d.clone(),
             h: PhantomData,
         }
+        .with_namespace(Self::DEFAULT_NAMESPACE)
     }
 }
 
@@ -185,6 +196,33 @@ where
     H: Hasher,
 {
     fn from(d: D) -> Self {
-        Self { d, h: PhantomData }
+        Self {
+            namespace_node: Hash::default(),
+            namespace_data: Hash::default(),
+            namespace_key: Hash::default(),
+            d,
+            h: PhantomData,
+        }
+        .with_namespace(Self::DEFAULT_NAMESPACE)
+    }
+}
+
+impl<D, H> Smt<D, H>
+where
+    D: DataBackend,
+    H: Hasher,
+{
+    /// Creates a SMT with leaf data prefixed with the provided namespace.
+    ///
+    /// This is used to create compound Merkle opening proofs, where the namespace will define the
+    /// path for each of the keys.
+    pub fn with_namespace<N>(mut self, namespace: N) -> Self
+    where
+        N: AsRef<[u8]>,
+    {
+        self.namespace_node = H::digest([Self::PREFIX_NODE, namespace.as_ref()]);
+        self.namespace_data = H::digest([Self::PREFIX_DATA, namespace.as_ref()]);
+        self.namespace_key = H::digest([Self::PREFIX_KEY, namespace.as_ref()]);
+        self
     }
 }
