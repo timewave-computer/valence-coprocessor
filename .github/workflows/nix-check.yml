@@ -1,15 +1,15 @@
-#name: Nix build and check 
-#on:
-#  pull_request:
-#    branches:
-#      - main
-#  push:
-#    branches:
-#      - main
-#jobs:
-#  checks:
-#    uses: nixbuild/nixbuild-action/.github/workflows/ci-workflow.yml@b6e3664e0152f305ea993d78bbf798f0db39ffa3
-#    with:
-#      filter_builds: '.top_attr == "checks" and .system == "x86_64-linux"'
-#    secrets:
-#      nixbuild_token: ${{ secrets.NIXBUILD_TOKEN }}
+name: Nix build and check 
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+jobs:
+  checks:
+    uses: nixbuild/nixbuild-action/.github/workflows/ci-workflow.yml@b6e3664e0152f305ea993d78bbf798f0db39ffa3
+    with:
+      filter_builds: '.top_attr == "checks" and .system == "x86_64-linux"'
+    secrets:
+      nixbuild_token: ${{ secrets.NIXBUILD_TOKEN }}
