@@ -1,5 +1,5 @@
 use proptest::collection;
-use valence_coprocessor::MemorySmt;
+use valence_coprocessor::{CompoundOpeningBuilder, MemorySmt};
 use valence_coprocessor_merkle::Opening;
 use valence_coprocessor_types::{Blake3Hasher, Hasher};
 
@@ -323,6 +323,118 @@ fn deep_opening() -> anyhow::Result<()> {
     assert!(MemorySmt::verify(&p0, &root, &k0, &n[0].to_le_bytes()));
     assert!(MemorySmt::verify(&p1, &root, &k1, &n[1].to_le_bytes()));
     assert!(MemorySmt::verify(&p2, &root, &k2, &n[2].to_le_bytes()));
+
+    Ok(())
+}
+
+#[test]
+fn compound_opening() -> anyhow::Result<()> {
+    let context = "poem";
+    let mask = 0b11100000u8;
+
+    let ns = ["sm1", "sm2"];
+
+    let data = [
+        &[0x00, 0x00, 0x09],
+        &[0x00, 0x00, 0x19],
+        &[0x00, 0x00, 0x03],
+        &[0x00, 0x00, 0x05],
+    ];
+
+    let keys = [
+        Blake3Hasher::key(context, data[0]),
+        Blake3Hasher::key(context, data[1]),
+        Blake3Hasher::key(context, data[2]),
+        Blake3Hasher::key(context, data[3]),
+    ];
+
+    assert_eq!(keys[0][0] & mask, 0b10000000u8);
+    assert_eq!(keys[1][0] & mask, 0b11000000u8);
+    assert_eq!(keys[2][0] & mask, 0b10100000u8);
+    assert_eq!(keys[3][0] & mask, 0b01000000u8);
+
+    let mut roots = [MemorySmt::empty_tree_root(); 2];
+    let mut tree = MemorySmt::default().with_namespace(ns[0]);
+
+    let mut proofs = [
+        Opening::default(),
+        Opening::default(),
+        Opening::default(),
+        Opening::default(),
+    ];
+
+    // R = 0
+
+    tree = tree.with_namespace(ns[0]);
+    roots[0] = tree.insert(roots[0], &keys[0], data[0])?;
+    proofs[0] = tree.get_opening(roots[0], &keys[0])?.unwrap();
+
+    assert_eq!(proofs[0].len(), 0);
+
+    assert!(MemorySmt::verify(&proofs[0], &roots[0], &keys[0], data[0]));
+
+    //   R
+    //  / \
+    // _   o
+    //    / \
+    //   0   1
+
+    tree = tree.with_namespace(ns[0]);
+    roots[0] = tree.insert(roots[0], &keys[1], data[1])?;
+
+    proofs[0] = tree.get_opening(roots[0], &keys[0])?.unwrap();
+    proofs[1] = tree.get_opening(roots[0], &keys[1])?.unwrap();
+
+    assert_eq!(proofs[0].len(), 2);
+    assert_eq!(proofs[1].len(), 2);
+
+    assert!(MemorySmt::verify(&proofs[0], &roots[0], &keys[0], data[0]));
+    assert!(MemorySmt::verify(&proofs[1], &roots[0], &keys[1], data[1]));
+
+    // R = 2
+
+    tree = tree.with_namespace(ns[1]);
+    roots[1] = tree.insert(roots[1], &keys[2], data[2])?;
+    proofs[2] = tree.get_opening(roots[1], &keys[2])?.unwrap();
+
+    assert_eq!(proofs[2].len(), 0);
+
+    assert!(MemorySmt::verify(&proofs[2], &roots[1], &keys[2], data[2]));
+
+    //   R
+    //  / \
+    // 3   2
+
+    tree = tree.with_namespace(ns[1]);
+    roots[1] = tree.insert(roots[1], &keys[3], data[3])?;
+
+    proofs[2] = tree.get_opening(roots[1], &keys[2])?.unwrap();
+    proofs[3] = tree.get_opening(roots[1], &keys[3])?.unwrap();
+
+    assert_eq!(proofs[2].len(), 1);
+    assert_eq!(proofs[3].len(), 1);
+
+    assert!(MemorySmt::verify(&proofs[2], &roots[1], &keys[2], data[2]));
+    assert!(MemorySmt::verify(&proofs[3], &roots[1], &keys[3], data[3]));
+
+    //   R
+    //  / \
+    // _   o
+    //    / \
+    //   R   1
+    //  / \
+    // 3   2
+
+    tree = tree.with_namespace(ns[0]);
+    roots[0] = tree.insert_compound(roots[0], &keys[0], roots[1])?;
+
+    tree = tree.with_namespace(ns[1]);
+    let compound = CompoundOpeningBuilder::new(roots[1])
+        .with_tree(ns[1], keys[3])
+        .with_tree(ns[0], keys[0])
+        .opening(tree)?;
+
+    assert!(MemorySmt::verify_compound(&compound, &roots[1], data[3]));
 
     Ok(())
 }

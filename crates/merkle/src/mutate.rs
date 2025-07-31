@@ -10,9 +10,17 @@ where
 {
     /// Inserts a leaf into the tree.
     pub fn insert(&self, root: Hash, key: &Hash, data: &[u8]) -> anyhow::Result<Hash> {
-        let mut depth = 0;
+        self.insert_with_leaf(root, key, H::hash(data), data)
+    }
 
-        let leaf = H::hash(data);
+    pub(crate) fn insert_with_leaf(
+        &self,
+        root: Hash,
+        key: &Hash,
+        leaf: Hash,
+        data: &[u8],
+    ) -> anyhow::Result<Hash> {
+        let mut depth = 0;
 
         self.insert_key_data(key, data)?;
         self.insert_node_key(&leaf, key)?;

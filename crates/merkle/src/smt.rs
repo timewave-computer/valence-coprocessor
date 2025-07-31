@@ -12,6 +12,9 @@ where
     D: DataBackend,
     H: Hasher,
 {
+    pub(crate) namespace_node: Hash,
+    pub(crate) namespace_data: Hash,
+    pub(crate) namespace_key: Hash,
     pub(crate) d: D,
     pub(crate) h: PhantomData<H>,
 }
