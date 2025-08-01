@@ -60,14 +60,14 @@ impl CompoundOpening {
 ///
 /// ```text
 ///
-/// // We open from the innermost tree; that is n1
-/// let compound = CompoundOpeningBuilder::new(n1)
+/// // We open from the outmost tree; that is n0
+/// let compound = CompoundOpeningBuilder::new(n0)
 ///
-///     // we provide the namespace that created the root n1 with its respective leaf key.
-///     .with_tree(namespace1, k3)
-///
-///     // we proceed with the outmost tree n0 with the key k0 that opens to the root of n1.
+///     // we provide the namespace that created the root n0 with its respective leaf key.
 ///     .with_tree(namespace0, k0)
+///
+///     // we proceed with the outmost tree n1 with the key k3 that opens to the root of n1.
+///     .with_tree(namespace1, k3)
 ///
 ///     // finally, we open from the deepest tree.
 ///     .opening(tree.with_namespace(n1))?;
@@ -110,15 +110,24 @@ impl CompoundOpeningBuilder {
         for (namespace, key) in self.openings {
             smt = smt.with_namespace(namespace);
 
-            let (opening, node) = smt.get_opening_with_node(root, &key)?;
-            let opening = match opening {
-                Some(o) => o,
-                None => break,
-            };
+            let keyed = smt.get_keyed_opening(root, &key)?;
 
-            root = node;
-            trees.push(CompoundEntry { key, opening });
+            anyhow::ensure!(
+                keyed.key == key,
+                "the key `{}` is not present for the compound tree `{}`",
+                hex::encode(key),
+                hex::encode(root),
+            );
+
+            root = keyed.node;
+
+            trees.push(CompoundEntry {
+                key,
+                opening: keyed.opening,
+            });
         }
+
+        trees.reverse();
 
         Ok(CompoundOpening { trees })
     }

@@ -22,6 +22,24 @@ pub trait Hasher: Clone {
     fn digest<'a>(data: impl IntoIterator<Item = &'a [u8]>) -> Hash;
 }
 
+impl Hasher for () {
+    fn key(_context: &str, _data: &[u8]) -> Hash {
+        Hash::default()
+    }
+
+    fn hash(_data: &[u8]) -> Hash {
+        Hash::default()
+    }
+
+    fn merge(_a: &Hash, _b: &Hash) -> Hash {
+        Hash::default()
+    }
+
+    fn digest<'a>(_data: impl IntoIterator<Item = &'a [u8]>) -> Hash {
+        Hash::default()
+    }
+}
+
 #[cfg(feature = "blake3")]
 pub use blake3::*;
 

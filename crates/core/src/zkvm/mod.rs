@@ -1,10 +1,13 @@
 use alloc::vec::Vec;
 use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
-use valence_coprocessor_merkle::Opening;
+use valence_coprocessor_merkle::CompoundOpening;
 use valence_coprocessor_types::{StateProof, ValidatedWitnesses, Witness};
 
-use crate::{DataBackend, ExecutionContext, Hash, Hasher, Proof};
+use crate::{DataBackend, ExecutionContext, Hash, Hasher, Historical, Proof};
+
+#[cfg(test)]
+mod tests;
 
 /// A zkVM definition.
 pub trait ZkVm: Clone + Sized {
@@ -46,11 +49,8 @@ pub struct DomainOpening {
     /// Proven state.
     pub proof: StateProof,
 
-    /// Block payload.
-    pub payload: Vec<u8>,
-
-    /// Opening proof to root.
-    pub opening: Opening,
+    /// Opening proof to the coprocessor root.
+    pub opening: CompoundOpening,
 }
 
 /// A circuit witness data obtained via Valence API.
@@ -67,25 +67,65 @@ pub struct WitnessCoprocessor {
 }
 
 impl WitnessCoprocessor {
+    /// Attemtps to create an instance from a set of witnesses.
+    ///
+    /// Will compute the domain opening for every state proof.
+    pub fn try_from_witnesses<H, D>(
+        data: D,
+        root: Hash,
+        witnesses: Vec<Witness>,
+    ) -> anyhow::Result<Self>
+    where
+        H: Hasher,
+        D: DataBackend,
+    {
+        let proofs = witnesses
+            .iter()
+            .filter_map(|w| w.as_state_proof().cloned())
+            .map(|proof| {
+                let opening = Historical::<H, D>::get_block_proof_with_historical(
+                    data.clone(),
+                    root,
+                    proof.domain,
+                    proof.number,
+                )?;
+
+                Ok(DomainOpening { proof, opening })
+            })
+            .collect::<anyhow::Result<_>>()?;
+
+        Ok(Self {
+            root,
+            proofs,
+            witnesses,
+        })
+    }
+
     /// Validates the co-processor witness, yielding verified state proofs & data for the circuit.
     pub fn validate<H: Hasher>(mut self) -> anyhow::Result<ValidatedWitnesses> {
-        for o in &self.proofs {
-            let key = H::key(&o.proof.domain, &o.proof.root);
-            let value = H::hash(&o.payload);
+        let mut witnesses = self.witnesses.iter_mut();
 
-            tracing::debug!("verifying domain opening for {key:x?}, {value:x?}");
+        for p in self.proofs {
+            let root = Historical::<H, ()>::compute_root(&p.opening, &p.proof.state_root);
+            let domain = Historical::<H, ()>::get_domain_id(&p.opening)
+                .ok_or_else(|| anyhow::anyhow!("failed to compute domain id"))?;
 
-            anyhow::ensure!(o.opening.verify::<H>(&self.root, &key, &value));
-        }
+            anyhow::ensure!(root == self.root, "invalid opening to root");
+            anyhow::ensure!(domain == p.proof.domain, "unexpected domain");
 
-        let mut proofs = self.proofs.into_iter().map(|o| o.proof);
+            let mut w;
 
-        for w in self.witnesses.iter_mut() {
-            if let Witness::StateProof(s) = w {
-                *s = proofs
+            loop {
+                w = witnesses
                     .next()
-                    .ok_or_else(|| anyhow::anyhow!("no state proof available"))?;
+                    .ok_or_else(|| anyhow::anyhow!("witnesses set depleted"))?;
+
+                if w.as_state_proof().is_some() {
+                    break;
+                }
             }
+
+            *w = Witness::StateProof(p.proof);
         }
 
         Ok(ValidatedWitnesses {

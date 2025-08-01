@@ -6,15 +6,13 @@ extern crate alloc;
 
 mod context;
 mod domain;
+mod historical;
 mod registry;
 mod vm;
 mod zkvm;
 
 #[cfg(feature = "std")]
 mod data;
-
-#[cfg(feature = "std")]
-mod historical;
 
 #[cfg(feature = "std")]
 pub mod utils;
@@ -24,15 +22,13 @@ pub mod mocks;
 
 pub use context::*;
 pub use domain::*;
+pub use historical::*;
 pub use registry::*;
 pub use vm::*;
 pub use zkvm::*;
 
 #[cfg(feature = "std")]
 pub use data::*;
-
-#[cfg(feature = "std")]
-pub use historical::*;
 
 pub use valence_coprocessor_merkle::*;
 pub use valence_coprocessor_types::*;

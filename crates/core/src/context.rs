@@ -1,11 +1,14 @@
+use core::marker::PhantomData;
+
 use alloc::{rc::Rc, vec::Vec};
 
-use msgpacker::Unpackable as _;
 use serde_json::Value;
+use valence_coprocessor_merkle::CompoundOpening;
+use valence_coprocessor_types::HistoricalUpdate;
 
 use crate::{
-    Blake3Hasher, DataBackend, DomainData, DomainOpening, Hash, Hasher, Opening, Registry, Smt,
-    StateProof, ValidatedDomainBlock, Vm, Witness, WitnessCoprocessor, ZkVm,
+    Blake3Hasher, DataBackend, DomainData, Hash, Hasher, Historical, Registry, StateProof,
+    ValidatedDomainBlock, Vm, Witness, WitnessCoprocessor, ZkVm,
 };
 
 pub use buf_fs::{File, FileSystem};
@@ -19,9 +22,10 @@ where
     D: DataBackend,
 {
     data: D,
+    hasher: PhantomData<H>,
     registry: Registry<D>,
-    historical: Smt<D, H>,
     historical_root: Hash,
+    history_tree: Hash,
     controller: Hash,
 
     #[cfg(feature = "std")]
@@ -54,12 +58,6 @@ where
     H: Hasher,
     D: DataBackend,
 {
-    /// Data backend prefix for the historical SMT.
-    pub const PREFIX_SMT: &[u8] = b"smt-historical";
-
-    /// Data backend prefix for the latest block of a domain.
-    pub const PREFIX_BLOCK: &[u8] = b"smt-domain-block";
-
     /// Data backend prefix for the context controller data.
     pub const PREFIX_CONTROLLER: &[u8] = b"context-controller";
 
@@ -122,38 +120,11 @@ where
         &self,
         witnesses: Vec<Witness>,
     ) -> anyhow::Result<WitnessCoprocessor> {
-        let root = self.inner.historical_root;
-        let proofs = witnesses
-            .iter()
-            .filter_map(|w| match w {
-                Witness::StateProof(p) => Some(p),
-                _ => None,
-            })
-            .map(|p| {
-                let key = H::key(&p.domain, &p.root);
-                let payload = self
-                    .inner
-                    .historical
-                    .get_key_data(&key)?
-                    .unwrap_or_default();
-
-                self.inner
-                    .historical
-                    .get_opening(root, &key)?
-                    .map(|opening| DomainOpening {
-                        proof: p.clone(),
-                        payload,
-                        opening,
-                    })
-                    .ok_or_else(|| anyhow::anyhow!("failed to compute the domain proof"))
-            })
-            .collect::<anyhow::Result<Vec<_>>>()?;
-
-        Ok(WitnessCoprocessor {
-            root,
-            proofs,
+        WitnessCoprocessor::try_from_witnesses::<H, D>(
+            self.inner.data.clone(),
+            self.inner.historical_root,
             witnesses,
-        })
+        )
     }
 
     /// Returns the circuit verifying key.
@@ -253,14 +224,30 @@ where
 
     /// Returns the last included block for the provided domain.
     pub fn get_latest_block(&self, domain: &str) -> anyhow::Result<Option<ValidatedDomainBlock>> {
-        let domain = DomainData::identifier_from_parts(domain);
-        let block = self.inner.data.get(Self::PREFIX_BLOCK, &domain)?;
-        let block = block
-            .map(|b| ValidatedDomainBlock::unpack(&b).map(|(_, b)| b))
-            .transpose()
-            .map_err(|e| anyhow::anyhow!("failed to parse validated block: {e}"))?;
+        Historical::<H, D>::get_latest_block(&self.inner.data, domain)
+    }
 
-        Ok(block)
+    /// Returns a Merkle proof that opens a block number to the historical root.
+    pub fn get_block_proof(
+        &self,
+        domain: &str,
+        block_number: u64,
+    ) -> anyhow::Result<CompoundOpening> {
+        Historical::<H, D>::get_block_proof_for_domain_with_historical(
+            self.inner.data.clone(),
+            self.inner.historical_root,
+            domain,
+            block_number,
+        )
+    }
+
+    ///  Returns the historical tree update that generated the provided root.
+    pub fn get_historical_update(&self, root: Hash) -> anyhow::Result<Option<HistoricalUpdate>> {
+        Historical::<H, D>::get_historical_update_with_tree(
+            self.inner.data.clone(),
+            self.inner.history_tree,
+            root,
+        )
     }
 
     #[cfg(feature = "std")]
@@ -293,29 +280,6 @@ where
         self.inner.historical_root
     }
 
-    /// Returns the opening to the provided root on the historical SMT.
-    pub fn get_historical_opening(
-        &self,
-        tree: Hash,
-        domain: &str,
-        root: &[u8],
-    ) -> anyhow::Result<Option<Opening>> {
-        let key = H::key(domain, root);
-
-        self.inner.historical.get_opening(tree, &key)
-    }
-
-    /// Returns the payload of the provided domain root on the historical SMT.
-    pub fn get_historical_payload(
-        &self,
-        domain: &str,
-        root: &[u8],
-    ) -> anyhow::Result<Option<Vec<u8>>> {
-        let key = H::key(domain, root);
-
-        self.inner.historical.get_key_data(&key)
-    }
-
     /// Calls the entrypoint of the controller with the provided arguments.
     pub fn entrypoint<VM>(&self, vm: &VM, args: Value) -> anyhow::Result<Value>
     where
@@ -332,12 +296,18 @@ where
 {
     /// Initializes a new execution context.
     #[allow(dead_code)]
-    pub(crate) fn init(controller: Hash, historical_root: Hash, data: D) -> Self {
+    pub(crate) fn init(
+        controller: Hash,
+        historical_root: Hash,
+        history_tree: Hash,
+        data: D,
+    ) -> Self {
         Self {
             inner: Rc::new(ExecutionContextInner {
                 data: data.clone(),
-                historical: Smt::from(data.clone()),
+                hasher: PhantomData,
                 historical_root,
+                history_tree,
                 registry: Registry::from(data.clone()),
                 controller,
 

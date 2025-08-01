@@ -1,4 +1,5 @@
 use flume::Sender;
+use poem::http::StatusCode;
 use poem::web::Data;
 use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::{json, Value};
@@ -132,8 +133,6 @@ pub struct DomainAddBlockResponse {
     pub number: u64,
     /// The hash root of the block.
     pub root: Hash,
-    /// SMT key to index the payload.
-    pub key: Hash,
     /// Block blob payload.
     pub payload: Vec<u8>,
 }
@@ -394,7 +393,6 @@ impl Api {
             domain,
             number,
             root,
-            key,
             payload,
         } = ctx
             .get_latest_block(&domain)?
@@ -405,7 +403,6 @@ impl Api {
             "domain": hex::encode(domain),
             "number": number,
             "root": hex::encode(root),
-            "key": hex::encode(key),
             "payload": hex::encode(payload),
         })))
     }
@@ -432,7 +429,6 @@ impl Api {
         let ValidatedDomainBlock {
             number,
             root,
-            key,
             payload,
             ..
         } = block;
@@ -444,10 +440,48 @@ impl Api {
             log,
             number,
             root,
-            key,
             payload,
         }))
     }
+
+    /// Get the historical update for the provided historical tree root.
+    #[oai(path = "/registry/historical/:root", method = "get")]
+    pub async fn historical_update(
+        &self,
+        root: Path<String>,
+        historical: Data<&Historical>,
+    ) -> poem::Result<Json<Value>> {
+        let root = try_str_to_hash(&root)?;
+        let update = historical.get_historical_update(root)?;
+        let update = match update {
+            Some(u) => u,
+            None => return Err(r404()),
+        };
+
+        Ok(Json(json!(update)))
+    }
+
+    /// Get the historical proof for the provided domain.
+    #[oai(path = "/registry/historical/:domain/:number", method = "get")]
+    pub async fn historical_proof(
+        &self,
+        domain: Path<String>,
+        number: Path<String>,
+        historical: Data<&Historical>,
+    ) -> poem::Result<Json<Value>> {
+        let number = number.parse().map_err(|_| r400())?;
+        let proof = historical.get_block_proof_for_domain(&domain, number)?;
+
+        Ok(Json(json!(proof)))
+    }
+}
+
+fn r400() -> poem::Error {
+    poem::Error::from_status(StatusCode::BAD_REQUEST)
+}
+
+fn r404() -> poem::Error {
+    poem::Error::from_status(StatusCode::NOT_FOUND)
 }
 
 fn try_str_to_hash(hash: &str) -> anyhow::Result<Hash> {

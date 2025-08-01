@@ -77,64 +77,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alloy-sol-macro"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aedac07a10d4c2027817a43cc1f038313fc53c7ac866f7363239971fd01f9f18"
-dependencies = [
- "alloy-sol-macro-expander",
- "alloy-sol-macro-input",
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.104",
-]
-
-[[package]]
-name = "alloy-sol-macro-expander"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24f9a598f010f048d8b8226492b6401104f5a5c1273c2869b72af29b48bb4ba9"
-dependencies = [
- "alloy-sol-macro-input",
- "const-hex",
- "heck 0.5.0",
- "indexmap 2.10.0",
- "proc-macro-error2",
- "proc-macro2",
- "quote",
- "syn 2.0.104",
- "syn-solidity",
- "tiny-keccak",
-]
-
-[[package]]
-name = "alloy-sol-macro-input"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f494adf9d60e49aa6ce26dfd42c7417aa6d4343cf2ae621f20e4d92a5ad07d85"
-dependencies = [
- "const-hex",
- "dunce",
- "heck 0.5.0",
- "macro-string",
- "proc-macro2",
- "quote",
- "syn 2.0.104",
- "syn-solidity",
-]
-
-[[package]]
-name = "alloy-sol-types"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a285b46e3e0c177887028278f04cc8262b76fd3b8e0e20e93cea0a58c35f5ac5"
-dependencies = [
- "alloy-primitives",
- "alloy-sol-macro",
-]
-
-[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -857,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-valence"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -902,9 +844,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.30"
+version = "1.2.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deec109607ca693028562ed836a5f1c4b8bd77755c4e132fc5ce11b0b6211ae7"
+checksum = "c3a42d84bb6b69d3a8b3eaacf0d88f179e1929695e1ad012b6cf64d9caaa5fd2"
 dependencies = [
  "jobserver",
  "libc",
@@ -1605,7 +1547,7 @@ checksum = "e01a3366d27ee9890022452ee61b2b63a67e6f13f58900b651ff5665f0bb1fab"
 dependencies = [
  "libc",
  "option-ext",
- "redox_users 0.5.1",
+ "redox_users 0.5.2",
  "windows-sys 0.60.2",
 ]
 
@@ -1661,12 +1603,6 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
 ]
-
-[[package]]
-name = "dunce"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
 
 [[package]]
 name = "ecdsa"
@@ -2872,7 +2808,6 @@ checksum = "391290121bad3d37fbddad76d8f5d1c1c314cfc646d143d7e07a3086ddff0ce3"
 dependencies = [
  "bitflags",
  "libc",
- "redox_syscall",
 ]
 
 [[package]]
@@ -2940,17 +2875,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d640282b302c0bb0a2a8e0233ead9035e3bed871f0b7e81fe4a1ec829765db44"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "macro-string"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b27834086c65ec3f9387b096d66e99f221cf081c2b738042aa252bcd41204e3"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.104",
 ]
 
 [[package]]
@@ -3965,28 +3889,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proc-macro-error-attr2"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96de42df36bb9bba5542fe9f1a054b8cc87e172759a1868aa05c1f3acc89dfc5"
-dependencies = [
- "proc-macro2",
- "quote",
-]
-
-[[package]]
-name = "proc-macro-error2"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11ec05c52be0a07b08061f7dd003e7d7092e0472bc731b4af7bb1ef876109802"
-dependencies = [
- "proc-macro-error-attr2",
- "proc-macro2",
- "quote",
- "syn 2.0.104",
-]
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4312,9 +4214,9 @@ dependencies = [
 
 [[package]]
 name = "redox_users"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78eaea1f52c56d57821be178b2d47e09ff26481a6042e8e042fcb0ced068b470"
+checksum = "a4e608c6638b9c18977b00b475ac1f28d14e84b27d8d42f70e0bf1e3dec127ac"
 dependencies = [
  "getrandom 0.2.16",
  "libredox",
@@ -4811,9 +4713,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.141"
+version = "1.0.142"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30b9eff21ebe718216c6ec64e1d9ac57087aad11efc64e32002bce4a0d4c03d3"
+checksum = "030fedb782600dcbd6f02d479bf0d817ac3bb40d644745b769d6a96bc3afc5a7"
 dependencies = [
  "itoa",
  "memchr",
@@ -5035,9 +4937,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-build"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8b0ae601dd5e1ed72e8f7bfdb3db25409daa3975f1f34b7e4c6dc11cb7756bd"
+checksum = "88d96525859507f33edf4389c16470d21f6515d33ae7a2c73d5fb0aea36f5aba"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -5049,9 +4951,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-core-executor"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a585a154b0b43d75481c5e58057c3dd72d88c8a36b30205a2365718e493cd2d"
+checksum = "b56e34c5471e3aa03232fb8317b34ce65591d202102db911a0b2a205dbf402cd"
 dependencies = [
  "bincode",
  "bytemuck",
@@ -5088,9 +4990,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-core-machine"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20e23baf403939adcbe73070bf03f41da26e0d4a18382408a945606cb168fb0d"
+checksum = "24633e4abce5b23283496d01c68268860629de8cd3687c813e064e8056f69f16"
 dependencies = [
  "bincode",
  "cbindgen",
@@ -5145,9 +5047,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-cuda"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2efa1d0adcc7744ca6427898ba8ce4e8a5d94540e674b5c2e136821f086376f"
+checksum = "d3d56209b50707201184746b749d3e791f3d33411539f508a563405de1fb8694"
 dependencies = [
  "bincode",
  "ctrlc",
@@ -5162,9 +5064,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-curves"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9208e3831da02d1327bd33d852d06770a1c6dbd291591e5a6f0f6a3f4fc44ff9"
+checksum = "3f41a82cad6d25d7d91f994262edc0c346d2be000b7629f50bbb5eeb32151c71"
 dependencies = [
  "cfg-if",
  "dashu",
@@ -5226,9 +5128,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-prover"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afaa1d5a3ccb8b366ec109c396681fdc07d8c637aa6003889f171aaac86d18ed"
+checksum = "d5fa3bb2b42cd36c1045472900dcc348a61475774734a5d8cdd4acaf929396ff"
 dependencies = [
  "anyhow",
  "bincode",
@@ -5271,9 +5173,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-recursion-circuit"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df69d5d8fac13f45cf4f2d79e27204091fde377ec71253dd7b55101de675d5fb"
+checksum = "4e725f838e5a8d0248eeb8d3666cf8a53e0a4195686c3a3d1c86d9c65a7c1b3d"
 dependencies = [
  "hashbrown 0.14.5",
  "itertools 0.13.0",
@@ -5306,9 +5208,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-recursion-compiler"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "315f723325c6029c0716ff3b272aaffe4c0a7f9612d2b3fe5b3d4838895f9e3d"
+checksum = "b320b12f11429f09b33179256aae999ac57059a3df75c815a1e8fc97edc66822"
 dependencies = [
  "backtrace",
  "itertools 0.13.0",
@@ -5328,9 +5230,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-recursion-core"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70c10b0080100f579c90914c1587414a4adc3a102e2d607566f3ac8a60f67536"
+checksum = "472a2c6e36cc47814b82bbd73bc911a410c7a85ea70c6c5f78cc0a19a98be71d"
 dependencies = [
  "backtrace",
  "cbindgen",
@@ -5381,9 +5283,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-recursion-gnark-ffi"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b10e8e6519c601ee244ff29d2746787d524034b4dbe42a1d66f901386396febd"
+checksum = "cb0f48c722ad9319b3bc02ac2e61f5a82f8b8584fcdab5fe60db0b2292972857"
 dependencies = [
  "anyhow",
  "bincode",
@@ -5407,12 +5309,11 @@ dependencies = [
 
 [[package]]
 name = "sp1-sdk"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "107fab01d5f78c4d3537ddd768de9b22d9ba442aea50d404c2a988265bdb00ba"
+checksum = "bb6f73c5efb1f55c0b6dca8a9427124eff4e36bd57108a96a7eb5a6034cf61a1"
 dependencies = [
  "alloy-primitives",
- "alloy-sol-types",
  "anyhow",
  "async-trait",
  "backoff",
@@ -5453,9 +5354,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-stark"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbe80bdd3bb89d1543c1ad53a47fd902fe20293d4e1ccc20ca2ecff600f32477"
+checksum = "0e60392613a5b36b34a2e46a055a67d952014c359feda2731354b708f5ea8f80"
 dependencies = [
  "arrayref",
  "hashbrown 0.14.5",
@@ -5488,9 +5389,9 @@ dependencies = [
 
 [[package]]
 name = "sp1-verifier"
-version = "5.1.0"
+version = "5.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f322157eb4ab635d733bb1c538add9c22fd8d41b207020fa148a03bcb0d5082"
+checksum = "67ea3f0cad7b03ab302713ed46ffc39dcf549922eaa03959ead26281df8efbe1"
 dependencies = [
  "ark-bn254",
  "ark-ec",
@@ -5626,18 +5527,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "syn-solidity"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7a985ff4ffd7373e10e0fb048110fb11a162e5a4c47f92ddb8787a6f766b769"
-dependencies = [
- "paste",
- "proc-macro2",
- "quote",
- "syn 2.0.104",
 ]
 
 [[package]]
@@ -5858,9 +5747,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.47.0"
+version = "1.47.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43864ed400b6043a4757a25c7a64a8efde741aed79a056a2fb348a406701bb35"
+checksum = "89e49afdadebb872d3145a5638b59eb0691ea23e46ca484037cfab3b76b95038"
 dependencies = [
  "backtrace",
  "bytes",
@@ -6330,14 +6219,16 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "base64",
  "buf-fs",
  "hashbrown 0.15.4",
+ "hex",
  "msgpacker",
  "proptest",
+ "rand 0.9.2",
  "reqwest",
  "serde",
  "serde_json",
@@ -6350,7 +6241,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-client"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "hex",
@@ -6365,9 +6256,10 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-merkle"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
+ "hex",
  "msgpacker",
  "proptest",
  "serde",
@@ -6378,7 +6270,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-prover"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -6403,7 +6295,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-redis"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "r2d2",
@@ -6413,7 +6305,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-service"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -6437,7 +6329,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-sp1"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -6457,7 +6349,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-types"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -6470,7 +6362,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm"
-version = "0.3.13"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "dlmalloc",

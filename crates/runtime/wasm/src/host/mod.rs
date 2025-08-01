@@ -84,18 +84,14 @@ where
         linker.func_wrap(HOST_CONTROLLER, "get_historical", valence::get_historical)?;
         linker.func_wrap(
             HOST_CONTROLLER,
-            "get_historical_opening",
-            valence::get_historical_opening,
-        )?;
-        linker.func_wrap(
-            HOST_CONTROLLER,
-            "get_historical_payload",
-            valence::get_historical_payload,
-        )?;
-        linker.func_wrap(
-            HOST_CONTROLLER,
             "get_latest_block",
             valence::get_latest_block,
+        )?;
+        linker.func_wrap(HOST_CONTROLLER, "get_block_proof", valence::get_block_proof)?;
+        linker.func_wrap(
+            HOST_CONTROLLER,
+            "get_historical_update",
+            valence::get_historical_update,
         )?;
         linker.func_wrap(HOST_CONTROLLER, "get_state_proof", valence::get_state_proof)?;
         linker.func_wrap(HOST_CONTROLLER, "http", valence::http)?;

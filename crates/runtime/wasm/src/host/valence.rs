@@ -30,6 +30,8 @@ pub enum ReturnCodes {
     HistoricalPayload = -17,
     AlchemyApiKey = -18,
     AlchemyResult = -19,
+    BlockProof = -20,
+    HistoricalUpdate = -21,
 }
 
 /// Resolves a panic.
@@ -319,96 +321,6 @@ where
     }
 }
 
-/// Returns the opening to the provided root on the historical SMT.
-pub(super) fn get_historical_opening<H, D, VM>(
-    mut caller: Caller<Runtime<H, D, VM>>,
-    tree_ptr: u32,
-    domain_ptr: u32,
-    domain_len: u32,
-    root_ptr: u32,
-    root_len: u32,
-    ptr: u32,
-) -> i32
-where
-    H: Hasher,
-    D: DataBackend,
-    VM: Vm<H, D>,
-{
-    let mem = match caller.get_export("memory") {
-        Some(Extern::Memory(mem)) => mem,
-        _ => return ReturnCodes::MemoryExport as i32,
-    };
-
-    let tree = match read_hash(&mut caller, &mem, tree_ptr) {
-        Ok(d) => d,
-        Err(e) => return e,
-    };
-
-    let domain = match read_string(&mut caller, &mem, domain_ptr, domain_len) {
-        Ok(d) => d,
-        Err(e) => return e,
-    };
-
-    let root = match read_buffer(&mut caller, &mem, root_ptr, root_len) {
-        Ok(d) => d,
-        Err(e) => return e,
-    };
-
-    let opening = match caller
-        .data()
-        .ctx
-        .get_historical_opening(tree, &domain, &root)
-    {
-        Ok(o) => o,
-        Err(_) => return ReturnCodes::HistoricalOpening as i32,
-    };
-
-    match serialize(&mut caller, &mem, ptr, &opening) {
-        Ok(len) => len,
-        Err(e) => e,
-    }
-}
-
-/// Returns the payload of the provided domain root on the historical SMT.
-pub(super) fn get_historical_payload<H, D, VM>(
-    mut caller: Caller<Runtime<H, D, VM>>,
-    domain_ptr: u32,
-    domain_len: u32,
-    root_ptr: u32,
-    root_len: u32,
-    ptr: u32,
-) -> i32
-where
-    H: Hasher,
-    D: DataBackend,
-    VM: Vm<H, D>,
-{
-    let mem = match caller.get_export("memory") {
-        Some(Extern::Memory(mem)) => mem,
-        _ => return ReturnCodes::MemoryExport as i32,
-    };
-
-    let domain = match read_string(&mut caller, &mem, domain_ptr, domain_len) {
-        Ok(d) => d,
-        Err(e) => return e,
-    };
-
-    let root = match read_buffer(&mut caller, &mem, root_ptr, root_len) {
-        Ok(d) => d,
-        Err(e) => return e,
-    };
-
-    let payload = match caller.data().ctx.get_historical_payload(&domain, &root) {
-        Ok(o) => o,
-        Err(_) => return ReturnCodes::HistoricalPayload as i32,
-    };
-
-    match serialize(&mut caller, &mem, ptr, &payload) {
-        Ok(len) => len,
-        Err(e) => e,
-    }
-}
-
 /// Returns the last included block for the provided domain.
 pub fn get_latest_block<H, D, VM>(
     mut caller: Caller<Runtime<H, D, VM>>,
@@ -437,6 +349,75 @@ where
     };
 
     match serialize(&mut caller, &mem, ptr, &block) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
+pub fn get_block_proof<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
+    domain_ptr: u32,
+    domain_len: u32,
+    block_number_ptr: u32,
+    ptr: u32,
+) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    VM: Vm<H, D>,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let domain = match read_string(&mut caller, &mem, domain_ptr, domain_len) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let block_number = match read_u64(&mut caller, &mem, block_number_ptr) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let proof = match caller.data().ctx.get_block_proof(&domain, block_number) {
+        Ok(p) => p,
+        Err(_) => return ReturnCodes::BlockProof as i32,
+    };
+
+    match serialize(&mut caller, &mem, ptr, &proof) {
+        Ok(len) => len,
+        Err(e) => e,
+    }
+}
+
+pub fn get_historical_update<H, D, VM>(
+    mut caller: Caller<Runtime<H, D, VM>>,
+    root_ptr: u32,
+    ptr: u32,
+) -> i32
+where
+    H: Hasher,
+    D: DataBackend,
+    VM: Vm<H, D>,
+{
+    let mem = match caller.get_export("memory") {
+        Some(Extern::Memory(mem)) => mem,
+        _ => return ReturnCodes::MemoryExport as i32,
+    };
+
+    let root = match read_hash(&mut caller, &mem, root_ptr) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+
+    let update = match caller.data().ctx.get_historical_update(root) {
+        Ok(u) => u,
+        Err(_) => return ReturnCodes::HistoricalUpdate as i32,
+    };
+
+    match serialize(&mut caller, &mem, ptr, &update) {
         Ok(len) => len,
         Err(e) => e,
     }
@@ -683,6 +664,23 @@ where
 {
     read_buffer(caller, mem, ptr, HASH_LEN as u32).and_then(|buffer| {
         Hash::try_from(buffer.as_slice()).map_err(|_| ReturnCodes::BufferTooLarge as i32)
+    })
+}
+
+fn read_u64<H, D, VM>(
+    caller: &mut Caller<Runtime<H, D, VM>>,
+    mem: &Memory,
+    ptr: u32,
+) -> Result<u64, i32>
+where
+    H: Hasher,
+    D: DataBackend,
+    VM: Vm<H, D>,
+{
+    read_buffer(caller, mem, ptr, 8).and_then(|buffer| {
+        <[u8; 8]>::try_from(buffer.as_slice())
+            .map(u64::from_le_bytes)
+            .map_err(|_| ReturnCodes::BufferTooLarge as i32)
     })
 }
 

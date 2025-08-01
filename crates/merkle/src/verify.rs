@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use valence_coprocessor_types::{DataBackend, Hash, Hasher, HASH_LEN};
 
-use crate::{Opening, Smt, SmtChildren};
+use crate::{KeyedOpening, Opening, Smt, SmtChildren};
 
 impl Opening {
     /// Computes the root for the opening.
@@ -45,15 +45,16 @@ where
 {
     /// Computes a Merkle opening proof for the provided leaf to the root.
     pub fn get_opening(&self, root: Hash, key: &Hash) -> anyhow::Result<Option<Opening>> {
-        Ok(self.get_opening_with_node(root, key)?.0)
+        let keyed = self.get_keyed_opening(root, key)?;
+
+        Ok((key == &keyed.key).then_some(keyed.opening))
     }
 
     /// Computes a Merkle opening proof for the provided leaf to the root.
-    pub fn get_opening_with_node(
-        &self,
-        root: Hash,
-        key: &Hash,
-    ) -> anyhow::Result<(Option<Opening>, Hash)> {
+    ///
+    /// Note: the returned node may not be the one with the target key. The routine will return the
+    /// first leaf that matches the path provided by the key.
+    pub fn get_keyed_opening(&self, root: Hash, key: &Hash) -> anyhow::Result<KeyedOpening> {
         let (mut i, mut j) = (0, 0);
         let mut leaf_node = root;
         let mut opening = Vec::with_capacity(HASH_LEN * 8);
@@ -88,7 +89,14 @@ where
 
         opening.reverse();
 
-        Ok((Some(Opening::new(opening)), leaf_node))
+        let key = self.get_node_key(&leaf_node)?.unwrap_or_default();
+        let opening = Opening::new(opening);
+
+        Ok(KeyedOpening {
+            key,
+            node: leaf_node,
+            opening,
+        })
     }
 
     /// Verifies a Merkle opening generated via [`Smt::get_opening`].

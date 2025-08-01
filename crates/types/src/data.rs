@@ -29,6 +29,32 @@ pub trait DataBackend: Clone {
     fn set_bulk(&self, prefix: &[u8], key: &[u8], data: &[u8]) -> anyhow::Result<()>;
 }
 
+impl DataBackend for () {
+    fn get(&self, _prefix: &[u8], _key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        Err(anyhow::anyhow!("unit type is not a valid data backend"))
+    }
+
+    fn has(&self, _prefix: &[u8], _key: &[u8]) -> anyhow::Result<bool> {
+        Err(anyhow::anyhow!("unit type is not a valid data backend"))
+    }
+
+    fn remove(&self, _prefix: &[u8], _key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        Err(anyhow::anyhow!("unit type is not a valid data backend"))
+    }
+
+    fn set(&self, _prefix: &[u8], _key: &[u8], _data: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        Err(anyhow::anyhow!("unit type is not a valid data backend"))
+    }
+
+    fn get_bulk(&self, _prefix: &[u8], _key: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+        Err(anyhow::anyhow!("unit type is not a valid data backend"))
+    }
+
+    fn set_bulk(&self, _prefix: &[u8], _key: &[u8], _data: &[u8]) -> anyhow::Result<()> {
+        Err(anyhow::anyhow!("unit type is not a valid data backend"))
+    }
+}
+
 /// The unique identifier of a domain that is supported by Valence programs.
 #[derive(
     Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
@@ -128,10 +154,13 @@ impl ControllerData {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker)]
 pub struct StateProof {
     /// Domain of the proof.
-    pub domain: String,
+    pub domain: Hash,
 
-    /// Domain root of the proof.
-    pub root: Hash,
+    /// Block number.
+    pub number: u64,
+
+    /// State root of the domain.
+    pub state_root: Hash,
 
     /// An arbitrary payload for the block.
     pub payload: Vec<u8>,
@@ -148,6 +177,18 @@ pub enum Witness {
 
     /// Arbitrary execution data.
     Data(Vec<u8>),
+}
+
+impl From<StateProof> for Witness {
+    fn from(proof: StateProof) -> Self {
+        Self::StateProof(proof)
+    }
+}
+
+impl From<Vec<u8>> for Witness {
+    fn from(data: Vec<u8>) -> Self {
+        Self::Data(data)
+    }
 }
 
 impl Witness {
@@ -243,11 +284,23 @@ pub struct ValidatedDomainBlock {
     /// The hash root of the block.
     pub root: Hash,
 
-    /// SMT key to index the payload.
-    pub key: Hash,
-
     /// Block blob payload.
     pub payload: Vec<u8>,
+}
+
+/// A historical tree chained update.
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
+)]
+pub struct HistoricalUpdate {
+    /// Current historical root.
+    pub root: Hash,
+
+    /// Historical root priot to the update
+    pub previous: Hash,
+
+    /// Block that triggered the update.
+    pub block: ValidatedDomainBlock,
 }
 
 /// A confirmation of an added block.

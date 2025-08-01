@@ -7,6 +7,7 @@ description = "The Valence co-processor Merkle primitives"
 
 [dependencies]
 anyhow.workspace = true
+hex.workspace = true
 msgpacker.workspace = true
 serde.workspace = true
 zerocopy.workspace = true

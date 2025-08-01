@@ -1689,6 +1689,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
+name = "hello-program"
+version = "0.1.0"
+dependencies = [
+ "sp1-zkvm",
+ "valence-coprocessor",
+ "valence-coprocessor-sp1",
+]
+
+[[package]]
+name = "hello-script"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "sp1-build",
+ "sp1-sdk",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3030,25 +3048,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "program-circuit"
-version = "0.1.0"
-dependencies = [
- "sp1-zkvm",
- "valence-coprocessor",
- "valence-coprocessor-integrated-tests-domain",
- "valence-coprocessor-sp1",
-]
-
-[[package]]
-name = "program-script"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "sp1-build",
- "sp1-sdk",
 ]
 
 [[package]]
@@ -5018,16 +5017,6 @@ dependencies = [
  "valence-coprocessor-merkle",
  "valence-coprocessor-types",
  "zerocopy",
-]
-
-[[package]]
-name = "valence-coprocessor-integrated-tests-domain"
-version = "0.4.0"
-dependencies = [
- "anyhow",
- "serde_json",
- "valence-coprocessor",
- "valence-coprocessor-sp1",
 ]
 
 [[package]]

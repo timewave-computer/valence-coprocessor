@@ -444,205 +444,6 @@ rec {
         };
         resolvedDefaultFeatures = [ "k256" "serde" ];
       };
-      "alloy-sol-macro" = rec {
-        crateName = "alloy-sol-macro";
-        version = "1.3.0";
-        edition = "2024";
-        description = "Solidity to Rust procedural macro";
-        sha256 = "064z3z81z5rr68vgfrn8g8ycagri73qc2g542xw05hnl21xc1nmf";
-        procMacro = true;
-        libName = "alloy_sol_macro";
-        authors = [
-          "Alloy Contributors"
-        ];
-        dependencies = [
-          {
-            name = "alloy-sol-macro-expander";
-            packageId = "alloy-sol-macro-expander";
-            usesDefaultFeatures = false;
-          }
-          {
-            name = "alloy-sol-macro-input";
-            packageId = "alloy-sol-macro-input";
-            usesDefaultFeatures = false;
-          }
-          {
-            name = "proc-macro-error2";
-            packageId = "proc-macro-error2";
-          }
-          {
-            name = "proc-macro2";
-            packageId = "proc-macro2";
-          }
-          {
-            name = "quote";
-            packageId = "quote";
-          }
-          {
-            name = "syn";
-            packageId = "syn 2.0.104";
-            features = [ "extra-traits" ];
-          }
-        ];
-        features = {
-          "json" = [ "alloy-sol-macro-expander/json" ];
-        };
-      };
-      "alloy-sol-macro-expander" = rec {
-        crateName = "alloy-sol-macro-expander";
-        version = "1.3.0";
-        edition = "2024";
-        description = "Expander used in the Solidity to Rust procedural macro";
-        sha256 = "1aabpd49pwianxljhg17q6jza10i82v94r12p3c4iw0hy2caby94";
-        libName = "alloy_sol_macro_expander";
-        authors = [
-          "Alloy Contributors"
-        ];
-        dependencies = [
-          {
-            name = "alloy-sol-macro-input";
-            packageId = "alloy-sol-macro-input";
-            usesDefaultFeatures = false;
-          }
-          {
-            name = "const-hex";
-            packageId = "const-hex";
-            rename = "hex";
-            usesDefaultFeatures = false;
-            features = [ "alloc" "core-error" ];
-          }
-          {
-            name = "heck";
-            packageId = "heck 0.5.0";
-          }
-          {
-            name = "indexmap";
-            packageId = "indexmap 2.10.0";
-          }
-          {
-            name = "proc-macro-error2";
-            packageId = "proc-macro-error2";
-          }
-          {
-            name = "proc-macro2";
-            packageId = "proc-macro2";
-          }
-          {
-            name = "quote";
-            packageId = "quote";
-          }
-          {
-            name = "syn";
-            packageId = "syn 2.0.104";
-            features = [ "extra-traits" ];
-          }
-          {
-            name = "syn-solidity";
-            packageId = "syn-solidity";
-            usesDefaultFeatures = false;
-            features = [ "visit" "visit-mut" ];
-          }
-          {
-            name = "tiny-keccak";
-            packageId = "tiny-keccak";
-            usesDefaultFeatures = false;
-            features = [ "keccak" ];
-          }
-        ];
-        features = {
-          "json" = [ "dep:alloy-json-abi" "alloy-sol-macro-input/json" ];
-        };
-      };
-      "alloy-sol-macro-input" = rec {
-        crateName = "alloy-sol-macro-input";
-        version = "1.3.0";
-        edition = "2024";
-        description = "Input types for sol!-like macros";
-        sha256 = "11bxs1d2mng440gn5bpj7hsd99ks873l5zbdw9nalj8fsvwsv57l";
-        libName = "alloy_sol_macro_input";
-        authors = [
-          "Alloy Contributors"
-        ];
-        dependencies = [
-          {
-            name = "const-hex";
-            packageId = "const-hex";
-            rename = "hex";
-            usesDefaultFeatures = false;
-            features = [ "alloc" "core-error" ];
-          }
-          {
-            name = "dunce";
-            packageId = "dunce";
-          }
-          {
-            name = "heck";
-            packageId = "heck 0.5.0";
-          }
-          {
-            name = "macro-string";
-            packageId = "macro-string";
-          }
-          {
-            name = "proc-macro2";
-            packageId = "proc-macro2";
-          }
-          {
-            name = "quote";
-            packageId = "quote";
-          }
-          {
-            name = "syn";
-            packageId = "syn 2.0.104";
-          }
-          {
-            name = "syn-solidity";
-            packageId = "syn-solidity";
-            usesDefaultFeatures = false;
-          }
-        ];
-        features = {
-          "json" = [ "dep:alloy-json-abi" "dep:serde_json" "alloy-json-abi/serde_json" ];
-        };
-      };
-      "alloy-sol-types" = rec {
-        crateName = "alloy-sol-types";
-        version = "1.3.0";
-        edition = "2024";
-        description = "Compile-time ABI and EIP-712 implementations";
-        sha256 = "1iasbz1mh2pa7klj03lf7gypcar6r16g0y420a3ph5qc7rpb91d2";
-        libName = "alloy_sol_types";
-        authors = [
-          "Alloy Contributors"
-        ];
-        dependencies = [
-          {
-            name = "alloy-primitives";
-            packageId = "alloy-primitives";
-            usesDefaultFeatures = false;
-          }
-          {
-            name = "alloy-sol-macro";
-            packageId = "alloy-sol-macro";
-            usesDefaultFeatures = false;
-          }
-        ];
-        devDependencies = [
-          {
-            name = "alloy-primitives";
-            packageId = "alloy-primitives";
-            usesDefaultFeatures = false;
-            features = [ "arbitrary" "serde" "rlp" ];
-          }
-        ];
-        features = {
-          "arbitrary" = [ "alloy-primitives/arbitrary" ];
-          "default" = [ "std" ];
-          "eip712-serde" = [ "dep:serde" "alloy-primitives/serde" ];
-          "json" = [ "dep:alloy-json-abi" "alloy-sol-macro/json" ];
-          "std" = [ "alloy-primitives/std" "alloy-json-abi?/std" "serde?/std" ];
-        };
-      };
       "android-tzdata" = rec {
         crateName = "android-tzdata";
         version = "0.1.1";
@@ -2975,7 +2776,7 @@ constant-time operation and embedded-friendly no_std support
       };
       "cargo-valence" = rec {
         crateName = "cargo-valence";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor cargo subcommand.";
         crateBin = [
@@ -3140,13 +2941,13 @@ constant-time operation and embedded-friendly no_std support
       };
       "cc" = rec {
         crateName = "cc";
-        version = "1.2.30";
+        version = "1.2.31";
         edition = "2018";
         description = "A build-time dependency for Cargo build scripts to assist in invoking the native
 C compiler to compile native C code into a static archive to be linked into Rust
 code.
 ";
-        sha256 = "1rqs46vb04ffqlpi6kjwfmvvvf64y6jkdn1faql30sfa0yb11v6y";
+        sha256 = "1ljzmb5djr6gnq9d06jyd4lik7hpizcg1b7anfld6sbbpf22v963";
         authors = [
           "Alex Crichton <alex@alexcrichton.com>"
         ];
@@ -5445,7 +5246,7 @@ on macOS.
           }
           {
             name = "redox_users";
-            packageId = "redox_users 0.5.1";
+            packageId = "redox_users 0.5.2";
             usesDefaultFeatures = false;
             target = { target, features }: ("redox" == target."os" or null);
           }
@@ -5618,17 +5419,6 @@ parameters, associated types, and type constraints.
           "verify" = [ "digest" ];
         };
         resolvedDefaultFeatures = [ "digest" "rustls-tls" "verify" ];
-      };
-      "dunce" = rec {
-        crateName = "dunce";
-        version = "1.0.5";
-        edition = "2021";
-        description = "Normalize Windows paths to the most compatible format, avoiding UNC where possible";
-        sha256 = "04y8wwv3vvcqaqmqzssi6k0ii9gs6fpz96j5w9nky2ccsl23axwj";
-        authors = [
-          "Kornel <kornel@geekhood.net>"
-        ];
-
       };
       "ecdsa" = rec {
         crateName = "ecdsa";
@@ -9561,11 +9351,6 @@ and keccak-p variants
             name = "libc";
             packageId = "libc";
           }
-          {
-            name = "redox_syscall";
-            packageId = "redox_syscall";
-            optional = true;
-          }
         ];
         features = {
           "default" = [ "call" "std" "redox_syscall" ];
@@ -9573,7 +9358,7 @@ and keccak-p variants
           "mkns" = [ "ioslice" ];
           "redox_syscall" = [ "dep:redox_syscall" ];
         };
-        resolvedDefaultFeatures = [ "call" "redox_syscall" "std" ];
+        resolvedDefaultFeatures = [ "call" "std" ];
       };
       "linux-raw-sys 0.4.15" = rec {
         crateName = "linux-raw-sys";
@@ -9758,44 +9543,6 @@ and keccak-p variants
         features = {
         };
         resolvedDefaultFeatures = [ "default" ];
-      };
-      "macro-string" = rec {
-        crateName = "macro-string";
-        version = "0.1.4";
-        edition = "2021";
-        description = "Eager evaluation of macros like `concat!` and `env!`";
-        sha256 = "1qq42babqlm25823idy2h7q1q8lzx5k6s2bv73ww6pn6hr0869qv";
-        libName = "macro_string";
-        authors = [
-          "David Tolnay <dtolnay@gmail.com>"
-        ];
-        dependencies = [
-          {
-            name = "proc-macro2";
-            packageId = "proc-macro2";
-            usesDefaultFeatures = false;
-          }
-          {
-            name = "quote";
-            packageId = "quote";
-            usesDefaultFeatures = false;
-          }
-          {
-            name = "syn";
-            packageId = "syn 2.0.104";
-            usesDefaultFeatures = false;
-            features = [ "parsing" "printing" ];
-          }
-        ];
-        devDependencies = [
-          {
-            name = "syn";
-            packageId = "syn 2.0.104";
-            usesDefaultFeatures = false;
-            features = [ "printing" "proc-macro" ];
-          }
-        ];
-
       };
       "matchers" = rec {
         crateName = "matchers";
@@ -12992,74 +12739,6 @@ equation coefficients
         ];
 
       };
-      "proc-macro-error-attr2" = rec {
-        crateName = "proc-macro-error-attr2";
-        version = "2.0.0";
-        edition = "2021";
-        description = "Attribute macro for the proc-macro-error2 crate";
-        sha256 = "1ifzi763l7swl258d8ar4wbpxj4c9c2im7zy89avm6xv6vgl5pln";
-        procMacro = true;
-        libName = "proc_macro_error_attr2";
-        authors = [
-          "CreepySkeleton <creepy-skeleton@yandex.ru>"
-          "GnomedDev <david2005thomas@gmail.com>"
-        ];
-        dependencies = [
-          {
-            name = "proc-macro2";
-            packageId = "proc-macro2";
-          }
-          {
-            name = "quote";
-            packageId = "quote";
-          }
-        ];
-
-      };
-      "proc-macro-error2" = rec {
-        crateName = "proc-macro-error2";
-        version = "2.0.1";
-        edition = "2021";
-        description = "Almost drop-in replacement to panics in proc-macros";
-        sha256 = "00lq21vgh7mvyx51nwxwf822w2fpww1x0z8z0q47p8705g2hbv0i";
-        libName = "proc_macro_error2";
-        authors = [
-          "CreepySkeleton <creepy-skeleton@yandex.ru>"
-          "GnomedDev <david2005thomas@gmail.com>"
-        ];
-        dependencies = [
-          {
-            name = "proc-macro-error-attr2";
-            packageId = "proc-macro-error-attr2";
-          }
-          {
-            name = "proc-macro2";
-            packageId = "proc-macro2";
-          }
-          {
-            name = "quote";
-            packageId = "quote";
-          }
-          {
-            name = "syn";
-            packageId = "syn 2.0.104";
-            optional = true;
-            usesDefaultFeatures = false;
-          }
-        ];
-        devDependencies = [
-          {
-            name = "syn";
-            packageId = "syn 2.0.104";
-            features = [ "full" ];
-          }
-        ];
-        features = {
-          "default" = [ "syn-error" ];
-          "syn-error" = [ "dep:syn" ];
-        };
-        resolvedDefaultFeatures = [ "default" "syn-error" ];
-      };
       "proc-macro2" = rec {
         crateName = "proc-macro2";
         version = "1.0.95";
@@ -14157,12 +13836,12 @@ equation coefficients
           "zeroize" = [ "dep:zeroize" ];
         };
       };
-      "redox_users 0.5.1" = rec {
+      "redox_users 0.5.2" = rec {
         crateName = "redox_users";
-        version = "0.5.1";
+        version = "0.5.2";
         edition = "2021";
         description = "A Rust library to access Redox users and groups functionality";
-        sha256 = "0w5ld38cxc7w8bhfhhk03942dzq9gvab4y713f15fvf5a8gymskq";
+        sha256 = "1b17q7gf7w8b1vvl53bxna24xl983yn7bd00gfbii74bcg30irm4";
         authors = [
           "Jose Narvaez <goyox86@gmail.com>"
           "Wesley Hershberger <mggmugginsmc@gmail.com>"
@@ -14177,7 +13856,7 @@ equation coefficients
             name = "libredox";
             packageId = "libredox";
             usesDefaultFeatures = false;
-            features = [ "std" "call" "redox_syscall" ];
+            features = [ "std" "call" ];
           }
           {
             name = "thiserror";
@@ -16148,10 +15827,10 @@ Elliptic-Curve-Point-to-Octet-String encoding
       };
       "serde_json" = rec {
         crateName = "serde_json";
-        version = "1.0.141";
+        version = "1.0.142";
         edition = "2021";
         description = "A JSON serialization file format";
-        sha256 = "1lq39h6lmkib00r4xipg26npl22pmkcy2r7cqqb84wdy3vrfzf9h";
+        sha256 = "19y5mz1npafnd6vlaiv41ns3pb0pv3q9nirdy3bcn3b0havys3q3";
         authors = [
           "Erick Tryzelaar <erick.tryzelaar@gmail.com>"
           "David Tolnay <dtolnay@gmail.com>"
@@ -16849,10 +16528,10 @@ possible intended.
       };
       "sp1-build" = rec {
         crateName = "sp1-build";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "Build an SP1 program.";
-        sha256 = "1ganfz5i3p66wjvk87szjyixl2aln8yxpgzpx1rfvqfm3mhaxc58";
+        sha256 = "1fjsdyisxc2z7p3s5rrsscana7yjf1jc32a3vwzg61wmhljnbnc8";
         libName = "sp1_build";
         dependencies = [
           {
@@ -16887,10 +16566,10 @@ possible intended.
       };
       "sp1-core-executor" = rec {
         crateName = "sp1-core-executor";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "0bfdjgj1hmrnl82h5crnia6dhwnxqdbq1rf5h5adfhqb9camln1a";
+        sha256 = "1k82ykdhb8mjl08vjb8h0b992mg69jrig0zv68ra0fhy8z2k8vmm";
         libName = "sp1_core_executor";
         dependencies = [
           {
@@ -17034,11 +16713,11 @@ possible intended.
       };
       "sp1-core-machine" = rec {
         crateName = "sp1-core-machine";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
         links = "sp1-core-machine-sys";
-        sha256 = "03gvd2qnqq25m4428f0q986nx8hxyh1vyw1hwz5ssf9r82pkpqi0";
+        sha256 = "05lzyrb80kh67s0pqs6kikg2j1l6d21cc0bd961k5cp5pi53wqr4";
         libName = "sp1_core_machine";
         dependencies = [
           {
@@ -17282,10 +16961,10 @@ possible intended.
       };
       "sp1-cuda" = rec {
         crateName = "sp1-cuda";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "0vrphvq22s0k5rf4nrqfaja5v2jfrsl8p297ck548xycmp8a3vx2";
+        sha256 = "1546zghmsh33ll4gaf8m84rks7vr7sfp8svlhh8j01q7nl4n5mfk";
         libName = "sp1_cuda";
         dependencies = [
           {
@@ -17335,10 +17014,10 @@ possible intended.
       };
       "sp1-curves" = rec {
         crateName = "sp1-curves";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "1yagqi7kyshgdxd1wncisbdwd8bhcz855n1kplki6bd03n1y624j";
+        sha256 = "0w8w2lrfnpmv1gsjjxhb02zd4in3q3nn4hlr3zcxf9bdmlnahh9z";
         libName = "sp1_curves";
         dependencies = [
           {
@@ -17536,11 +17215,11 @@ possible intended.
       };
       "sp1-prover" = rec {
         crateName = "sp1-prover";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
         crateBin = [];
-        sha256 = "1v8qdp4al6hpky406q5a6z3dh1yw3xl9dhq9q5p3d2yb7id1vamg";
+        sha256 = "1zwnjf9azb6lrpcaad27fxsi99j8qgf00aa78l86rlrcnjr3pynm";
         libName = "sp1_prover";
         dependencies = [
           {
@@ -17709,10 +17388,10 @@ possible intended.
       };
       "sp1-recursion-circuit" = rec {
         crateName = "sp1-recursion-circuit";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "1yymfpk1s42mggfm64n7gqvxw7q90irf4y9d9z7lagy1zbcdasfz";
+        sha256 = "0g8vgidcdnc63hyklv38jm0hlgm5z1n6dlxqxr4053asis1mywjf";
         libName = "sp1_recursion_circuit";
         dependencies = [
           {
@@ -17852,10 +17531,10 @@ possible intended.
       };
       "sp1-recursion-compiler" = rec {
         crateName = "sp1-recursion-compiler";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "0gcyby4khj1xbgzb7lhjjrzhlk7ymwm2ffzz2q3rq0n64lrp4pri";
+        sha256 = "08k8qvnrgz78l4awhxfzldcp1icsk6p6l9br66rhk7s224pv285k";
         libName = "sp1_recursion_compiler";
         dependencies = [
           {
@@ -17926,11 +17605,11 @@ possible intended.
       };
       "sp1-recursion-core" = rec {
         crateName = "sp1-recursion-core";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
         links = "sp1-recursion-core-sys";
-        sha256 = "0dkmyrh8mb7kcrsn0b9f20xdqjja863iak4ij2f5f3qhh000phbh";
+        sha256 = "07g7iflij2ncg1gnq357bslcf454274kpmxvh95q2iyc6rp2qaj7";
         libName = "sp1_recursion_core";
         dependencies = [
           {
@@ -18122,10 +17801,10 @@ possible intended.
       };
       "sp1-recursion-gnark-ffi" = rec {
         crateName = "sp1-recursion-gnark-ffi";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "1ggyjrikh0grcqfjmr6vnhs40lkxg132g7gj9wjfw0f635jqw3mi";
+        sha256 = "0mr8jy9242yvc3zbbnpwhj2qnbx8ymhjxb02pjrik4xd4b3lh3yb";
         libName = "sp1_recursion_gnark_ffi";
         dependencies = [
           {
@@ -18213,10 +17892,10 @@ possible intended.
       };
       "sp1-sdk" = rec {
         crateName = "sp1-sdk";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "1fh0vddjd259q82d8l7a592bmn92kgg6imyx6wslv37psl0snzqh";
+        sha256 = "18b1rws60npblyb8l42pplv4xzsf28kr92nadl5mrxdixz2p6vxv";
         libName = "sp1_sdk";
         dependencies = [
           {
@@ -18225,11 +17904,6 @@ possible intended.
             optional = true;
             usesDefaultFeatures = false;
             features = [ "k256" "serde" ];
-          }
-          {
-            name = "alloy-sol-types";
-            packageId = "alloy-sol-types";
-            usesDefaultFeatures = false;
           }
           {
             name = "anyhow";
@@ -18393,20 +18067,20 @@ possible intended.
         ];
         features = {
           "bigint-rug" = [ "sp1-core-machine/bigint-rug" ];
-          "default" = [ "network" "reserved-capacity" ];
+          "default" = [ "network" ];
           "native-gnark" = [ "sp1-prover/native-gnark" ];
           "network" = [ "dep:prost" "dep:alloy-primitives" "dep:tokio" "dep:reqwest" "dep:twirp" "dep:reqwest-middleware" "dep:tonic" "dep:backoff" ];
           "profiling" = [ "sp1-core-executor/profiling" ];
-          "reserved-capacity" = [ "network" ];
+          "sepolia" = [ "network" "dep:alloy-sol-types" ];
         };
-        resolvedDefaultFeatures = [ "cuda" "default" "native-gnark" "network" "reserved-capacity" ];
+        resolvedDefaultFeatures = [ "cuda" "default" "native-gnark" "network" ];
       };
       "sp1-stark" = rec {
         crateName = "sp1-stark";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "0xr4yc0gdkrfr8hcq72f7llj1zh2v5zs8lxdq51ib7dq7gfhps6v";
+        sha256 = "104gxbshidsl2drs5vcz6m602lnrcxd0asp4l8s6pcx52ck3jq0f";
         libName = "sp1_stark";
         dependencies = [
           {
@@ -18526,10 +18200,10 @@ possible intended.
       };
       "sp1-verifier" = rec {
         crateName = "sp1-verifier";
-        version = "5.1.0";
+        version = "5.0.8";
         edition = "2021";
         description = "Verifier for SP1 Groth16 and Plonk proofs.";
-        sha256 = "10jh1p5kp828l47h41xj866zs8lwvn55675v6gbkbdjaxdbj2cjz";
+        sha256 = "1qgvivgq2qnjx9ckk87a4acm9kwxqgzldv8k4wqan0vvml63zsk7";
         libName = "sp1_verifier";
         dependencies = [
           {
@@ -18984,39 +18658,6 @@ OSA, Damerau-Levenshtein, Jaro, Jaro-Winkler, and Sørensen-Dice.
           "test" = [ "syn-test-suite/all-features" ];
         };
         resolvedDefaultFeatures = [ "clone-impls" "default" "derive" "extra-traits" "fold" "full" "parsing" "printing" "proc-macro" "visit" "visit-mut" ];
-      };
-      "syn-solidity" = rec {
-        crateName = "syn-solidity";
-        version = "1.3.0";
-        edition = "2024";
-        description = "syn-powered Solidity parser";
-        sha256 = "0sdpcvvsd1w7vcnzjiscb8p1c6mi1w8lic0g1vhp6wzx9zzqbad7";
-        libName = "syn_solidity";
-        authors = [
-          "Alloy Contributors"
-        ];
-        dependencies = [
-          {
-            name = "paste";
-            packageId = "paste";
-          }
-          {
-            name = "proc-macro2";
-            packageId = "proc-macro2";
-          }
-          {
-            name = "quote";
-            packageId = "quote";
-          }
-          {
-            name = "syn";
-            packageId = "syn 2.0.104";
-            features = [ "extra-traits" ];
-          }
-        ];
-        features = {
-        };
-        resolvedDefaultFeatures = [ "visit" "visit-mut" ];
       };
       "sync_wrapper" = rec {
         crateName = "sync_wrapper";
@@ -19645,12 +19286,12 @@ OSA, Damerau-Levenshtein, Jaro, Jaro-Winkler, and Sørensen-Dice.
       };
       "tokio" = rec {
         crateName = "tokio";
-        version = "1.47.0";
+        version = "1.47.1";
         edition = "2021";
         description = "An event-driven, non-blocking I/O platform for writing asynchronous I/O
 backed applications.
 ";
-        sha256 = "0ddv05kl12ilzfi5d83rxld79ppgm1j7lp52ax3kl15n03a4x1j3";
+        sha256 = "0f2hp5v3payg6x04ijj67si1wsdhksskhmjs2k9p5f7bmpyrmr49";
         authors = [
           "Tokio Contributors <team@tokio.rs>"
         ];
@@ -21552,7 +21193,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor" = rec {
         crateName = "valence-coprocessor";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/core; };
@@ -21625,8 +21266,18 @@ Unicode Standard Annex #31.
         ];
         devDependencies = [
           {
+            name = "hex";
+            packageId = "hex";
+            usesDefaultFeatures = false;
+            features = [ "alloc" ];
+          }
+          {
             name = "proptest";
             packageId = "proptest";
+          }
+          {
+            name = "rand";
+            packageId = "rand 0.9.2";
           }
           {
             name = "valence-coprocessor";
@@ -21643,7 +21294,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-client" = rec {
         crateName = "valence-coprocessor-client";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor client";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/utils/client; };
@@ -21660,6 +21311,8 @@ Unicode Standard Annex #31.
           {
             name = "hex";
             packageId = "hex";
+            usesDefaultFeatures = false;
+            features = [ "alloc" ];
           }
           {
             name = "reqwest";
@@ -21702,7 +21355,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-merkle" = rec {
         crateName = "valence-coprocessor-merkle";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor Merkle primitives";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/merkle; };
@@ -21715,6 +21368,12 @@ Unicode Standard Annex #31.
             name = "anyhow";
             packageId = "anyhow";
             usesDefaultFeatures = false;
+          }
+          {
+            name = "hex";
+            packageId = "hex";
+            usesDefaultFeatures = false;
+            features = [ "alloc" ];
           }
           {
             name = "msgpacker";
@@ -21752,7 +21411,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-prover" = rec {
         crateName = "valence-coprocessor-prover";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor prover service.";
         crateBin = [
@@ -21789,6 +21448,8 @@ Unicode Standard Annex #31.
           {
             name = "hex";
             packageId = "hex";
+            usesDefaultFeatures = false;
+            features = [ "alloc" ];
           }
           {
             name = "lru";
@@ -21861,7 +21522,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-redis" = rec {
         crateName = "valence-coprocessor-redis";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor Redis data backend implementation.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/data/redis; };
@@ -21893,7 +21554,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-service" = rec {
         crateName = "valence-coprocessor-service";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor service application.";
         crateBin = [
@@ -21930,6 +21591,8 @@ Unicode Standard Annex #31.
           {
             name = "hex";
             packageId = "hex";
+            usesDefaultFeatures = false;
+            features = [ "alloc" ];
           }
           {
             name = "poem";
@@ -21997,7 +21660,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-sp1" = rec {
         crateName = "valence-coprocessor-sp1";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor SP1 prover backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/sp1; };
@@ -22102,7 +21765,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-types" = rec {
         crateName = "valence-coprocessor-types";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor types definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/types; };
@@ -22159,7 +21822,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-wasm" = rec {
         crateName = "valence-coprocessor-wasm";
-        version = "0.3.13";
+        version = "0.4.0";
         edition = "2021";
         description = "The Valence co-processor WASM module backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/wasm; };
@@ -22227,6 +21890,8 @@ Unicode Standard Annex #31.
           {
             name = "hex";
             packageId = "hex";
+            usesDefaultFeatures = false;
+            features = [ "alloc" ];
           }
           {
             name = "tiny_http";

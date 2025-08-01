@@ -195,7 +195,7 @@ fn complex_tree() -> anyhow::Result<()> {
 
     proofs[0] = tree.get_opening(root, &keys[0])?.unwrap();
 
-    assert_eq!(proofs[0].len(), 0);
+    assert_eq!(proofs[0].len(), 1);
 
     assert!(MemorySmt::verify(&proofs[0], &root, &keys[0], data[0]));
 
@@ -277,7 +277,7 @@ fn deep_opening() -> anyhow::Result<()> {
 
     let p0 = tree.get_opening(root, &k0)?.unwrap();
 
-    assert_eq!(p0.len(), 0);
+    assert_eq!(p0.len(), 1);
 
     assert!(MemorySmt::verify(&p0, &root, &k0, &n[0].to_le_bytes()));
 
@@ -293,7 +293,7 @@ fn deep_opening() -> anyhow::Result<()> {
     let p1 = tree.get_opening(root, &k1)?.unwrap();
 
     assert_eq!(p0.len(), 1);
-    assert_eq!(p1.len(), 1);
+    assert_eq!(p1.len(), 2);
 
     assert!(MemorySmt::verify(&p0, &root, &k0, &n[0].to_le_bytes()));
     assert!(MemorySmt::verify(&p1, &root, &k1, &n[1].to_le_bytes()));
@@ -317,7 +317,7 @@ fn deep_opening() -> anyhow::Result<()> {
     let p2 = tree.get_opening(root, &k2)?.unwrap();
 
     assert_eq!(p0.len(), 4);
-    assert_eq!(p1.len(), 1);
+    assert_eq!(p1.len(), 2);
     assert_eq!(p2.len(), 4);
 
     assert!(MemorySmt::verify(&p0, &root, &k0, &n[0].to_le_bytes()));
@@ -369,7 +369,7 @@ fn compound_opening() -> anyhow::Result<()> {
     roots[0] = tree.insert(roots[0], &keys[0], data[0])?;
     proofs[0] = tree.get_opening(roots[0], &keys[0])?.unwrap();
 
-    assert_eq!(proofs[0].len(), 0);
+    assert_eq!(proofs[0].len(), 1);
 
     assert!(MemorySmt::verify(&proofs[0], &roots[0], &keys[0], data[0]));
 
@@ -397,7 +397,7 @@ fn compound_opening() -> anyhow::Result<()> {
     roots[1] = tree.insert(roots[1], &keys[2], data[2])?;
     proofs[2] = tree.get_opening(roots[1], &keys[2])?.unwrap();
 
-    assert_eq!(proofs[2].len(), 0);
+    assert_eq!(proofs[2].len(), 1);
 
     assert!(MemorySmt::verify(&proofs[2], &roots[1], &keys[2], data[2]));
 
@@ -412,7 +412,7 @@ fn compound_opening() -> anyhow::Result<()> {
     proofs[3] = tree.get_opening(roots[1], &keys[3])?.unwrap();
 
     assert_eq!(proofs[2].len(), 1);
-    assert_eq!(proofs[3].len(), 1);
+    assert_eq!(proofs[3].len(), 2);
 
     assert!(MemorySmt::verify(&proofs[2], &roots[1], &keys[2], data[2]));
     assert!(MemorySmt::verify(&proofs[3], &roots[1], &keys[3], data[3]));
@@ -428,13 +428,12 @@ fn compound_opening() -> anyhow::Result<()> {
     tree = tree.with_namespace(ns[0]);
     roots[0] = tree.insert_compound(roots[0], &keys[0], roots[1])?;
 
-    tree = tree.with_namespace(ns[1]);
-    let compound = CompoundOpeningBuilder::new(roots[1])
-        .with_tree(ns[1], keys[3])
+    let compound = CompoundOpeningBuilder::new(roots[0])
         .with_tree(ns[0], keys[0])
+        .with_tree(ns[1], keys[3])
         .opening(tree)?;
 
-    assert!(MemorySmt::verify_compound(&compound, &roots[1], data[3]));
+    assert!(MemorySmt::verify_compound(&compound, &roots[0], data[3]));
 
     Ok(())
 }
