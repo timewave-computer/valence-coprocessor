@@ -21,7 +21,9 @@ valence-coprocessor-merkle.path = "../merkle"
 valence-coprocessor-types.path = "../types"
 
 [dev-dependencies]
+hex.workspace = true
 proptest.workspace = true
+rand.workspace = true
 valence-coprocessor = { path = ".", features = ["mocks"] }
 
 [features]

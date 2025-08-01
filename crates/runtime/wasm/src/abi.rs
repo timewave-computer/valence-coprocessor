@@ -4,7 +4,9 @@
 use alloc::vec::Vec;
 
 use serde_json::Value;
-use valence_coprocessor::{FileSystem, Hash, Opening, StateProof, ValidatedDomainBlock, Witness};
+use valence_coprocessor::{
+    CompoundOpening, FileSystem, Hash, HistoricalUpdate, StateProof, ValidatedDomainBlock, Witness,
+};
 
 #[cfg(not(feature = "std"))]
 use msgpacker::Unpackable as _;
@@ -26,22 +28,14 @@ mod host {
         pub(super) fn set_raw_storage(ptr: u32, len: u32) -> i32;
         pub(super) fn get_controller(ptr: u32) -> i32;
         pub(super) fn get_historical(ptr: u32) -> i32;
-        pub(super) fn get_historical_opening(
-            tree_ptr: u32,
-            domain_ptr: u32,
-            domain_len: u32,
-            root_ptr: u32,
-            root_len: u32,
-            ptr: u32,
-        ) -> i32;
-        pub(super) fn get_historical_payload(
-            domain_ptr: u32,
-            domain_len: u32,
-            root_ptr: u32,
-            root_len: u32,
-            ptr: u32,
-        ) -> i32;
         pub(super) fn get_latest_block(domain_ptr: u32, domain_len: u32, ptr: u32) -> i32;
+        pub(super) fn get_block_proof(
+            domain_ptr: u32,
+            domain_len: u32,
+            block_number_ptr: u32,
+            ptr: u32,
+        ) -> i32;
+        pub(super) fn get_historical_update(root_ptr: u32, ptr: u32) -> i32;
         pub(super) fn get_state_proof(
             domain_ptr: u32,
             domain_len: u32,
@@ -67,7 +61,7 @@ mod host {
 pub(crate) mod use_std {
     use std::sync::{LazyLock, Mutex};
 
-    use valence_coprocessor::{File, Opening, StateProof};
+    use valence_coprocessor::{CompoundOpening, File, HistoricalUpdate, StateProof};
 
     use super::*;
 
@@ -157,19 +151,15 @@ pub(crate) mod use_std {
         todo!()
     }
 
-    pub fn get_historical_opening(
-        _tree: &Hash,
-        _domain: &str,
-        _root: &[u8],
-    ) -> anyhow::Result<Option<Opening>> {
-        todo!()
-    }
-
-    pub fn get_historical_payload(_domain: &str, _root: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
-        todo!()
-    }
-
     pub fn get_latest_block(_domain: &str) -> anyhow::Result<Option<ValidatedDomainBlock>> {
+        todo!()
+    }
+
+    pub fn get_block_proof(_domain: &str, _block_number: u64) -> anyhow::Result<CompoundOpening> {
+        todo!()
+    }
+
+    pub fn get_historical_update(_root: &Hash) -> anyhow::Result<Option<HistoricalUpdate>> {
         todo!()
     }
 
@@ -381,63 +371,6 @@ pub fn get_historical() -> anyhow::Result<Hash> {
     }
 }
 
-/// Get the opening to the provided root on the historical SMT.
-pub fn get_historical_opening(
-    tree: &Hash,
-    domain: &str,
-    root: &[u8],
-) -> anyhow::Result<Option<Opening>> {
-    #[cfg(feature = "std")]
-    return use_std::get_historical_opening(tree, domain, root);
-
-    #[cfg(not(feature = "std"))]
-    unsafe {
-        let tree_ptr = tree.as_ptr() as u32;
-
-        let domain_ptr = domain.as_ptr() as u32;
-        let domain_len = domain.len() as u32;
-
-        let root_ptr = root.as_ptr() as u32;
-        let root_len = root.len() as u32;
-
-        let ptr = BUF.as_ptr() as u32;
-        let len =
-            host::get_historical_opening(tree_ptr, domain_ptr, domain_len, root_ptr, root_len, ptr);
-
-        anyhow::ensure!(len >= 0, "failed to read historical opening");
-        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
-
-        Option::unpack(&BUF[..len as usize])
-            .map(|(_, o)| o)
-            .map_err(|e| anyhow::anyhow!("error unpacking historical opening: {e}"))
-    }
-}
-
-/// Get the payload of the provided domain root on the historical SMT.
-pub fn get_historical_payload(domain: &str, root: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
-    #[cfg(feature = "std")]
-    return use_std::get_historical_payload(domain, root);
-
-    #[cfg(not(feature = "std"))]
-    unsafe {
-        let domain_ptr = domain.as_ptr() as u32;
-        let domain_len = domain.len() as u32;
-
-        let root_ptr = root.as_ptr() as u32;
-        let root_len = root.len() as u32;
-
-        let ptr = BUF.as_ptr() as u32;
-        let len = host::get_historical_payload(domain_ptr, domain_len, root_ptr, root_len, ptr);
-
-        anyhow::ensure!(len >= 0, "failed to read historical payload");
-        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
-
-        Option::unpack(&BUF[..len as usize])
-            .map(|(_, o)| o)
-            .map_err(|e| anyhow::anyhow!("error unpacking historical payload: {e}"))
-    }
-}
-
 /// Returns the last included block for the provided domain.
 pub fn get_latest_block(domain: &str) -> anyhow::Result<Option<ValidatedDomainBlock>> {
     #[cfg(feature = "std")]
@@ -457,6 +390,53 @@ pub fn get_latest_block(domain: &str) -> anyhow::Result<Option<ValidatedDomainBl
         Option::unpack(&BUF[..len as usize])
             .map(|(_, o)| o)
             .map_err(|e| anyhow::anyhow!("error unpacking latest block: {e}"))
+    }
+}
+
+/// Returns a Merkle proof that opens a block number to the historical root.
+pub fn get_block_proof(domain: &str, block_number: u64) -> anyhow::Result<CompoundOpening> {
+    #[cfg(feature = "std")]
+    return use_std::get_block_proof(domain, block_number);
+
+    #[cfg(not(feature = "std"))]
+    unsafe {
+        let domain_ptr = domain.as_ptr() as u32;
+        let domain_len = domain.len() as u32;
+
+        let block_number = block_number.to_le_bytes();
+        let block_number_ptr = block_number.as_ptr() as u32;
+
+        let ptr = BUF.as_ptr() as u32;
+
+        let len = host::get_block_proof(domain_ptr, domain_len, block_number_ptr, ptr);
+
+        anyhow::ensure!(len >= 0, "failed to get block proof");
+        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
+
+        CompoundOpening::unpack(&BUF[..len as usize])
+            .map(|(_, o)| o)
+            .map_err(|e| anyhow::anyhow!("error unpacking block proof: {e}"))
+    }
+}
+
+///  Returns the historical tree update that generated the provided root.
+pub fn get_historical_update(root: &Hash) -> anyhow::Result<Option<HistoricalUpdate>> {
+    #[cfg(feature = "std")]
+    return use_std::get_historical_update(root);
+
+    #[cfg(not(feature = "std"))]
+    unsafe {
+        let root_ptr = root.as_ptr() as u32;
+        let ptr = BUF.as_ptr() as u32;
+
+        let len = host::get_historical_update(root_ptr, ptr);
+
+        anyhow::ensure!(len >= 0, "failed to get historical update");
+        anyhow::ensure!(len as usize <= BUF_LEN, "arguments too large");
+
+        Option::unpack(&BUF[..len as usize])
+            .map(|(_, o)| o)
+            .map_err(|e| anyhow::anyhow!("error unpacking historical update: {e}"))
     }
 }
 

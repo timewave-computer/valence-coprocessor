@@ -2,8 +2,8 @@
 members = [
   "alchemy",
   "controller",
-  "domain",
   "hello",
+  "historical",
   "http",
   "log",
   "raw_storage",

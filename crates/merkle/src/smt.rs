@@ -58,3 +58,25 @@ impl SmtChildren {
         H::merge(&self.left, &self.right)
     }
 }
+
+/// A Merkle opening with its node value and key.
+#[derive(
+    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
+)]
+pub struct KeyedOpening {
+    /// Node key
+    pub key: Hash,
+
+    /// Leaf value
+    pub node: Hash,
+
+    /// Merkle path
+    pub opening: Opening,
+}
+
+impl KeyedOpening {
+    /// Verifies a Merkle opening proof to a known root.
+    pub fn verify<H: Hasher>(&self, root: &Hash) -> bool {
+        self.opening.verify::<H>(root, &self.key, &self.node)
+    }
+}

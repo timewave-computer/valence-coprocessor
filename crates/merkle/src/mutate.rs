@@ -10,10 +10,15 @@ where
 {
     /// Inserts a leaf into the tree.
     pub fn insert(&self, root: Hash, key: &Hash, data: &[u8]) -> anyhow::Result<Hash> {
-        self.insert_with_leaf(root, key, H::hash(data), data)
+        let leaf = H::hash(data);
+
+        self.insert_with_leaf(root, key, leaf, data)
     }
 
-    pub(crate) fn insert_with_leaf(
+    /// Overrides the leaf computation by accepting the provided value instead of hashing the data.
+    ///
+    /// The data will still be associated with the key.
+    pub fn insert_with_leaf(
         &self,
         root: Hash,
         key: &Hash,
@@ -27,7 +32,16 @@ where
 
         // childless node
         if root == Hash::default() {
-            return Ok(leaf);
+            let bit = (key[0] >> 7) & 1;
+            let children = SmtChildren {
+                left: if bit == 0 { leaf } else { Hash::default() },
+                right: if bit == 0 { Hash::default() } else { leaf },
+            };
+            let root = children.parent::<H>();
+
+            self.insert_children(&root, &children)?;
+
+            return Ok(root);
         }
 
         // single node tree
@@ -129,6 +143,8 @@ where
             // create a subtree to hold both the new leaf and the old leaf
             if let Some(sibling_key) = self.get_node_key(&node)? {
                 if &sibling_key == key {
+                    // if the key matches, override the node value
+                    node = leaf;
                     break;
                 }
 
