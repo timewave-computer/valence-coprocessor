@@ -46,6 +46,14 @@ impl Hasher for Sp1Hasher {
         hasher.finalize().into()
     }
 
+    fn hash_raw(data: &[u8]) -> Hash {
+        let mut hasher = Sha256::new();
+
+        hasher.update(data);
+
+        hasher.finalize().into()
+    }
+
     fn merge(a: &Hash, b: &Hash) -> Hash {
         let mut hasher = Sha256::new();
 
