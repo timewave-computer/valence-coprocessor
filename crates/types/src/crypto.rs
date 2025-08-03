@@ -14,6 +14,9 @@ pub trait Hasher: Clone {
     /// Hashes the data arguments into an array of bytes.
     fn hash(data: &[u8]) -> Hash;
 
+    /// Hashes the data arguments using no prefix.
+    fn hash_raw(data: &[u8]) -> Hash;
+
     /// Merges the two hashes into a single one, extending the cryptographic properties of the
     /// underlying hash function.
     fn merge(a: &Hash, b: &Hash) -> Hash;
@@ -28,6 +31,10 @@ impl Hasher for () {
     }
 
     fn hash(_data: &[u8]) -> Hash {
+        Hash::default()
+    }
+
+    fn hash_raw(_data: &[u8]) -> Hash {
         Hash::default()
     }
 
@@ -70,6 +77,10 @@ mod blake3 {
                 .update(data)
                 .finalize()
                 .into()
+        }
+
+        fn hash_raw(data: &[u8]) -> Hash {
+            ::blake3::hash(data).into()
         }
 
         fn merge(a: &Hash, b: &Hash) -> Hash {
