@@ -581,6 +581,10 @@ mod handlers {
 
         panic(ptr, len);
 
+        #[cfg(target_arch = "wasm32")]
         core::arch::wasm32::unreachable();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        loop {}
     }
 }

@@ -5004,7 +5004,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "base64",
@@ -5021,7 +5021,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-integrated-tests-domain"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "serde_json",
@@ -5031,7 +5031,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-merkle"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "hex",
@@ -5043,7 +5043,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-sp1"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "ark-bn254",
  "ark-ec",
@@ -5057,7 +5057,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-types"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "base64",
