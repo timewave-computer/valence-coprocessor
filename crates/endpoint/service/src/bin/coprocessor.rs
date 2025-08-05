@@ -17,7 +17,7 @@ struct Cli {
     bind: SocketAddr,
 
     /// Socket to the Redis data backend. Fallback to memory data.
-    #[arg(short, long, value_name = "REDIS")]
+    #[arg(short, long, env, value_name = "REDIS")]
     redis: Option<String>,
 
     /// Socket to the Prover service backend. Fallback to SP1 mock prover.
