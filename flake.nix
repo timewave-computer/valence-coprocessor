@@ -167,7 +167,7 @@
         }
       );
 
-      flake.systemModules.service = moduleWithSystem (
+      flake.nixosModules.service = moduleWithSystem (
         { self', ... }:
         { config, lib, ... }:
         let
@@ -196,7 +196,7 @@
                   StateDirectory = "valence-coprocessor";
                   ExecStart = "${lib.getExe cfg.package} ${lib.concatStringsSep " " cfg.flags}";
                 };
-                wantedBy = [ "system-manager.target" ];
+                wantedBy = [ "multi-user.target" ];
               };
             };
           };
