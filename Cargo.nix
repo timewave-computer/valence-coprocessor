@@ -2800,7 +2800,7 @@ constant-time operation and embedded-friendly no_std support
           {
             name = "clap";
             packageId = "clap";
-            features = [ "derive" ];
+            features = [ "derive" "env" ];
           }
           {
             name = "reqwest";
@@ -21449,7 +21449,7 @@ Unicode Standard Annex #31.
           {
             name = "clap";
             packageId = "clap";
-            features = [ "derive" ];
+            features = [ "derive" "env" ];
           }
           {
             name = "flume";
@@ -21588,7 +21588,7 @@ Unicode Standard Annex #31.
           {
             name = "clap";
             packageId = "clap";
-            features = [ "derive" ];
+            features = [ "derive" "env" ];
           }
           {
             name = "dirs";
@@ -27800,8 +27800,6 @@ even WASM!
               panic = "unwind"; # tests require panic=unwind
             });
             depProfileRustcOpts = profileToRustcOpts profileCfg true;
-            buildProfileRustcOpts = profileToRustcOpts
-              (profileCfg // (profileCfg.build-override or {})) true;
             devDependencies = lib.optionals (runTests && packageId == rootPackageId) (
               crateConfig'.devDependencies or [ ]
             );
@@ -27817,7 +27815,7 @@ even WASM!
                   self.crates.${depPackageId}
                 ).override {
                   extraRustcOpts = depProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
-                  extraRustcOptsForBuildRs = buildProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+                  extraRustcOptsForBuildRs = depProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
                 };
               dependencies = (crateConfig.dependencies or [ ]) ++ devDependencies;
             };
@@ -27825,8 +27823,8 @@ even WASM!
               inherit features;
               inherit (self.build) target;
               buildByPackageId = depPackageId: self.build.crates.${depPackageId}.override {
-                extraRustcOpts = buildProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
-                extraRustcOptsForBuildRs = buildProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+                extraRustcOpts = depProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
+                extraRustcOptsForBuildRs = depProfileRustcOpts ++ targetFeaturesRustcOpts ++ globalRustcOpts;
               };
               dependencies = crateConfig.buildDependencies or [ ];
             };
@@ -27896,7 +27894,7 @@ even WASM!
             // (lib.optionalAttrs (packageId == rootPackageId) {
               extraRustcOpts = (profileToRustcOpts profileCfg false) ++ targetFeaturesRustcOpts ++ globalRustcOpts;
               extraRustcOptsForBuildRs =
-                (profileToRustcOpts (profileCfg // (profileCfg.build-override or {})) false)
+                (profileToRustcOpts profileCfg false)
                 ++ targetFeaturesRustcOpts ++ globalRustcOpts;
             })
           );
@@ -28299,11 +28297,6 @@ even WASM!
       # split-debuginfo = "...";
       strip = "none";
       panic = "unwind";
-      build-override = {
-        opt-level = 0;
-        codegen-units = 256;
-        debug = false;
-      };
     };
     release = {
       overflow-checks = false;
@@ -28317,10 +28310,6 @@ even WASM!
       panic = "unwind";
       codegen-units = 16;
       debug-assertions = false;
-      build-override = {
-        opt-level = 0;
-        codegen-units = 256;
-      };
     };
   };
 
