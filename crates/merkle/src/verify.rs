@@ -1,42 +1,9 @@
 use alloc::vec::Vec;
-use valence_coprocessor_types::{DataBackend, Hash, Hasher, HASH_LEN};
+use valence_coprocessor_types::{
+    DataBackend, Hash, Hasher, KeyedOpening, Opening, OpeningNonMembership, Preimage, HASH_LEN,
+};
 
-use crate::{KeyedOpening, Opening, Smt, SmtChildren};
-
-impl Opening {
-    /// Computes the root for the opening.
-    pub fn root<H: Hasher>(&self, key: &Hash, value: &Hash) -> Hash {
-        let mut node = *value;
-        let mut depth = self.path.len();
-
-        for sibling in &self.path {
-            depth -= 1;
-
-            let i = depth / 8;
-            let j = depth % 8;
-
-            if i == HASH_LEN {
-                // The provided key is larger than the bits context.
-                break;
-            }
-
-            let bit = (key[i] >> (7 - j)) & 1;
-
-            node = if bit == 0 {
-                H::merge(&node, sibling)
-            } else {
-                H::merge(sibling, &node)
-            };
-        }
-
-        node
-    }
-
-    /// Verifies a Merkle opening proof to a known root.
-    pub fn verify<H: Hasher>(&self, root: &Hash, key: &Hash, value: &Hash) -> bool {
-        *root == self.root::<H>(key, value)
-    }
-}
+use crate::{Smt, SmtChildren};
 
 impl<D, H> Smt<D, H>
 where
@@ -46,8 +13,33 @@ where
     /// Computes a Merkle opening proof for the provided leaf to the root.
     pub fn get_opening(&self, root: Hash, key: &Hash) -> anyhow::Result<Option<Opening>> {
         let keyed = self.get_keyed_opening(root, key)?;
+        let opening = keyed.key.filter(|k| k == key).map(|_| keyed.opening);
 
-        Ok((key == &keyed.key).then_some(keyed.opening))
+        Ok(opening)
+    }
+
+    /// Creates a Merkle proof of non-membership.
+    pub fn get_non_membership_opening(
+        &self,
+        root: Hash,
+        key: &Hash,
+    ) -> anyhow::Result<OpeningNonMembership> {
+        let keyed = self.get_keyed_opening(root, key)?;
+        let preimage = if keyed.node == Hash::default() {
+            Preimage::Zero
+        } else {
+            let key = keyed.key.unwrap_or_default();
+            //.ok_or_else(|| anyhow::anyhow!("non-zero leaf should have key"))?;
+
+            let data = self.get_key_data(&key)?.unwrap_or_default();
+
+            Preimage::Data(data)
+        };
+
+        Ok(OpeningNonMembership {
+            preimage,
+            opening: keyed.opening,
+        })
     }
 
     /// Computes a Merkle opening proof for the provided leaf to the root.
@@ -89,7 +81,7 @@ where
 
         opening.reverse();
 
-        let key = self.get_node_key(&leaf_node)?.unwrap_or_default();
+        let key = self.get_node_key(&leaf_node)?;
         let opening = Opening::new(opening);
 
         Ok(KeyedOpening {
@@ -104,5 +96,17 @@ where
         let value = H::hash(data);
 
         opening.verify::<H>(root, key, &value)
+    }
+
+    /// Verifies a non-membership proof.
+    pub fn verify_non_membership(
+        proof: &OpeningNonMembership,
+        root: &Hash,
+        key: &Hash,
+        data: &[u8],
+    ) -> bool {
+        let value = H::hash(data);
+
+        proof.verify::<H>(root, key, &value)
     }
 }

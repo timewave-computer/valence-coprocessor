@@ -1,3 +1,5 @@
+use core::array;
+
 use alloc::{string::String, vec, vec::Vec};
 use msgpacker::{MsgPacker, Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
@@ -64,6 +66,8 @@ pub struct DomainData {
     pub name: String,
     /// Controller used to compute the domain functions.
     pub controller: Vec<u8>,
+    /// Circuit associated with the domain block add function.
+    pub circuit: Vec<u8>,
 }
 
 impl DomainData {
@@ -75,12 +79,19 @@ impl DomainData {
         Self {
             name,
             controller: vec![],
+            circuit: vec![],
         }
     }
 
     /// Associates the provided controller with the domain.
     pub fn with_controller(mut self, controller: Vec<u8>) -> Self {
         self.controller = controller;
+        self
+    }
+
+    /// Associates the provided circuit with the domain.
+    pub fn with_circuit(mut self, circuit: Vec<u8>) -> Self {
+        self.circuit = circuit;
         self
     }
 
@@ -293,14 +304,26 @@ pub struct ValidatedDomainBlock {
     Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
 )]
 pub struct HistoricalUpdate {
+    /// The UUID associated with the update.
+    pub uuid: [u8; 16],
+
     /// Current historical root.
     pub root: Hash,
 
-    /// Historical root priot to the update
+    /// Historical root prior to the update.
     pub previous: Hash,
 
     /// Block that triggered the update.
     pub block: ValidatedDomainBlock,
+}
+
+impl HistoricalUpdate {
+    /// Compute the historical Merkle key from the block number.
+    pub fn block_number_to_key(number: u64) -> Hash {
+        let key = number.to_be_bytes();
+
+        array::from_fn(|i| key.get(i).copied().unwrap_or(0))
+    }
 }
 
 /// A confirmation of an added block.

@@ -3,13 +3,14 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use msgpacker::Packable as _;
 use serde_json::Value;
-use valence_coprocessor_merkle::{CompoundOpening, Smt};
+use uuid::Uuid;
+use valence_coprocessor_merkle::Smt;
 use valence_coprocessor_types::{
-    BlockAdded, DataBackend, DomainData, Hash, Hasher, HistoricalUpdate, ValidatedBlock,
-    ValidatedDomainBlock,
+    BlockAdded, CompoundOpening, DataBackend, DomainData, Hash, Hasher, HistoricalTransitionProof,
+    HistoricalUpdate, ValidatedBlock, ValidatedDomainBlock,
 };
 
-use crate::{ExecutionContext, Historical, Vm};
+use crate::{ExecutionContext, Historical, HistoricalNonMembership, Vm};
 
 impl<H, D> Historical<H, D>
 where
@@ -21,24 +22,16 @@ where
         *self.current.read().expect("infallible lock")
     }
 
-    /// Returns the latest history tree root.
-    pub fn history(&self) -> Hash {
-        *self.history.read().expect("infallible lock")
-    }
-
     /// Initializes a new context.
     pub fn context(&self, controller: Hash) -> ExecutionContext<H, D> {
         let current = self.current();
-        let history = self.history();
 
-        ExecutionContext::init(controller, current, history, self.data.clone())
+        ExecutionContext::init(controller, current, self.data.clone())
     }
 
     /// Initializes a new context with the provided historical root.
     pub fn context_with_root(&self, controller: Hash, root: Hash) -> ExecutionContext<H, D> {
-        let history = self.current();
-
-        ExecutionContext::init(controller, root, history, self.data.clone())
+        ExecutionContext::init(controller, root, self.data.clone())
     }
 
     /// Loads a new instance of the historical tree from the data backend.
@@ -51,20 +44,11 @@ where
             .map_err(|_| anyhow::anyhow!("failed to load current tree from the database"))?
             .unwrap_or(empty);
 
-        let history = data.get(Self::PREFIX_HISTORY, &[])?;
-        let history = history
-            .map(Hash::try_from)
-            .transpose()
-            .map_err(|_| anyhow::anyhow!("failed to load history tree from the database"))?
-            .unwrap_or(empty);
-
         let next = Arc::new(Mutex::new(current));
         let current = Arc::new(RwLock::new(current));
-        let history = Arc::new(RwLock::new(history));
 
         Ok(Self {
             current,
-            history,
             next,
             data,
             phantom: PhantomData,
@@ -97,48 +81,50 @@ where
             let opening = tree.get_keyed_opening(smt, &block.domain)?;
 
             // Use the node value if matches; otherwise, create a new sub-tree.
-            let leaf = if opening.key == block.domain {
+            let leaf = if opening.key == Some(block.domain) {
                 opening.node
             } else {
                 Hash::default()
             };
 
             let tree = tree.with_namespace(block.domain);
-            let key = Historical::<H, ()>::block_number_to_key(block.number);
+            let key = HistoricalUpdate::block_number_to_key(block.number);
             let leaf = tree.insert_with_leaf(leaf, &key, block.root, &block.payload)?;
 
             let tree = tree.with_namespace(Self::PREFIX_HISTORICAL);
             let smt = tree.insert_compound(smt, &block.domain, leaf)?;
 
-            // prepare the update on the history tree
-            // note: this cannot fail, so it will short-circuit in case of data error
+            // update chained history (must be infallible)
 
-            let mut history = self
-                .history
-                .write()
-                .map_err(|e| anyhow::anyhow!("failed to lock history tree: {e}"))?;
+            // if repeated block, then don't update chain
+            if smt != prev_smt {
+                let uuid = Uuid::now_v7().as_u128().to_be_bytes();
+                let chained = HistoricalUpdate {
+                    uuid,
+                    previous: prev_smt,
+                    root: smt,
+                    block: block.clone(),
+                }
+                .pack_to_vec();
 
-            *history = self
-                .smt()
-                .with_namespace(Self::PREFIX_HISTORY)
-                .insert_with_leaf(*history, &smt, prev_smt, &block.pack_to_vec())?;
+                self.data
+                    .set(Self::PREFIX_HISTORY_PREV, &prev_smt, &chained)?;
 
-            if let Err(e) = self.data.set(Self::PREFIX_HISTORY, &[], &*history) {
-                tracing::error!("failed to update current history: {e}");
+                self.data.set(Self::PREFIX_HISTORY_CUR, &smt, &chained)?;
+
+                // update computed; override control vars & database
+
+                match self.current.write() {
+                    Ok(mut c) => *c = smt,
+                    Err(e) => tracing::warn!("failed to update current historical: {e}"),
+                }
+
+                if let Err(e) = self.data.set(Self::PREFIX_CURRENT, &[], &smt) {
+                    tracing::error!("failed to update current smt: {e}");
+                }
+
+                *next = smt;
             }
-
-            // update computed; override control vars & database
-
-            match self.current.write() {
-                Ok(mut c) => *c = smt,
-                Err(e) => tracing::warn!("failed to update current historical: {e}"),
-            }
-
-            if let Err(e) = self.data.set(Self::PREFIX_CURRENT, &[], &smt) {
-                tracing::error!("failed to update current smt: {e}");
-            }
-
-            *next = smt;
 
             smt
         };
@@ -181,12 +167,21 @@ where
 
         tracing::debug!("block validated for domain {}...", domain);
 
-        let validated: ValidatedBlock = serde_json::from_value(validated)?;
+        let ValidatedBlock {
+            number,
+            root,
+            payload,
+        } = serde_json::from_value(validated)?;
+
+        let exists = self.block_exists(id, number)?;
+
+        anyhow::ensure!(!exists, "cannot override blocks");
+
         let validated = ValidatedDomainBlock {
             domain: id,
-            number: validated.number,
-            root: validated.root,
-            payload: validated.payload,
+            number,
+            root,
+            payload,
         };
 
         let (prev_smt, smt) = self.add_validated_block(domain, &validated)?;
@@ -218,15 +213,47 @@ where
         Self::get_block_proof_with_historical(self.data.clone(), root, domain_id, number)
     }
 
-    /// Get the historical update for the provided historical tree root.
-    pub fn get_historical_update(&self, root: Hash) -> anyhow::Result<Option<HistoricalUpdate>> {
-        let tree = {
-            *self
-                .history
-                .read()
-                .map_err(|e| anyhow::anyhow!("failed to get the history tree root: {e}"))?
-        };
+    /// Returns `true` if the provided block exists for the domain.
+    pub fn block_exists(&self, domain_id: Hash, number: u64) -> anyhow::Result<bool> {
+        self.get_block_proof(domain_id, number)
+            .map(|p| p.trees.len() == 2)
+    }
 
-        Self::get_historical_update_with_tree(self.data.clone(), tree, root)
+    /// Computes a proof of non-membership of the provided block.
+    pub fn get_historical_non_membership_proof(
+        &self,
+        domain_id: &Hash,
+        number: u64,
+    ) -> anyhow::Result<HistoricalNonMembership> {
+        let root = self.current();
+
+        Self::get_historical_non_membership_proof_with_data(
+            self.data.clone(),
+            root,
+            domain_id,
+            number,
+        )
+    }
+
+    /// Verifies the non-membership proof of the block.
+    pub fn verify_non_membership(
+        &self,
+        proof: &HistoricalNonMembership,
+        domain_id: &Hash,
+        number: u64,
+        state_root: &Hash,
+    ) -> bool {
+        let root = self.current();
+
+        proof.verify::<H>(&root, domain_id, number, state_root)
+    }
+
+    /// Computes a historical tree transition proof for the provided root.
+    pub fn get_latest_historical_transition_proof(
+        &self,
+    ) -> anyhow::Result<HistoricalTransitionProof> {
+        let root = self.current();
+
+        Self::get_historical_transition_proof_with_data(self.data.clone(), &root)
     }
 }

@@ -7,6 +7,7 @@ extern crate alloc;
 #[no_mangle]
 pub extern "C" fn entrypoint() {
     let args = abi::args().unwrap();
+
     let domain = args["domain"].as_str().unwrap();
     let number = args["number"].as_u64().unwrap();
 

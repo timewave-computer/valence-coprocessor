@@ -365,7 +365,7 @@ rec {
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             optional = true;
             usesDefaultFeatures = false;
             features = [ "default-hasher" "inline-more" ];
@@ -499,10 +499,10 @@ rec {
       };
       "anstream" = rec {
         crateName = "anstream";
-        version = "0.6.19";
+        version = "0.6.20";
         edition = "2021";
-        description = "A simple cross platform library for writing colored text to a terminal.";
-        sha256 = "0crr9a207dyn8k66xgvhvmlxm9raiwpss3syfa35c6265s9z26ih";
+        description = "IO stream adapters for writing colored text that will gracefully degrade according to your terminal's capabilities.";
+        sha256 = "14k1iqdf3dx7hdjllmql0j9sjxkwr1lfdddi3adzff0r7mjn7r9s";
         dependencies = [
           {
             name = "anstyle";
@@ -577,15 +577,15 @@ rec {
       };
       "anstyle-query" = rec {
         crateName = "anstyle-query";
-        version = "1.1.3";
+        version = "1.1.4";
         edition = "2021";
         description = "Look up colored console capabilities";
-        sha256 = "1sgs2hq54wayrmpvy784ww2ccv9f8yhhpasv12z872bx0jvdx2vc";
+        sha256 = "1qir6d6fl5a4y2gmmw9a5w93ckwx6xn51aryd83p26zn6ihiy8wy";
         libName = "anstyle_query";
         dependencies = [
           {
             name = "windows-sys";
-            packageId = "windows-sys 0.59.0";
+            packageId = "windows-sys 0.60.2";
             target = { target, features }: (target."windows" or false);
             features = [ "Win32_System_Console" "Win32_Foundation" ];
           }
@@ -594,10 +594,10 @@ rec {
       };
       "anstyle-wincon" = rec {
         crateName = "anstyle-wincon";
-        version = "3.0.9";
+        version = "3.0.10";
         edition = "2021";
         description = "Styling legacy Windows terminals";
-        sha256 = "10n8mcgr89risdf35i73zc67aaa392bhggwzqlri1fv79297ags0";
+        sha256 = "0ajz9wsf46a2l3pds7v62xbhq2cffj7wrilamkx2z8r28m0k61iy";
         libName = "anstyle_wincon";
         dependencies = [
           {
@@ -611,7 +611,7 @@ rec {
           }
           {
             name = "windows-sys";
-            packageId = "windows-sys 0.59.0";
+            packageId = "windows-sys 0.60.2";
             target = { target, features }: (target."windows" or false);
             features = [ "Win32_System_Console" "Win32_Foundation" ];
           }
@@ -886,7 +886,7 @@ rec {
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             usesDefaultFeatures = false;
             features = [ "inline-more" "allocator-api2" ];
           }
@@ -1325,7 +1325,7 @@ rec {
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             usesDefaultFeatures = false;
             features = [ "inline-more" "allocator-api2" ];
           }
@@ -2643,10 +2643,10 @@ constant-time operation and embedded-friendly no_std support
       };
       "bytemuck" = rec {
         crateName = "bytemuck";
-        version = "1.23.1";
+        version = "1.23.2";
         edition = "2018";
         description = "A crate for mucking around with piles of bytes.";
-        sha256 = "08ilqv7x5lckj82i41j5lx2is9krcxiibgrs9pispr245rwsaxjw";
+        sha256 = "0xs637lsr9p73ackjkmbjw80dp1dfdw0ydhdk0gzjcnzpkpfm59r";
         authors = [
           "Lokathor <zefria@gmail.com>"
         ];
@@ -2668,10 +2668,10 @@ constant-time operation and embedded-friendly no_std support
       };
       "bytemuck_derive" = rec {
         crateName = "bytemuck_derive";
-        version = "1.10.0";
+        version = "1.10.1";
         edition = "2018";
         description = "derive proc-macros for `bytemuck`";
-        sha256 = "1r2p4abv6jzs60fq92qj03xk1rr33p34nx4cc9l9lidhnkr76524";
+        sha256 = "0a9dczfzn2c1lgg7afhqrh2drmg34w49hxhipni6pjri49blw5ag";
         procMacro = true;
         authors = [
           "Lokathor <zefria@gmail.com>"
@@ -2734,10 +2734,10 @@ constant-time operation and embedded-friendly no_std support
       };
       "camino" = rec {
         crateName = "camino";
-        version = "1.1.10";
+        version = "1.1.11";
         edition = "2018";
         description = "UTF-8 paths";
-        sha256 = "1asw3160i5x2r98lsfym3my8dps0fyk25qi206bddn3i271mp90d";
+        sha256 = "1h2150limbipfx5w59cw797nsgwjxn5mjpf33gvpc35hjfdal1sx";
         authors = [
           "Without Boats <saoirse@without.boats>"
           "Ashley Williams <ashley666ashley@gmail.com>"
@@ -2776,7 +2776,7 @@ constant-time operation and embedded-friendly no_std support
       };
       "cargo-valence" = rec {
         crateName = "cargo-valence";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor cargo subcommand.";
         crateBin = [
@@ -2941,13 +2941,13 @@ constant-time operation and embedded-friendly no_std support
       };
       "cc" = rec {
         crateName = "cc";
-        version = "1.2.31";
+        version = "1.2.32";
         edition = "2018";
         description = "A build-time dependency for Cargo build scripts to assist in invoking the native
 C compiler to compile native C code into a static archive to be linked into Rust
 code.
 ";
-        sha256 = "1ljzmb5djr6gnq9d06jyd4lik7hpizcg1b7anfld6sbbpf22v963";
+        sha256 = "0vi9np1fac712q5dpa2gb3g8lwr7bl6ik5cwdmg4sm4wgrcyali3";
         authors = [
           "Alex Crichton <alex@alexcrichton.com>"
         ];
@@ -3156,11 +3156,11 @@ item that gets emitted.
       };
       "clap" = rec {
         crateName = "clap";
-        version = "4.5.42";
+        version = "4.5.43";
         edition = "2021";
         description = "A simple to use, efficient, and full-featured Command Line Argument Parser";
         crateBin = [];
-        sha256 = "10m8lrwagli325bs9q30hki3xjsrq75az6r86xsschdv63ask1zd";
+        sha256 = "0vzc91f7968q57fmbr9lxg2hwa3lyb37m49ilf553693vk4rgzah";
         dependencies = [
           {
             name = "clap_builder";
@@ -3199,10 +3199,10 @@ item that gets emitted.
       };
       "clap_builder" = rec {
         crateName = "clap_builder";
-        version = "4.5.42";
+        version = "4.5.43";
         edition = "2021";
         description = "A simple to use, efficient, and full-featured Command Line Argument Parser";
-        sha256 = "0rmrg896szc23rsvpa4jyfnsax0rraickap9qzrsz53wqzrz7x34";
+        sha256 = "0rcgrp7lfcfsbg2qih4jf2q4qni2jp68bbrl413a07sf54q5hny3";
         dependencies = [
           {
             name = "anstream";
@@ -3836,7 +3836,7 @@ with no_std support and support for mobile targets including Android and iOS
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             usesDefaultFeatures = false;
           }
           {
@@ -7054,10 +7054,10 @@ composability, and iterator-like interfaces.
       };
       "h2" = rec {
         crateName = "h2";
-        version = "0.4.11";
+        version = "0.4.12";
         edition = "2021";
         description = "An HTTP/2 client and server";
-        sha256 = "118771sqbsa6cn48y9waxq24jx80f5xy8af0lq5ixq7ifsi51nhp";
+        sha256 = "11hk5mpid8757z6n3v18jwb62ikffrgzjlrgpzqvkqdlzjfbdh7k";
         authors = [
           "Carl Lerche <me@carllerche.com>"
           "Sean McArthur <sean@seanmonstar.com>"
@@ -7303,12 +7303,12 @@ composability, and iterator-like interfaces.
         };
         resolvedDefaultFeatures = [ "ahash" "allocator-api2" "default" "inline-more" "serde" ];
       };
-      "hashbrown 0.15.4" = rec {
+      "hashbrown 0.15.5" = rec {
         crateName = "hashbrown";
-        version = "0.15.4";
+        version = "0.15.5";
         edition = "2021";
         description = "A Rust port of Google's SwissTable hash map";
-        sha256 = "1mg045sm1nm00cwjm7ndi80hcmmv1v3z7gnapxyhd9qxc62sqwar";
+        sha256 = "189qaczmjxnikm9db748xyhiw04kpmhm9xj9k9hg0sgx7pjwyacj";
         authors = [
           "Amanieu d'Antras <amanieu@gmail.com>"
         ];
@@ -8639,11 +8639,11 @@ composability, and iterator-like interfaces.
       };
       "indenter" = rec {
         crateName = "indenter";
-        version = "0.3.3";
+        version = "0.3.4";
         edition = "2018";
         description = "A formatter wrapper that indents the text, designed for error display impls
 ";
-        sha256 = "10y6i6y4ls7xsfsc1r3p5j2hhbxhaqnk5zzk8aj52b14v05ba8yf";
+        sha256 = "1maq7yl2px9y40f68c2g2gjsq93rabphzp5shinj8nsldplfckcn";
         authors = [
           "Jane Lusby <jlusby@yaah.dev>"
         ];
@@ -8694,7 +8694,7 @@ composability, and iterator-like interfaces.
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             usesDefaultFeatures = false;
           }
           {
@@ -9480,7 +9480,7 @@ and keccak-p variants
         dependencies = [
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             optional = true;
           }
         ];
@@ -9503,7 +9503,7 @@ and keccak-p variants
         dependencies = [
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             optional = true;
           }
         ];
@@ -10589,7 +10589,7 @@ Supports various backends including num-bigint, etc..
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             optional = true;
             usesDefaultFeatures = false;
             features = [ "default-hasher" ];
@@ -13894,7 +13894,7 @@ equation coefficients
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             usesDefaultFeatures = false;
           }
           {
@@ -14658,10 +14658,10 @@ Digital Signature Algorithm (DSA) and Elliptic Curve Digital Signature Algorithm
       };
       "ruint" = rec {
         crateName = "ruint";
-        version = "1.15.0";
+        version = "1.16.0";
         edition = "2021";
         description = "Unsigned integer type with const-generic bit length";
-        sha256 = "1d3zkj42w569v502fy54cwikvwwjwlh0gvrrdyn5d3y6x1gnn98i";
+        sha256 = "1xmw2h7awp0cl9qbagxpm67f6dp5qkbm5vv27mf0rwkp4kw3ijwy";
         authors = [
           "Remco Bloemen <remco@wicked.ventures>"
         ];
@@ -14727,6 +14727,7 @@ Digital Signature Algorithm (DSA) and Elliptic Curve Digital Signature Algorithm
           "arbitrary" = [ "dep:arbitrary" "std" ];
           "ark-ff" = [ "dep:ark-ff-03" ];
           "ark-ff-04" = [ "dep:ark-ff-04" ];
+          "bigdecimal" = [ "dep:bigdecimal" "num-bigint" ];
           "bn-rs" = [ "dep:bn-rs" "std" ];
           "borsh" = [ "dep:borsh" ];
           "bytemuck" = [ "dep:bytemuck" ];
@@ -14747,6 +14748,7 @@ Digital Signature Algorithm (DSA) and Elliptic Curve Digital Signature Algorithm
           "quickcheck" = [ "dep:quickcheck" "std" ];
           "rand" = [ "dep:rand-08" ];
           "rand-09" = [ "dep:rand-09" ];
+          "rkyv" = [ "dep:rkyv" "alloc" ];
           "rlp" = [ "dep:rlp" "alloc" ];
           "serde" = [ "dep:serde" "alloc" ];
           "sqlx" = [ "dep:sqlx-core" "std" "dep:thiserror" ];
@@ -15165,7 +15167,7 @@ Digital Signature Algorithm (DSA) and Elliptic Curve Digital Signature Algorithm
           }
           {
             name = "security-framework";
-            packageId = "security-framework 3.2.0";
+            packageId = "security-framework 3.3.0";
             target = { target, features }: ("macos" == target."os" or null);
           }
         ];
@@ -15627,12 +15629,12 @@ Elliptic-Curve-Point-to-Octet-String encoding
         };
         resolvedDefaultFeatures = [ "OSX_10_10" "OSX_10_11" "OSX_10_12" "OSX_10_9" "default" ];
       };
-      "security-framework 3.2.0" = rec {
+      "security-framework 3.3.0" = rec {
         crateName = "security-framework";
-        version = "3.2.0";
+        version = "3.3.0";
         edition = "2021";
         description = "Security.framework bindings for macOS and iOS";
-        sha256 = "05mkrddi9i18h9p098d0iimqv1xxz0wd8mbgpbvh9jj67x0205r7";
+        sha256 = "037f0h06p00gg7ycczx3jsz4ikxzll177gdqnhca72h2qn91vyw0";
         libName = "security_framework";
         authors = [
           "Steven Fackler <sfackler@gmail.com>"
@@ -16392,10 +16394,10 @@ the accelerated variant TurboSHAKE
       };
       "slab" = rec {
         crateName = "slab";
-        version = "0.4.10";
+        version = "0.4.11";
         edition = "2018";
         description = "Pre-allocated storage for a uniform data type";
-        sha256 = "03f5a9gdp33mngya4qwq2555138pj74pl015scv57wsic5rikp04";
+        sha256 = "12bm4s88rblq02jjbi1dw31984w61y2ldn13ifk5gsqgy97f8aks";
         authors = [
           "Carl Lerche <me@carllerche.com>"
         ];
@@ -17098,10 +17100,10 @@ possible intended.
       };
       "sp1-derive" = rec {
         crateName = "sp1-derive";
-        version = "5.1.1";
+        version = "5.2.1";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "0blfzjjd8m6rh7lw70cbirsmy68rq7wmqf20yas1i3a1c6pvgg3w";
+        sha256 = "139wiqjzimk250rvvaiw9c93bd9z8jbs3v1krxp1savmc7kbqdm7";
         procMacro = true;
         libName = "sp1_derive";
         dependencies = [
@@ -17119,10 +17121,10 @@ possible intended.
       };
       "sp1-lib" = rec {
         crateName = "sp1-lib";
-        version = "5.1.1";
+        version = "5.2.1";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "0hp0d6wgh2bxxijf9qkhkqdp04alr554rxgpwfg1v9q4mbwmp87b";
+        sha256 = "06kd21kmppascv5y119prphhw7p4iaa2yr6bf28ly4w7dwdyh7qf";
         libName = "sp1_lib";
         dependencies = [
           {
@@ -17153,10 +17155,10 @@ possible intended.
       };
       "sp1-primitives" = rec {
         crateName = "sp1-primitives";
-        version = "5.1.1";
+        version = "5.2.1";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "0k2gpx45wd94b7yg79zp849fdywyvpz4vhwymbbafgfhhpmyndvn";
+        sha256 = "0av99xcnl3h1jjrhd7s6ppdbg07hkjdjxy6pw00cbha05018vpfx";
         libName = "sp1_primitives";
         dependencies = [
           {
@@ -17780,10 +17782,10 @@ possible intended.
       };
       "sp1-recursion-derive" = rec {
         crateName = "sp1-recursion-derive";
-        version = "5.1.1";
+        version = "5.2.1";
         edition = "2021";
         description = "SP1 is a performant, 100% open-source, contributor-friendly zkVM.";
-        sha256 = "1arsnkn7mzpqgk1z1gz1nfrq35d17yh7mjh7cgg7hxz4j9kgp3fq";
+        sha256 = "1g337iphl32v7jriyxqj7ihfkimazskqcqwf7pjg2fw7vrx4dj0l";
         procMacro = true;
         libName = "sp1_recursion_derive";
         dependencies = [
@@ -21190,11 +21192,11 @@ Unicode Standard Annex #31.
           "v7" = [ "rng" ];
           "zerocopy" = [ "dep:zerocopy" ];
         };
-        resolvedDefaultFeatures = [ "default" "rng" "std" "v4" ];
+        resolvedDefaultFeatures = [ "default" "rng" "std" "v4" "v7" ];
       };
       "valence-coprocessor" = rec {
         crateName = "valence-coprocessor";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/core; };
@@ -21220,7 +21222,7 @@ Unicode Standard Annex #31.
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
           }
           {
             name = "msgpacker";
@@ -21250,6 +21252,12 @@ Unicode Standard Annex #31.
             name = "tracing";
             packageId = "tracing";
             usesDefaultFeatures = false;
+          }
+          {
+            name = "uuid";
+            packageId = "uuid";
+            optional = true;
+            features = [ "v7" ];
           }
           {
             name = "valence-coprocessor-merkle";
@@ -21289,13 +21297,14 @@ Unicode Standard Annex #31.
         features = {
           "default" = [ "std" ];
           "reqwest" = [ "dep:reqwest" ];
-          "std" = [ "base64/std" "serde/std" "reqwest" ];
+          "std" = [ "base64/std" "serde/std" "reqwest" "uuid" ];
+          "uuid" = [ "dep:uuid" ];
         };
-        resolvedDefaultFeatures = [ "default" "mocks" "reqwest" "std" ];
+        resolvedDefaultFeatures = [ "default" "mocks" "reqwest" "std" "uuid" ];
       };
       "valence-coprocessor-client" = rec {
         crateName = "valence-coprocessor-client";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor client";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/utils/client; };
@@ -21356,7 +21365,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-merkle" = rec {
         crateName = "valence-coprocessor-merkle";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor Merkle primitives";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/merkle; };
@@ -21412,7 +21421,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-prover" = rec {
         crateName = "valence-coprocessor-prover";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor prover service.";
         crateBin = [
@@ -21523,7 +21532,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-redis" = rec {
         crateName = "valence-coprocessor-redis";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor Redis data backend implementation.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/data/redis; };
@@ -21555,7 +21564,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-service" = rec {
         crateName = "valence-coprocessor-service";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor service application.";
         crateBin = [
@@ -21661,7 +21670,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-sp1" = rec {
         crateName = "valence-coprocessor-sp1";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor SP1 prover backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/sp1; };
@@ -21766,7 +21775,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-types" = rec {
         crateName = "valence-coprocessor-types";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor types definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/types; };
@@ -21823,7 +21832,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-wasm" = rec {
         crateName = "valence-coprocessor-wasm";
-        version = "0.4.2";
+        version = "0.4.3";
         edition = "2021";
         description = "The Valence co-processor WASM module backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/wasm; };
@@ -21845,7 +21854,7 @@ Unicode Standard Annex #31.
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             optional = true;
           }
           {
@@ -22433,7 +22442,7 @@ dependency.
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             optional = true;
             usesDefaultFeatures = false;
             features = [ "default-hasher" ];
@@ -22593,7 +22602,7 @@ dependency.
           }
           {
             name = "hashbrown";
-            packageId = "hashbrown 0.15.4";
+            packageId = "hashbrown 0.15.5";
             usesDefaultFeatures = false;
             features = [ "default-hasher" ];
           }
@@ -26266,7 +26275,7 @@ dependency.
           "Win32_Web" = [ "Win32" ];
           "Win32_Web_InternetExplorer" = [ "Win32_Web" ];
         };
-        resolvedDefaultFeatures = [ "Win32" "Win32_Foundation" "Win32_Globalization" "Win32_Networking" "Win32_Networking_WinSock" "Win32_System" "Win32_System_Com" "Win32_System_Diagnostics" "Win32_System_Diagnostics_Debug" "Win32_UI" "Win32_UI_Shell" "default" ];
+        resolvedDefaultFeatures = [ "Win32" "Win32_Foundation" "Win32_Globalization" "Win32_Networking" "Win32_Networking_WinSock" "Win32_System" "Win32_System_Com" "Win32_System_Console" "Win32_System_Diagnostics" "Win32_System_Diagnostics_Debug" "Win32_UI" "Win32_UI_Shell" "default" ];
       };
       "windows-targets 0.48.5" = rec {
         crateName = "windows-targets";
@@ -27167,10 +27176,10 @@ even WASM!
       };
       "zerovec" = rec {
         crateName = "zerovec";
-        version = "0.11.2";
+        version = "0.11.4";
         edition = "2021";
         description = "Zero-copy vector backed by a byte array";
-        sha256 = "0a2457fmz39k9vrrj3rm82q5ykdhgxgbwfz2r6fa6nq11q4fn1aa";
+        sha256 = "0fz7j1ns8d86m2fqg2a4bzi5gnh5892bxv4kcr9apwc6a3ajpap7";
         authors = [
           "The ICU4X Project Developers"
         ];

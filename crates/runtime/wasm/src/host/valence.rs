@@ -412,7 +412,7 @@ where
         Err(e) => return e,
     };
 
-    let update = match caller.data().ctx.get_historical_update(root) {
+    let update = match caller.data().ctx.get_historical_update(&root) {
         Ok(u) => u,
         Err(_) => return ReturnCodes::HistoricalUpdate as i32,
     };

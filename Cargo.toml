@@ -18,7 +18,7 @@ default-members = ["crates/core", "crates/merkle", "crates/types"]
 authors = ["Timewave Labs"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.4.2"
+version = "0.4.3"
 repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]
@@ -53,6 +53,7 @@ sp1-stark = "=5.0.8"
 sp1-verifier = "=5.0.8"
 tokio = { version = "1.44.2", features = ["full"] }
 tracing = { version = "0.1.41", default-features = false }
+uuid = { version = "1.17.0", features = ["v7"] }
 zerocopy = { version = "0.8.23", features = ["alloc", "derive"] }
 
 [profile.dev]

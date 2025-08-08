@@ -1,7 +1,6 @@
 use proptest::collection;
 use valence_coprocessor::{CompoundOpeningBuilder, MemorySmt};
-use valence_coprocessor_merkle::Opening;
-use valence_coprocessor_types::{Blake3Hasher, Hasher};
+use valence_coprocessor_types::{Blake3Hasher, Hasher, Opening};
 
 use proptest::prelude::*;
 
@@ -14,6 +13,10 @@ fn single_node_opening() -> anyhow::Result<()> {
     let key = Blake3Hasher::key(context, &[]);
 
     let root = MemorySmt::empty_tree_root();
+
+    let proof = tree.get_non_membership_opening(root, &key)?;
+    assert!(MemorySmt::verify_non_membership(&proof, &root, &key, data));
+
     let root = tree.insert(root, &key, data)?;
     let proof = tree.get_opening(root, &key)?.unwrap();
 
@@ -40,7 +43,16 @@ fn double_node_opening() -> anyhow::Result<()> {
     let tree = MemorySmt::default();
     let root = MemorySmt::empty_tree_root();
 
+    let proof = tree.get_non_membership_opening(root, &key)?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof, &root, &key, &data[0]
+    ));
     let root = tree.insert(root, &key, &data[0])?;
+
+    let proof = tree.get_non_membership_opening(root, &keyp)?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof, &root, &keyp, &data[1]
+    ));
     let root = tree.insert(root, &keyp, &data[1])?;
 
     let proofs = [
@@ -70,7 +82,14 @@ fn double_one_bit_collision() -> anyhow::Result<()> {
     let tree = MemorySmt::default();
     let root = MemorySmt::empty_tree_root();
 
+    let proof = tree.get_non_membership_opening(root, &key)?;
+    assert!(MemorySmt::verify_non_membership(&proof, &root, &key, data));
     let root = tree.insert(root, &key, data)?;
+
+    let proof = tree.get_non_membership_opening(root, &keyp)?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof, &root, &keyp, collision
+    ));
     let root = tree.insert(root, &keyp, collision)?;
 
     let proofs = [
@@ -104,7 +123,14 @@ fn double_two_bit_collision() -> anyhow::Result<()> {
     let tree = MemorySmt::default();
     let root = MemorySmt::empty_tree_root();
 
+    let proof = tree.get_non_membership_opening(root, &key)?;
+    assert!(MemorySmt::verify_non_membership(&proof, &root, &key, data));
     let root = tree.insert(root, &key, data)?;
+
+    let proof = tree.get_non_membership_opening(root, &keyp)?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof, &root, &keyp, collision
+    ));
     let root = tree.insert(root, &keyp, collision)?;
 
     let proofs = [
@@ -138,7 +164,14 @@ fn double_long_collision() -> anyhow::Result<()> {
     let tree = MemorySmt::default();
     let root = MemorySmt::empty_tree_root();
 
+    let proof = tree.get_non_membership_opening(root, &key)?;
+    assert!(MemorySmt::verify_non_membership(&proof, &root, &key, data));
     let root = tree.insert(root, &key, data)?;
+
+    let proof = tree.get_non_membership_opening(root, &keyp)?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof, &root, &keyp, collision
+    ));
     let root = tree.insert(root, &keyp, collision)?;
 
     let proofs = [
@@ -191,6 +224,10 @@ fn complex_tree() -> anyhow::Result<()> {
 
     // R = 0
 
+    let proof = tree.get_non_membership_opening(root, &keys[0])?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof, &root, &keys[0], data[0]
+    ));
     let root = tree.insert(root, &keys[0], data[0])?;
 
     proofs[0] = tree.get_opening(root, &keys[0])?.unwrap();
@@ -205,6 +242,10 @@ fn complex_tree() -> anyhow::Result<()> {
     //    / \
     //   0   1
 
+    let proof = tree.get_non_membership_opening(root, &keys[1])?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof, &root, &keys[1], data[1]
+    ));
     let root = tree.insert(root, &keys[1], data[1])?;
 
     proofs[0] = tree.get_opening(root, &keys[0])?.unwrap();
@@ -224,6 +265,10 @@ fn complex_tree() -> anyhow::Result<()> {
     //  / \
     // 0   2
 
+    let proof = tree.get_non_membership_opening(root, &keys[2])?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof, &root, &keys[2], data[2]
+    ));
     let root = tree.insert(root, &keys[2], data[2])?;
 
     proofs[0] = tree.get_opening(root, &keys[0])?.unwrap();
@@ -246,6 +291,10 @@ fn complex_tree() -> anyhow::Result<()> {
     //  / \
     // 0   2
 
+    let proof = tree.get_non_membership_opening(root, &keys[3])?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof, &root, &keys[3], data[3]
+    ));
     let root = tree.insert(root, &keys[3], data[3])?;
 
     proofs[0] = tree.get_opening(root, &keys[0])?.unwrap();
@@ -273,6 +322,9 @@ fn deep_opening() -> anyhow::Result<()> {
 
     let data = n[0].to_le_bytes();
     let k0 = Blake3Hasher::key(ctx, &data);
+
+    let proof = tree.get_non_membership_opening(root, &k0)?;
+    assert!(MemorySmt::verify_non_membership(&proof, &root, &k0, &data));
     let root = tree.insert(root, &k0, &data)?;
 
     let p0 = tree.get_opening(root, &k0)?.unwrap();
@@ -287,6 +339,9 @@ fn deep_opening() -> anyhow::Result<()> {
 
     let data = n[1].to_le_bytes();
     let k1 = Blake3Hasher::key(ctx, &data);
+
+    let proof = tree.get_non_membership_opening(root, &k1)?;
+    assert!(MemorySmt::verify_non_membership(&proof, &root, &k1, &data));
     let root = tree.insert(root, &k1, &data)?;
 
     let p0 = tree.get_opening(root, &k0)?.unwrap();
@@ -310,6 +365,9 @@ fn deep_opening() -> anyhow::Result<()> {
 
     let data = n[2].to_le_bytes();
     let k2 = Blake3Hasher::key(ctx, &data);
+
+    let proof = tree.get_non_membership_opening(root, &k2)?;
+    assert!(MemorySmt::verify_non_membership(&proof, &root, &k2, &data));
     let root = tree.insert(root, &k2, &data)?;
 
     let p0 = tree.get_opening(root, &k0)?.unwrap();
@@ -366,6 +424,14 @@ fn compound_opening() -> anyhow::Result<()> {
     // R = 0
 
     tree = tree.with_namespace(ns[0]);
+
+    let proof = tree.get_non_membership_opening(roots[0], &keys[0])?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof,
+        &roots[0],
+        &keys[0],
+        &data[0][..]
+    ));
     roots[0] = tree.insert(roots[0], &keys[0], data[0])?;
     proofs[0] = tree.get_opening(roots[0], &keys[0])?.unwrap();
 
@@ -380,6 +446,14 @@ fn compound_opening() -> anyhow::Result<()> {
     //   0   1
 
     tree = tree.with_namespace(ns[0]);
+
+    let proof = tree.get_non_membership_opening(roots[0], &keys[1])?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof,
+        &roots[0],
+        &keys[1],
+        &data[1][..]
+    ));
     roots[0] = tree.insert(roots[0], &keys[1], data[1])?;
 
     proofs[0] = tree.get_opening(roots[0], &keys[0])?.unwrap();
@@ -394,6 +468,14 @@ fn compound_opening() -> anyhow::Result<()> {
     // R = 2
 
     tree = tree.with_namespace(ns[1]);
+
+    let proof = tree.get_non_membership_opening(roots[1], &keys[2])?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof,
+        &roots[1],
+        &keys[2],
+        &data[2][..]
+    ));
     roots[1] = tree.insert(roots[1], &keys[2], data[2])?;
     proofs[2] = tree.get_opening(roots[1], &keys[2])?.unwrap();
 
@@ -406,6 +488,14 @@ fn compound_opening() -> anyhow::Result<()> {
     // 3   2
 
     tree = tree.with_namespace(ns[1]);
+
+    let proof = tree.get_non_membership_opening(roots[1], &keys[3])?;
+    assert!(MemorySmt::verify_non_membership(
+        &proof,
+        &roots[1],
+        &keys[3],
+        &data[3][..]
+    ));
     roots[1] = tree.insert(roots[1], &keys[3], data[3])?;
 
     proofs[2] = tree.get_opening(roots[1], &keys[2])?.unwrap();

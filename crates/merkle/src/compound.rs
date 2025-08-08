@@ -1,48 +1,9 @@
 use alloc::vec::Vec;
 use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
-use valence_coprocessor_types::{DataBackend, Hash, Hasher};
+use valence_coprocessor_types::{CompoundEntry, CompoundOpening, DataBackend, Hash, Hasher};
 
-use crate::{Opening, Smt};
-
-/// A compound Merkle opening keyed opening.
-#[derive(
-    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
-)]
-pub struct CompoundEntry {
-    /// Opening key for the compound entry.
-    pub key: Hash,
-
-    /// Merkle path to a root.
-    pub opening: Opening,
-}
-
-/// A compound Merkle opening to a root.
-#[derive(
-    Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, MsgPacker,
-)]
-pub struct CompoundOpening {
-    /// A set of trees with their paths that opens to the root
-    pub trees: Vec<CompoundEntry>,
-}
-
-impl CompoundOpening {
-    /// Computes the root for the compound opening.
-    pub fn root<H: Hasher>(&self, value: &Hash) -> Hash {
-        let mut node = *value;
-
-        for CompoundEntry { key, opening } in &self.trees {
-            node = opening.root::<H>(key, &node);
-        }
-
-        node
-    }
-
-    /// Verifies a Merkle opening proof to a known root.
-    pub fn verify<H: Hasher>(&self, root: &Hash, value: &Hash) -> bool {
-        *root == self.root::<H>(value)
-    }
-}
+use crate::Smt;
 
 /// A builder for a Merkle compound opening computation.
 ///
@@ -111,13 +72,6 @@ impl CompoundOpeningBuilder {
             smt = smt.with_namespace(namespace);
 
             let keyed = smt.get_keyed_opening(root, &key)?;
-
-            anyhow::ensure!(
-                keyed.key == key,
-                "the key `{}` is not present for the compound tree `{}`",
-                hex::encode(key),
-                hex::encode(root),
-            );
 
             root = keyed.node;
 
