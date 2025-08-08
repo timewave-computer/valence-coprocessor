@@ -173,7 +173,7 @@ where
             payload,
         } = serde_json::from_value(validated)?;
 
-        let exists = self.block_exists(id, number)?;
+        let exists = self.block_exists(&id, number)?;
 
         anyhow::ensure!(!exists, "cannot override blocks");
 
@@ -214,9 +214,10 @@ where
     }
 
     /// Returns `true` if the provided block exists for the domain.
-    pub fn block_exists(&self, domain_id: Hash, number: u64) -> anyhow::Result<bool> {
-        self.get_block_proof(domain_id, number)
-            .map(|p| p.trees.len() == 2)
+    pub fn block_exists(&self, domain_id: &Hash, number: u64) -> anyhow::Result<bool> {
+        let key = HistoricalUpdate::block_number_to_key(number);
+
+        Ok(self.data.get(domain_id, &key)?.is_some())
     }
 
     /// Computes a proof of non-membership of the provided block.

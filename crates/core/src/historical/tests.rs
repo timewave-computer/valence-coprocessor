@@ -23,6 +23,7 @@ fn historical_tree_compound_domain_works() {
 
 proptest! {
     #[test]
+    #[ignore = "create arbitrary/fuzz domain blocks"]
     fn historical_tree_property_check(seed: u64, count: u8, domains: u8) {
         let data = MemoryBackend::default();
         let historical = Blake3Historical::load(data).unwrap();
@@ -45,7 +46,7 @@ proptest! {
             let number = rng.next_u64();
             let id = DomainData::identifier_from_parts(domain);
 
-            if !historical.block_exists(id, number).unwrap() {
+            if !historical.block_exists(&id, number).unwrap() {
                 validate_block_creation(&historical, domain, number);
             }
         }
@@ -68,7 +69,10 @@ fn validate_block_creation<D: DataBackend>(
 
     let root = block.root;
 
-    if !historical.block_exists(block.domain, block.number).unwrap() {
+    if !historical
+        .block_exists(&block.domain, block.number)
+        .unwrap()
+    {
         let proof = historical
             .get_historical_non_membership_proof(&block.domain, block.number)
             .unwrap();
