@@ -1,8 +1,10 @@
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio::time::{self, Duration};
 use uuid::Uuid;
-use valence_coprocessor::{Base64, Hash, Proof, WitnessCoprocessor};
+use valence_coprocessor::{
+    Base64, Hash, HistoricalTransitionProof, HistoricalUpdate, Proof, ValidatedDomainBlock,
+    WitnessCoprocessor,
+};
 
 /// A co-processor client.
 #[derive(Debug, Clone)]
@@ -94,10 +96,17 @@ impl Client {
     ///
     /// - `domain`: the domain name.
     /// - `controller`: the runtime controller code.
-    pub async fn deploy_domain<D, T>(&self, domain: D, controller: T) -> anyhow::Result<String>
+    /// - `circuit`: the circuit zkvm bytecode.
+    pub async fn deploy_domain<D, T, C>(
+        &self,
+        domain: D,
+        controller: T,
+        circuit: C,
+    ) -> anyhow::Result<String>
     where
         D: AsRef<str>,
         T: AsRef<[u8]>,
+        C: AsRef<[u8]>,
     {
         let uri = self.uri("registry/domain");
 
@@ -106,6 +115,7 @@ impl Client {
             .json(&json!({
                 "name": domain.as_ref(),
                 "controller": Base64::encode(controller),
+                "circuit": Base64::encode(circuit),
             }))
             .send()
             .await?
@@ -449,51 +459,86 @@ impl Client {
         Ok(reqwest::Client::new().get(uri).send().await?.json().await?)
     }
 
+    /// Returns the historical update for the provided
+    pub async fn get_historical_update(&self, root: &Hash) -> anyhow::Result<HistoricalUpdate> {
+        let root = hex::encode(root);
+        let uri = format!("historical/{root}");
+        let uri = self.uri(uri);
+
+        let update: Value = reqwest::Client::new().get(uri).send().await?.json().await?;
+
+        let block: ValidatedDomainBlock = update
+            .get("block")
+            .cloned()
+            .and_then(|b| serde_json::from_value(b).ok())
+            .ok_or_else(|| anyhow::anyhow!("failed to parse block from reply"))?;
+
+        let uuid = str_to_array(&update, "uuid")?;
+        let root = str_to_array(&update, "root")?;
+        let previous = str_to_array(&update, "previous")?;
+
+        Ok(HistoricalUpdate {
+            uuid,
+            root,
+            previous,
+            block,
+        })
+    }
+
+    /// Returns a set of historical proofs for the provided interval.
+    pub async fn get_historical_updates(
+        &self,
+        from: &Hash,
+        to: &Hash,
+    ) -> anyhow::Result<Vec<HistoricalTransitionProof>> {
+        let from = hex::encode(from);
+        let to = hex::encode(to);
+
+        let uri = format!("historical/bulk/{from}/{to}");
+        let uri = self.uri(uri);
+
+        Ok(reqwest::Client::new().get(uri).send().await?.json().await?)
+    }
+
     /// Appends a block to the domain, validating it with the controller.
     pub async fn add_domain_block<D: AsRef<str>>(
         &self,
         domain: D,
         args: &Value,
-    ) -> anyhow::Result<AddedDomainBlock> {
+    ) -> anyhow::Result<Value> {
         let uri = format!("registry/domain/{}", domain.as_ref());
         let uri = self.uri(uri);
-
-        Ok(reqwest::Client::new()
+        let block = reqwest::Client::new()
             .post(uri)
             .json(&args)
             .send()
             .await?
             .json()
-            .await?)
+            .await?;
+
+        Ok(block)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AddedDomainBlock {
-    /// Domain to which the block was added.
-    pub domain: String,
-    /// Historical SMT root prior to the mutation.
-    pub prev_smt: Hash,
-    /// Historical SMT root after the mutation.
-    pub smt: Hash,
-    /// Controller execution log.
-    pub log: Vec<String>,
-    /// A block associated number.
-    pub number: u64,
-    /// The hash root of the block.
-    pub root: Hash,
-    /// SMT key to index the payload.
-    pub key: Hash,
-    /// Block blob payload.
-    pub payload: Vec<u8>,
+fn str_to_array<const N: usize>(value: &Value, field: &str) -> anyhow::Result<[u8; N]> {
+    value
+        .get(field)
+        .and_then(Value::as_str)
+        .and_then(|v| hex::decode(v).ok())
+        .and_then(|v| <[u8; N]>::try_from(v.as_slice()).ok())
+        .ok_or_else(|| {
+            anyhow::anyhow!("the provided value is not a string representation of an array")
+        })
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn stats_works() {
     Client::default().stats().await.unwrap();
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn deploy_controller_works() {
     Client::default()
         .deploy_controller(b"foo", b"bar", Some(15))
@@ -502,14 +547,16 @@ async fn deploy_controller_works() {
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn deploy_domain_works() {
     Client::default()
-        .deploy_domain("foo", b"bar")
+        .deploy_domain("foo", b"bar", b"baz")
         .await
         .unwrap();
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn get_storage_file_works() {
     let controller = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
     let path = "/var/share/proof.bin";
@@ -521,6 +568,7 @@ async fn get_storage_file_works() {
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn get_witnesses_works() {
     let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
     let args = json!({"value": 42});
@@ -532,6 +580,7 @@ async fn get_witnesses_works() {
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn prove_works() {
     let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
     let args = json!({"value": 42});
@@ -540,6 +589,7 @@ async fn prove_works() {
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn prove_with_root_works() {
     let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
     let root = "5f2f6b0dc5211dc53b6eb955c8e83193e58408d52ce03a0693c6db721f57f302";
@@ -552,6 +602,7 @@ async fn prove_with_root_works() {
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn get_vk_works() {
     let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
 
@@ -559,6 +610,7 @@ async fn get_vk_works() {
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn get_circuit_works() {
     let circuit = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
 
@@ -566,6 +618,7 @@ async fn get_circuit_works() {
 }
 
 #[tokio::test]
+#[ignore = "depends on remote service"]
 async fn entrypoint_works() {
     let controller = "5bbe392918c81c7e297375f6ef90064b61ed2b0c1849c7b568413fa7d8832918";
     let args = json!({
@@ -582,7 +635,7 @@ async fn entrypoint_works() {
 }
 
 #[tokio::test]
-#[ignore = "depends on deployed domain"]
+#[ignore = "depends on remote service"]
 async fn get_latest_domain_block_works() {
     Client::default()
         .get_latest_domain_block("ethereum-electra-alpha")

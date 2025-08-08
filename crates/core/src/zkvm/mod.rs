@@ -1,8 +1,7 @@
 use alloc::vec::Vec;
 use msgpacker::MsgPacker;
 use serde::{Deserialize, Serialize};
-use valence_coprocessor_merkle::CompoundOpening;
-use valence_coprocessor_types::{StateProof, ValidatedWitnesses, Witness};
+use valence_coprocessor_types::{CompoundOpening, StateProof, ValidatedWitnesses, Witness};
 
 use crate::{DataBackend, ExecutionContext, Hash, Hasher, Historical, Proof};
 

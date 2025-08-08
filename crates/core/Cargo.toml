@@ -15,6 +15,7 @@ reqwest = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+uuid = { workspace = true, optional = true }
 zerocopy.workspace = true
 
 valence-coprocessor-merkle.path = "../merkle"
@@ -29,4 +30,4 @@ valence-coprocessor = { path = ".", features = ["mocks"] }
 [features]
 default = ["std"]
 mocks = []
-std = ["base64/std", "serde/std", "reqwest"]
+std = ["base64/std", "serde/std", "reqwest", "uuid"]

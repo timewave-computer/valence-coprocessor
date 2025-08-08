@@ -95,6 +95,21 @@ pub struct RecursiveProof {
 }
 
 impl RecursiveProof {
+    /// Create a recursive proof argument from a given proof.
+    pub fn try_from_compressed_proof(
+        proof: &Proof,
+        vk: StarkVerifyingKey<BabyBearPoseidon2>,
+    ) -> anyhow::Result<Self> {
+        let proof = proof.decode()?.0;
+        let proof: SP1ProofWithPublicValues = serde_cbor::from_slice(&proof)?;
+        let proof = match proof.proof {
+            SP1Proof::Compressed(p) => p.as_ref().clone(),
+            _ => anyhow::bail!("recursive proofs must be of compressed type"),
+        };
+
+        Ok(Self { proof, vk })
+    }
+
     /// Encode a sequence of proofs into a base64 string.
     pub fn encode(proofs: Vec<Self>) -> String {
         serde_cbor::to_vec(&proofs).map(Base64::encode).unwrap()

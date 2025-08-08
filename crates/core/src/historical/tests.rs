@@ -1,6 +1,6 @@
 use proptest::prelude::*;
 use rand::{rngs::StdRng, SeedableRng as _};
-use valence_coprocessor_types::{Hash, HistoricalUpdate};
+use valence_coprocessor_types::Hash;
 
 use crate::MemoryBackend;
 
@@ -43,8 +43,11 @@ proptest! {
 
             let domain = &values[d as usize][..];
             let number = rng.next_u64();
+            let id = DomainData::identifier_from_parts(domain);
 
-            validate_block_creation(&historical, domain, number);
+            if !historical.block_exists(id, number).unwrap() {
+                validate_block_creation(&historical, domain, number);
+            }
         }
     }
 }
@@ -64,7 +67,23 @@ fn validate_block_creation<D: DataBackend>(
     };
 
     let root = block.root;
+
+    if !historical.block_exists(block.domain, block.number).unwrap() {
+        let proof = historical
+            .get_historical_non_membership_proof(&block.domain, block.number)
+            .unwrap();
+
+        assert!(historical.verify_non_membership(&proof, &block.domain, block.number, &block.root));
+    }
+
     let (previous, smt) = historical.add_validated_block(domain, &block).unwrap();
+
+    let proof = historical.get_latest_historical_transition_proof().unwrap();
+    let update = proof.verify::<Blake3Hasher>().unwrap();
+
+    assert_eq!(update.root, smt);
+    assert_eq!(update.previous, previous);
+    assert_eq!(update.block, block);
 
     let proof = historical.get_block_proof(block.domain, number).unwrap();
     let smt_p = Blake3Historical::compute_root(&proof, &root);
@@ -75,12 +94,9 @@ fn validate_block_creation<D: DataBackend>(
     assert_eq!(domain_id_p, block.domain);
     assert_eq!(number_p, number);
 
-    let update = HistoricalUpdate {
-        root: smt,
-        previous,
-        block,
-    };
-    let update_p = historical.get_historical_update(smt).unwrap().unwrap();
+    let update = historical.get_historical_update(&smt).unwrap().unwrap();
 
-    assert_eq!(update, update_p);
+    assert_eq!(smt, update.root);
+    assert_eq!(previous, update.previous);
+    assert_eq!(block, update.block);
 }

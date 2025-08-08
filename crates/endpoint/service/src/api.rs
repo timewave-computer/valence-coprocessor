@@ -3,7 +3,7 @@ use poem::http::StatusCode;
 use poem::web::Data;
 use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::{json, Value};
-use valence_coprocessor::{BlockAdded, Hash, ValidatedDomainBlock};
+use valence_coprocessor::{BlockAdded, Hash, HistoricalUpdate, ValidatedDomainBlock};
 use valence_coprocessor::{ControllerData, DomainData};
 
 use crate::{worker::Job, Historical, Registry, ServiceVm, ServiceZkVm};
@@ -36,6 +36,9 @@ pub struct RegisterDomainRequest {
 
     /// Base64 code for the WASM domain controller.
     pub controller: Base64<Vec<u8>>,
+
+    /// A Base64 circuit encoded prover.
+    pub circuit: Base64<Vec<u8>>,
 }
 
 #[derive(Object, Debug)]
@@ -148,17 +151,6 @@ impl Api {
         })))
     }
 
-    /// Co-processor root.
-    #[oai(path = "/root", method = "get")]
-    pub async fn root(&self, historical: Data<&Historical>) -> poem::Result<Json<Value>> {
-        let historical = historical.current();
-        let historical = hex::encode(historical);
-
-        Ok(Json(json!({
-            "historical": historical,
-        })))
-    }
-
     /// Register a new controller, returning its allocated id.
     #[oai(path = "/registry/controller", method = "post")]
     pub async fn registry_controller(
@@ -188,14 +180,16 @@ impl Api {
         &self,
         registry: Data<&Registry>,
         vm: Data<&ServiceVm>,
+        zkvm: Data<&ServiceZkVm>,
         request: Json<RegisterDomainRequest>,
     ) -> poem::Result<Json<RegisterDomainResponse>> {
         let domain = DomainData {
             name: request.name.clone(),
             controller: request.controller.to_vec(),
+            circuit: request.circuit.to_vec(),
         };
 
-        let domain = registry.register_domain(*vm, domain)?;
+        let domain = registry.register_domain(*vm, *zkvm, domain)?;
         let domain = RegisterDomainResponse {
             domain: hex::encode(domain),
         };
@@ -360,6 +354,24 @@ impl Api {
         }))
     }
 
+    /// Returns the controller runtime bytecode.
+    #[oai(path = "/registry/controller/:controller/runtime", method = "get")]
+    pub async fn controller_runtime(
+        &self,
+        controller: Path<String>,
+        historical: Data<&Historical>,
+    ) -> poem::Result<Json<ControllerCircuitResponse>> {
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
+        let circuit = ctx
+            .get_controller(&controller)?
+            .ok_or_else(|| anyhow::anyhow!("no runtime data available"))?;
+
+        Ok(Json(ControllerCircuitResponse {
+            base64: Base64(circuit),
+        }))
+    }
+
     /// Calls the controller entrypoint.
     #[oai(path = "/registry/controller/:controller/entrypoint", method = "post")]
     pub async fn controller_entrypoint(
@@ -369,6 +381,12 @@ impl Api {
         vm: Data<&ServiceVm>,
         args: Json<Value>,
     ) -> poem::Result<Json<ControllerEntrypointResponse>> {
+        tracing::debug!(
+            "received entrypoint request for `{}` with {:?}",
+            controller.as_str(),
+            &args.0
+        );
+
         let controller = try_str_to_hash(&controller)?;
         let ctx = historical.context(controller);
 
@@ -444,25 +462,46 @@ impl Api {
         }))
     }
 
+    /// Co-processor root.
+    #[oai(path = "/historical", method = "get")]
+    pub async fn root(&self, historical: Data<&Historical>) -> poem::Result<Json<Value>> {
+        let historical = historical.current();
+        let historical = hex::encode(historical);
+
+        Ok(Json(json!({
+            "root": historical,
+        })))
+    }
+
     /// Get the historical update for the provided historical tree root.
-    #[oai(path = "/registry/historical/:root", method = "get")]
+    #[oai(path = "/historical/:root", method = "get")]
     pub async fn historical_update(
         &self,
         root: Path<String>,
         historical: Data<&Historical>,
     ) -> poem::Result<Json<Value>> {
         let root = try_str_to_hash(&root)?;
-        let update = historical.get_historical_update(root)?;
-        let update = match update {
+        let update = historical.get_historical_update(&root)?;
+        let HistoricalUpdate {
+            uuid,
+            root,
+            previous,
+            block,
+        } = match update {
             Some(u) => u,
             None => return Err(r404()),
         };
 
-        Ok(Json(json!(update)))
+        Ok(Json(json!({
+            "uuid": hex::encode(uuid),
+            "root": hex::encode(root),
+            "previous": hex::encode(previous),
+            "block": block,
+        })))
     }
 
     /// Get the historical proof for the provided domain.
-    #[oai(path = "/registry/historical/:domain/:number", method = "get")]
+    #[oai(path = "/historical/:domain/:number", method = "get")]
     pub async fn historical_proof(
         &self,
         domain: Path<String>,
@@ -474,6 +513,71 @@ impl Api {
 
         Ok(Json(json!(proof)))
     }
+
+    /// Get a set of historical proofs for the provided interval
+    #[oai(path = "/historical/bulk/:from/:to", method = "get")]
+    pub async fn historical_proof_bulk(
+        &self,
+        from: Path<String>,
+        to: Path<String>,
+        historical: Data<&Historical>,
+    ) -> poem::Result<Json<Value>> {
+        tracing::debug!(
+            "historical bulk proof request received from `{}` to `{}`...",
+            from.as_str(),
+            to.as_str()
+        );
+
+        let from = try_str_to_hash(&from)?;
+        let to = try_str_to_hash(&to)?;
+
+        // skip current update
+        let from = historical
+            .get_historical_update_from_previous(&from)?
+            .ok_or_else(r400)?
+            .root;
+
+        tracing::debug!("previous root `{}`...", hex::encode(from));
+
+        let from = historical.get_historical_update(&from)?.ok_or_else(r400)?;
+        let mut to = historical.get_historical_update(&to)?.ok_or_else(r400)?;
+
+        tracing::debug!(
+            "historical range set from `{}` to `{}`...",
+            hex::encode(from.block.root),
+            hex::encode(to.block.root),
+        );
+
+        let mut updates = Vec::with_capacity(500);
+
+        while from.uuid <= to.uuid {
+            tracing::debug!(
+                "fetch block proof for root `{}` on block `{}` for domain `{}`...",
+                hex::encode(to.root),
+                to.block.number,
+                hex::encode(to.block.domain),
+            );
+
+            let proof = Historical::get_historical_transition_proof_with_data(
+                historical.data().clone(),
+                &to.root,
+            )?;
+
+            updates.push(proof);
+
+            to = match historical.get_historical_update(&to.previous)? {
+                Some(u) => u,
+                None if to.root == from.root => break,
+                _ => return Err(r500()),
+            };
+        }
+
+        updates.reverse();
+
+        tracing::debug!("provided `{}` updates.", updates.len());
+
+        Ok(Json(serde_json::to_value(updates).unwrap_or_default()))
+    }
 }
 
 fn r400() -> poem::Error {
@@ -482,6 +586,10 @@ fn r400() -> poem::Error {
 
 fn r404() -> poem::Error {
     poem::Error::from_status(StatusCode::NOT_FOUND)
+}
+
+fn r500() -> poem::Error {
+    poem::Error::from_status(StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 fn try_str_to_hash(hash: &str) -> anyhow::Result<Hash> {

@@ -1,10 +1,10 @@
-use core::{marker::PhantomData, ops::Deref, slice};
+use core::marker::PhantomData;
 
 use alloc::vec::Vec;
 use valence_coprocessor_types::{DataBackend, Hash, Hasher};
 use zerocopy::{IntoBytes as _, TryFromBytes as _};
 
-use crate::{Opening, Smt, SmtChildren};
+use crate::{Smt, SmtChildren};
 
 impl<D, H> Smt<D, H>
 where
@@ -117,36 +117,6 @@ where
     /// Returns the payload of the provided domain root on the historical SMT.
     pub fn get_key_data(&self, key: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
         self.d.get(&self.namespace_data, key)
-    }
-}
-
-impl Opening {
-    /// Creates a new Merkle opening proof from a path.
-    pub fn new(path: Vec<Hash>) -> Self {
-        Self { path }
-    }
-}
-
-impl Deref for Opening {
-    type Target = [Hash];
-
-    fn deref(&self) -> &Self::Target {
-        &self.path
-    }
-}
-
-impl<'a> IntoIterator for &'a Opening {
-    type Item = &'a Hash;
-    type IntoIter = slice::Iter<'a, Hash>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.path.iter()
-    }
-}
-
-impl FromIterator<Hash> for Opening {
-    fn from_iter<T: IntoIterator<Item = Hash>>(iter: T) -> Self {
-        Self::new(iter.into_iter().collect())
     }
 }
 

@@ -30,7 +30,7 @@ fn crosschain_coprocessor_witness_validates() {
         create_block(&historical, d, *n);
     }
 
-    let data = historical.data();
+    let data = historical.data().clone();
     let root = historical.current();
     let witnesses = cases.into_iter().map(create_state_proof).collect();
 

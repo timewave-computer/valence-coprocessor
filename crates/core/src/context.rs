@@ -3,8 +3,7 @@ use core::marker::PhantomData;
 use alloc::{rc::Rc, vec::Vec};
 
 use serde_json::Value;
-use valence_coprocessor_merkle::CompoundOpening;
-use valence_coprocessor_types::HistoricalUpdate;
+use valence_coprocessor_types::{CompoundOpening, HistoricalUpdate};
 
 use crate::{
     Blake3Hasher, DataBackend, DomainData, Hash, Hasher, Historical, Registry, StateProof,
@@ -25,7 +24,6 @@ where
     hasher: PhantomData<H>,
     registry: Registry<D>,
     historical_root: Hash,
-    history_tree: Hash,
     controller: Hash,
 
     #[cfg(feature = "std")]
@@ -196,9 +194,17 @@ where
 
     /// Overrides the controller storage file.
     pub fn set_storage_file(&self, path: &str, contents: &[u8]) -> anyhow::Result<()> {
-        let mut fs = self.get_storage()?;
-
         tracing::debug!("saving storage file to path `{path}`");
+
+        // TODO buf-fs doesn't support large extensions
+        if path.split('.').nth(1).filter(|s| s.len() <= 3).is_none() {
+            tracing::debug!("file path with length smaller than 3");
+
+            #[cfg(feature = "std")]
+            self.extend_log([alloc::format!("the provided file path extension `{path}` has more than 3 characters, which is not supported on FAT-16 filesystems")]).ok();
+        }
+
+        let mut fs = self.get_storage()?;
 
         if let Err(e) = fs.save(File::new(path.into(), contents.to_vec(), true)) {
             tracing::debug!("error saving storage file to path `{path}`: {e}");
@@ -241,13 +247,17 @@ where
         )
     }
 
-    ///  Returns the historical tree update that generated the provided root.
-    pub fn get_historical_update(&self, root: Hash) -> anyhow::Result<Option<HistoricalUpdate>> {
-        Historical::<H, D>::get_historical_update_with_tree(
-            self.inner.data.clone(),
-            self.inner.history_tree,
-            root,
-        )
+    /// Returns the chained historical update from the current historical root.
+    pub fn get_historical_update(&self, root: &Hash) -> anyhow::Result<Option<HistoricalUpdate>> {
+        Historical::<H, D>::get_historical_update_with_data(&self.inner.data, root)
+    }
+
+    /// Returns the chained historical update from the previous historical root.
+    pub fn get_historical_update_from_previous(
+        &self,
+        root: &Hash,
+    ) -> anyhow::Result<Option<HistoricalUpdate>> {
+        Historical::<H, D>::get_historical_update_from_previous_with_data(&self.inner.data, root)
     }
 
     #[cfg(feature = "std")]
@@ -296,18 +306,12 @@ where
 {
     /// Initializes a new execution context.
     #[allow(dead_code)]
-    pub(crate) fn init(
-        controller: Hash,
-        historical_root: Hash,
-        history_tree: Hash,
-        data: D,
-    ) -> Self {
+    pub(crate) fn init(controller: Hash, historical_root: Hash, data: D) -> Self {
         Self {
             inner: Rc::new(ExecutionContextInner {
                 data: data.clone(),
                 hasher: PhantomData,
                 historical_root,
-                history_tree,
                 registry: Registry::from(data.clone()),
                 controller,
 
