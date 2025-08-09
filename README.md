@@ -6,6 +6,79 @@ Its main objective is to be user-friendly, ensuring a seamless experience by abs
 
 The service is available publicly at https://service.coprocessor.valence.zone/
 
+```mermaid
+graph LR
+  subgraph "User"
+    Controller
+    Circuit
+    ProgramProof
+  end
+
+  subgraph "ETH lightclient"
+    State
+  end
+
+  subgraph "Domain prover"
+    Latest
+    RecentHistory
+  end
+
+  subgraph "External RPC"
+    Ankr
+    Alchemy
+  end
+
+  subgraph "Prover"
+    GPUWorker
+  end
+
+  subgraph "Coprocessor"
+    Historical
+    Storage
+    Runtime
+    ZkVM
+    DataBridge
+  end
+
+  subgraph "Data"
+    KVStore
+  end
+
+  subgraph "Authorization contract"
+    AuthorizationTable
+  end
+
+  %% Coprocessor
+  Runtime -- "ABI" --> Alchemy
+  Runtime -- "ABI" --> Storage
+  Runtime -- "Prove with witnesses" --> ZkVM
+  Runtime -- "Store/load bytecode" --> DataBridge
+  ZkVM -- "Store/load bytecode" --> DataBridge
+  Storage -- "Store/load bytes" --> DataBridge
+  Historical -- "Store/load SMT nodes" --> DataBridge
+  ZkVM -- "Prove program" --> GPUWorker
+  DataBridge --> KVStore
+
+  %% ETH lightclient
+  State -- "Store/Load" --> Storage
+  State -- "Fetch beacon data" --> Ankr
+  State -- "Add block" --> Historical
+  State -- "Prove ETH consensus" --> GPUWorker
+
+  %% User
+  Controller -- "Deploy" --> Runtime
+  Circuit -- "Deploy" --> ZkVM
+  ProgramProof -- "Request proof" --> Latest
+  ProgramProof -- "Publish" --> AuthorizationTable
+
+  %% Domain prover
+  Latest -- "Store/Load" --> Storage
+  Latest -- "Fetch updates" --> Historical
+  Latest -- "Request proof" --> Runtime
+  RecentHistory -- "Prove historical transition" --> GPUWorker
+  RecentHistory -- "Sync" --> Latest
+```
+
 #### CLI helper
 
 The Valence co-processor includes a CLI helper to facilitate the use of standard operations like deploying a domain, circuit, proving statements, and retrieving state information.
@@ -15,7 +88,7 @@ To install:
 ```sh
 cargo install \
   --git https://github.com/timewave-computer/valence-coprocessor.git \
-  --tag v0.4.1 \
+  --tag v0.4.4 \
   --locked cargo-valence
 ```
 
