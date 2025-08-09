@@ -23,7 +23,6 @@ fn historical_tree_compound_domain_works() {
 
 proptest! {
     #[test]
-    #[ignore = "create arbitrary/fuzz domain blocks"]
     fn historical_tree_property_check(seed: u64, count: u8, domains: u8) {
         let data = MemoryBackend::default();
         let historical = Blake3Historical::load(data).unwrap();

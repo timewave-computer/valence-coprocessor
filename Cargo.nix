@@ -15260,10 +15260,10 @@ Digital Signature Algorithm (DSA) and Elliptic Curve Digital Signature Algorithm
       };
       "rustversion" = rec {
         crateName = "rustversion";
-        version = "1.0.21";
+        version = "1.0.22";
         edition = "2018";
         description = "Conditional compilation according to rustc compiler version";
-        sha256 = "07bb1xx05hhwpnl43sqrhsmxyk5sd5m5baadp19nxp69s9xij3ca";
+        sha256 = "0vfl70jhv72scd9rfqgr2n11m5i9l1acnk684m2w83w0zbqdx75k";
         procMacro = true;
         build = "build/build.rs";
         authors = [

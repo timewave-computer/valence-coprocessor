@@ -13,6 +13,12 @@ pub struct Client {
     pub addr: String,
 }
 
+impl Default for Client {
+    fn default() -> Self {
+        Self::new("wss://prover.coprocessor.valence.zone")
+    }
+}
+
 impl Client {
     pub fn new<A>(addr: A) -> Self
     where

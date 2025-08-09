@@ -54,6 +54,7 @@ where
     ) -> anyhow::Result<Option<SmtChildren>> {
         let children = children.as_bytes();
 
+        self.d.remove(&self.namespace_key, parent)?;
         self.d
             .set(&self.namespace_node, parent, children)?
             .map(|d| {
