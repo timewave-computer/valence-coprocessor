@@ -199,19 +199,37 @@ impl Api {
 
     /// Returns the raw storage of the controller.
     #[oai(path = "/registry/controller/:controller/storage/raw", method = "get")]
-    pub async fn storage_raw(
+    pub async fn get_storage_raw(
         &self,
         controller: Path<String>,
         historical: Data<&Historical>,
-    ) -> poem::Result<Json<ControllerRawStorageResponse>> {
+    ) -> poem::Result<Json<String>> {
         let controller = try_str_to_hash(&controller)?;
         let ctx = historical.context(controller);
 
         let data = ctx.get_raw_storage()?.unwrap_or_default();
-        let data = Base64(data);
-        let log = ctx.get_log()?;
+        let data = valence_coprocessor::Base64::encode(data);
 
-        Ok(Json(ControllerRawStorageResponse { data, log }))
+        Ok(Json(data))
+    }
+
+    /// Replaces the raw storage of the controller.
+    #[oai(path = "/registry/controller/:controller/storage/raw", method = "post")]
+    pub async fn set_storage_raw(
+        &self,
+        controller: Path<String>,
+        historical: Data<&Historical>,
+        base64: Json<String>,
+    ) -> poem::Result<Json<Value>> {
+        let controller = try_str_to_hash(&controller)?;
+        let ctx = historical.context(controller);
+        let data = valence_coprocessor::Base64::decode(&*base64)?;
+
+        ctx.set_raw_storage(&data)?;
+
+        Ok(Json(serde_json::json!({
+            "success": true
+        })))
     }
 
     /// Returns a file from the storage of the controller.
@@ -489,6 +507,7 @@ impl Api {
             block,
         } = match update {
             Some(u) => u,
+            None if root == Hash::default() => HistoricalUpdate::default(),
             None => return Err(r404()),
         };
 

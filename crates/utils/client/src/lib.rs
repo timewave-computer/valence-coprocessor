@@ -157,6 +157,47 @@ impl Client {
             .and_then(Base64::decode)
     }
 
+    /// Return the storage raw bytes.
+    pub async fn get_storage_raw<T>(&self, controller: T) -> anyhow::Result<Vec<u8>>
+    where
+        T: AsRef<str>,
+    {
+        let uri = format!("registry/controller/{}/storage/raw", controller.as_ref());
+        let uri = self.uri(uri);
+
+        reqwest::Client::new()
+            .get(uri)
+            .send()
+            .await?
+            .json::<Value>()
+            .await?
+            .as_str()
+            .map(String::from)
+            .ok_or_else(|| anyhow::anyhow!("invalid response"))
+            .and_then(Base64::decode)
+    }
+
+    /// Set the storage raw bytes.
+    pub async fn set_storage_raw<T, B>(&self, controller: T, bytes: B) -> anyhow::Result<bool>
+    where
+        T: AsRef<str>,
+        B: AsRef<[u8]>,
+    {
+        let uri = format!("registry/controller/{}/storage/raw", controller.as_ref());
+        let uri = self.uri(uri);
+
+        reqwest::Client::new()
+            .post(uri)
+            .json(&json!(Base64::encode(bytes)))
+            .send()
+            .await?
+            .json::<Value>()
+            .await?
+            .get("success")
+            .and_then(Value::as_bool)
+            .ok_or_else(|| anyhow::anyhow!("invalid response"))
+    }
+
     /// Computes the witnesses of a controller for the provided arguments.
     ///
     /// This is a dry-run for the prove call, that will use the same components to compute the
@@ -457,6 +498,18 @@ impl Client {
         let uri = self.uri(uri);
 
         Ok(reqwest::Client::new().get(uri).send().await?.json().await?)
+    }
+
+    /// Get latest historical root.
+    pub async fn get_historical(&self) -> anyhow::Result<Hash> {
+        let uri = self.uri("historical");
+        let root: Value = reqwest::Client::new().get(uri).send().await?.json().await?;
+
+        root.get("root")
+            .and_then(Value::as_str)
+            .and_then(|r| hex::decode(r).ok())
+            .and_then(|r| Hash::try_from(r.as_slice()).ok())
+            .ok_or_else(|| anyhow::anyhow!("failed to parse response"))
     }
 
     /// Returns the historical update for the provided

@@ -799,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-valence"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "clap",
@@ -6219,7 +6219,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "base64",
@@ -6242,7 +6242,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-client"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "hex",
@@ -6257,7 +6257,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-merkle"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "hex",
@@ -6271,7 +6271,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-prover"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "bincode",
@@ -6296,7 +6296,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-redis"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "r2d2",
@@ -6306,7 +6306,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-service"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "clap",
@@ -6330,7 +6330,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-sp1"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -6350,7 +6350,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-types"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "base64",
@@ -6363,7 +6363,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "dlmalloc",
