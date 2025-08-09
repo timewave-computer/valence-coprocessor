@@ -146,11 +146,9 @@ impl Api {
     #[oai(path = "/stats", method = "get")]
     pub async fn stats(&self) -> poem::Result<Json<Value>> {
         const VERSION: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
-        const GIT_COMMIT: &str = env!("GIT_HASH");
 
         Ok(Json(json!({
             "version": VERSION,
-            "commit": GIT_COMMIT,
         })))
     }
 
