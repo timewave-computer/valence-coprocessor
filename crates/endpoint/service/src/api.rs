@@ -144,10 +144,11 @@ pub struct DomainAddBlockResponse {
 impl Api {
     /// Service stats.
     #[oai(path = "/stats", method = "get")]
-    pub async fn stats(&self, pool: Data<&Sender<Job>>) -> poem::Result<Json<Value>> {
+    pub async fn stats(&self) -> poem::Result<Json<Value>> {
+        const VERSION: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+
         Ok(Json(json!({
-            "workers": pool.receiver_count().saturating_sub(1),
-            "queued": pool.len(),
+            "version": VERSION
         })))
     }
 
