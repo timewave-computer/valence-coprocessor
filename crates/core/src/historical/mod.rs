@@ -166,9 +166,13 @@ where
 
                 let smt = smt.with_namespace(domain_id);
                 let key = HistoricalUpdate::block_number_to_key(number);
-                let domain = smt.get_non_membership_opening(domain, &key)?;
+                let mut proof = smt.get_non_membership_opening(domain, &key)?;
 
-                Some(domain)
+                // the stored data is the arbitrary payload, and the leaf is the state root.
+                let preimage = smt.get_keyed_opening(domain, &key)?.node;
+                proof.preimage = Preimage::Node(preimage);
+
+                Some(proof)
             }
         };
 
