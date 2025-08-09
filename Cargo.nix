@@ -2776,7 +2776,7 @@ constant-time operation and embedded-friendly no_std support
       };
       "cargo-valence" = rec {
         crateName = "cargo-valence";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor cargo subcommand.";
         crateBin = [
@@ -21196,7 +21196,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor" = rec {
         crateName = "valence-coprocessor";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/core; };
@@ -21304,7 +21304,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-client" = rec {
         crateName = "valence-coprocessor-client";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor client";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/utils/client; };
@@ -21365,7 +21365,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-merkle" = rec {
         crateName = "valence-coprocessor-merkle";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor Merkle primitives";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/merkle; };
@@ -21421,7 +21421,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-prover" = rec {
         crateName = "valence-coprocessor-prover";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor prover service.";
         crateBin = [
@@ -21532,7 +21532,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-redis" = rec {
         crateName = "valence-coprocessor-redis";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor Redis data backend implementation.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/data/redis; };
@@ -21564,7 +21564,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-service" = rec {
         crateName = "valence-coprocessor-service";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor service application.";
         crateBin = [
@@ -21670,7 +21670,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-sp1" = rec {
         crateName = "valence-coprocessor-sp1";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor SP1 prover backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/sp1; };
@@ -21775,7 +21775,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-types" = rec {
         crateName = "valence-coprocessor-types";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor types definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/types; };
@@ -21832,7 +21832,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-wasm" = rec {
         crateName = "valence-coprocessor-wasm";
-        version = "0.4.3";
+        version = "0.4.4";
         edition = "2021";
         description = "The Valence co-processor WASM module backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/wasm; };
