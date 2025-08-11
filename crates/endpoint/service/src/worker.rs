@@ -200,11 +200,19 @@ impl Worker {
             Err(e) => tracing::debug!("error on computed proof: {e}"),
         }
 
-        if ctx.entrypoint(&self.vm, args.clone()).is_err() {
-            tracing::debug!(
-                "failed to call controller `{}` entrypoint with args `{args:?}`",
+        tracing::debug!(
+            "proof received from worker; submitting to `{}`...",
+            serde_json::to_string(&args).unwrap_or_default()
+        );
+
+        let res = ctx.entrypoint(&self.vm, args.clone());
+
+        match res {
+            Ok(res) => tracing::debug!("response received from controller: {res:?}"),
+            Err(e) => tracing::debug!(
+                "failed to call controller `{}` entrypoint with args `{args:?}: {e}`",
                 hex::encode(controller)
-            );
+            ),
         }
     }
 

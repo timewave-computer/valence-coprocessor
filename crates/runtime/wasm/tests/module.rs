@@ -72,7 +72,13 @@ fn deploy_storage() {
     let path = "/var/share/foo.bin";
     let contents = "Valence";
 
-    assert!(ctx.get_storage_file(path).is_err());
+    let exists = ctx
+        .entrypoint(&vm, json!({"cmd": "exists", "path": path}))
+        .unwrap()["exists"]
+        .as_bool()
+        .unwrap();
+
+    assert!(!exists);
 
     ctx.entrypoint(
         &vm,
@@ -80,7 +86,10 @@ fn deploy_storage() {
     )
     .unwrap();
 
-    assert_eq!(ctx.get_storage_file(path).unwrap(), contents.as_bytes());
+    assert_eq!(
+        ctx.get_storage_file(path).unwrap(),
+        Some(contents.as_bytes().to_vec())
+    );
 
     let ret = ctx
         .entrypoint(&vm, json!({"cmd": "get", "path": path}))
@@ -104,7 +113,7 @@ fn deploy_storage() {
     )
     .unwrap();
 
-    assert_eq!(ctx.get_storage_file(path).unwrap(), vec![byte; count]);
+    assert_eq!(ctx.get_storage_file(path).unwrap(), Some(vec![byte; count]));
 }
 
 #[test]
