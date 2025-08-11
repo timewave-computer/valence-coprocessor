@@ -54,12 +54,6 @@ pub struct ControllerStorageFileRequest {
 }
 
 #[derive(Object, Debug)]
-pub struct ControllerStorageFileResponse {
-    /// Base64 encoded contents of the file
-    pub data: Base64<Vec<u8>>,
-}
-
-#[derive(Object, Debug)]
 pub struct ControllerDomainsResponse {
     /// Domains associated with the controller
     pub domains: Vec<String>,
@@ -235,23 +229,22 @@ impl Api {
 
     /// Returns a file from the storage of the controller.
     #[oai(path = "/registry/controller/:controller/storage/fs", method = "post")]
-    pub async fn storage_file(
+    pub async fn get_storage_file(
         &self,
         controller: Path<String>,
         historical: Data<&Historical>,
         request: Json<ControllerStorageFileRequest>,
-    ) -> poem::Result<Json<ControllerStorageFileResponse>> {
+    ) -> poem::Result<Json<Value>> {
         let path = request.0.path;
 
         tracing::debug!("received file request for path `{path}`...");
 
         let controller = try_str_to_hash(&controller)?;
         let ctx = historical.context(controller);
-
         let data = ctx.get_storage_file(&path)?;
-        let data = Base64(data);
+        let data = data.map(valence_coprocessor::Base64::encode);
 
-        Ok(Json(ControllerStorageFileResponse { data }))
+        Ok(Json(json!(data)))
     }
 
     /// Computes the witnesses for a controller proof.

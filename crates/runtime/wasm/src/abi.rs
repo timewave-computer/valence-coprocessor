@@ -121,8 +121,10 @@ pub(crate) mod use_std {
         set_raw_storage(&fs.try_to_raw_device()?)
     }
 
-    pub fn get_storage_file(path: &str) -> anyhow::Result<Vec<u8>> {
-        Ok(get_storage()?.open(path)?.contents)
+    pub fn get_storage_file(path: &str) -> anyhow::Result<Option<Vec<u8>>> {
+        let file = get_storage()?.open(path)?;
+
+        Ok((!file.new).then_some(file.contents))
     }
 
     pub fn set_storage_file(path: &str, contents: &[u8]) -> anyhow::Result<()> {
@@ -265,7 +267,7 @@ pub fn set_storage(fs: &FileSystem) -> anyhow::Result<()> {
     }
 }
 
-pub fn get_storage_file(path: &str) -> anyhow::Result<Vec<u8>> {
+pub fn get_storage_file(path: &str) -> anyhow::Result<Option<Vec<u8>>> {
     #[cfg(feature = "std")]
     return use_std::get_storage_file(path);
 
@@ -280,7 +282,9 @@ pub fn get_storage_file(path: &str) -> anyhow::Result<Vec<u8>> {
         anyhow::ensure!(len >= 0, "failed to fetch controller storage file");
         anyhow::ensure!(len as usize <= BUF_LEN, "controller storage file too large");
 
-        Ok(BUF[..len as usize].to_vec())
+        Option::unpack(&BUF[..len as usize])
+            .map(|(_, o)| o)
+            .map_err(|e| anyhow::anyhow!("error unpacking storage file: {e}"))
     }
 }
 

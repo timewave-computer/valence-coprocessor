@@ -159,12 +159,12 @@ where
         Err(e) => return e,
     };
 
-    let bytes = match caller.data().ctx.get_storage_file(&path) {
+    let file = match caller.data().ctx.get_storage_file(&path) {
         Ok(s) => s,
         Err(_) => return ReturnCodes::ControllerStorage as i32,
     };
 
-    match write_buffer(&mut caller, &mem, ptr, &bytes) {
+    match serialize(&mut caller, &mem, ptr, &file) {
         Ok(len) => len,
         Err(e) => e,
     }

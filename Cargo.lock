@@ -720,9 +720,9 @@ dependencies = [
 
 [[package]]
 name = "buf-fs"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5180c938efd7f874939eaaf27e7e7348c881c3e539938b079a995e8e50ec0a86"
+checksum = "1b141697cedf9f9de0b45c3eb6e45fde9e6b84f3425ded688628477daf834bba"
 dependencies = [
  "anyhow",
  "embedded-sdmmc",
@@ -799,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-valence"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -2076,9 +2076,9 @@ dependencies = [
 
 [[package]]
 name = "glob"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8d1add55171497b4705a648c6b583acafb01d58050a51727785f0b2c8e0a2b2"
+checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
 name = "group"
@@ -2780,9 +2780,9 @@ checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
 
 [[package]]
 name = "libc"
-version = "0.2.174"
+version = "0.2.175"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1171693293099992e19cddea4e8b849964e9846f4acee11b3948bcc337be8776"
+checksum = "6a82ae493e598baaea5209805c49bbf2ea7de956d50d7da0da1164f9c6d28543"
 
 [[package]]
 name = "libloading"
@@ -3890,9 +3890,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.95"
+version = "1.0.96"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
+checksum = "beef09f85ae72cea1ef96ba6870c51e6382ebfa4f0e85b643459331f3daa5be0"
 dependencies = [
  "unicode-ident",
 ]
@@ -6208,9 +6208,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.17.0"
+version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cf4199d1e5d15ddd86a694e4d0dffa9c323ce759fea589f00fef9d81cc1931d"
+checksum = "f33196643e165781c20a5ead5582283a7dacbb87855d867fbc2df3f81eddc1be"
 dependencies = [
  "getrandom 0.3.3",
  "js-sys",
@@ -6219,7 +6219,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "base64",
@@ -6242,7 +6242,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-client"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "hex",
@@ -6257,7 +6257,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-merkle"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "hex",
@@ -6271,7 +6271,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-prover"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "bincode",
@@ -6296,7 +6296,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-redis"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "r2d2",
@@ -6306,7 +6306,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-service"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -6330,7 +6330,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-sp1"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "ark-bn254",
@@ -6350,7 +6350,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-types"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "base64",
@@ -6363,7 +6363,7 @@ dependencies = [
 
 [[package]]
 name = "valence-coprocessor-wasm"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "anyhow",
  "dlmalloc",

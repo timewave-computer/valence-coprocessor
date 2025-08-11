@@ -20,9 +20,16 @@ pub extern "C" fn entrypoint() {
         }
         "get" => {
             let path = args["path"].as_str().unwrap();
-            let bytes = abi::get_storage_file(path).unwrap();
+            let bytes = abi::get_storage_file(path).unwrap().unwrap();
             let b64 = Base64::encode(bytes);
             let ret = serde_json::json!({"b64": b64});
+
+            abi::ret(&ret).unwrap();
+        }
+        "exists" => {
+            let path = args["path"].as_str().unwrap();
+            let exists = abi::get_storage_file(path).unwrap().is_some();
+            let ret = serde_json::json!({"exists": exists});
 
             abi::ret(&ret).unwrap();
         }

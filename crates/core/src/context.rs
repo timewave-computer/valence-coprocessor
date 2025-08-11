@@ -173,8 +173,8 @@ where
         let raw = self.get_raw_storage()?;
 
         match raw {
-            Some(r) => Ok(FileSystem::from_raw_device_unchecked(r)),
-            None => FileSystem::new(256 * 1024 * 1024),
+            Some(r) if !r.is_empty() => Ok(FileSystem::from_raw_device_unchecked(r)),
+            _ => FileSystem::new(256 * 1024 * 1024),
         }
     }
 
@@ -186,10 +186,10 @@ where
     }
 
     /// Returns the controller storage file from the given path.
-    pub fn get_storage_file(&self, path: &str) -> anyhow::Result<Vec<u8>> {
-        self.get_storage()
-            .and_then(|mut fs| fs.open(path))
-            .map(|f| f.contents)
+    pub fn get_storage_file(&self, path: &str) -> anyhow::Result<Option<Vec<u8>>> {
+        let file = self.get_storage()?.open(path)?;
+
+        Ok((!file.new).then_some(file.contents))
     }
 
     /// Overrides the controller storage file.

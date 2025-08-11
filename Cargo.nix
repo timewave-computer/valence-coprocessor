@@ -2575,10 +2575,10 @@ constant-time operation and embedded-friendly no_std support
       };
       "buf-fs" = rec {
         crateName = "buf-fs";
-        version = "0.1.2";
+        version = "0.1.3";
         edition = "2024";
         description = "A buffer based, in-memory filesystem.";
-        sha256 = "11haxi88wplrk83qp4rrwp1q3j28fdz7xwmaks9p9y6pxwwck02i";
+        sha256 = "1fjbhfppsir8hrlfspa2yf26p7nybzjbcgjwnkh9v7yzrsbic50v";
         libName = "buf_fs";
         authors = [
           "Victor Lopez <vhrlopes@gmail.com>"
@@ -2776,7 +2776,7 @@ constant-time operation and embedded-friendly no_std support
       };
       "cargo-valence" = rec {
         crateName = "cargo-valence";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor cargo subcommand.";
         crateBin = [
@@ -6963,11 +6963,11 @@ composability, and iterator-like interfaces.
       };
       "glob" = rec {
         crateName = "glob";
-        version = "0.3.2";
+        version = "0.3.3";
         edition = "2015";
         description = "Support for matching file paths against Unix shell style patterns.
 ";
-        sha256 = "1cm2w34b5w45fxr522h5b0fv1bxchfswcj560m3pnjbia7asvld8";
+        sha256 = "106jpd3syfzjfj2k70mwm0v436qbx96wig98m4q8x071yrq35hhc";
         authors = [
           "The Rust Project Developers"
         ];
@@ -9280,10 +9280,10 @@ and keccak-p variants
       };
       "libc" = rec {
         crateName = "libc";
-        version = "0.2.174";
+        version = "0.2.175";
         edition = "2021";
         description = "Raw FFI bindings to platform libraries like libc.";
-        sha256 = "0xl7pqvw7g2874dy3kjady2fjr4rhj5lxsnxkkhr5689jcr6jw8i";
+        sha256 = "0hw5sb3gjr0ivah7s3fmavlpvspjpd4mr009abmam2sr7r4sx0ka";
         authors = [
           "The Rust Project Developers"
         ];
@@ -12741,10 +12741,10 @@ equation coefficients
       };
       "proc-macro2" = rec {
         crateName = "proc-macro2";
-        version = "1.0.95";
+        version = "1.0.96";
         edition = "2021";
         description = "A substitute implementation of the compiler's `proc_macro` API to decouple token-based libraries from the procedural macro use case.";
-        sha256 = "0y7pwxv6sh4fgg6s715ygk1i7g3w02c0ljgcsfm046isibkfbcq2";
+        sha256 = "1q2vm8yiycsr6ij5ps7hljzjwf76a468g9kbz4gflb77bbw0kvxy";
         libName = "proc_macro2";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
@@ -21127,10 +21127,10 @@ Unicode Standard Annex #31.
       };
       "uuid" = rec {
         crateName = "uuid";
-        version = "1.17.0";
+        version = "1.18.0";
         edition = "2018";
         description = "A library to generate and parse UUIDs.";
-        sha256 = "07ckq4fdiygy02gmislzfp727hx9zw6lskk9dbcds5ax3sfikx1w";
+        sha256 = "1gn1vlggiwrdpizqcpc5hyxsqz9s5215bbay1b182mqn7rj9ccgk";
         authors = [
           "Ashley Mannix<ashleymannix@live.com.au>"
           "Dylan DPC<dylan.dpc@gmail.com>"
@@ -21196,7 +21196,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor" = rec {
         crateName = "valence-coprocessor";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/core; };
@@ -21304,7 +21304,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-client" = rec {
         crateName = "valence-coprocessor-client";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor client";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/utils/client; };
@@ -21365,7 +21365,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-merkle" = rec {
         crateName = "valence-coprocessor-merkle";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor Merkle primitives";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/merkle; };
@@ -21421,7 +21421,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-prover" = rec {
         crateName = "valence-coprocessor-prover";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor prover service.";
         crateBin = [
@@ -21532,7 +21532,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-redis" = rec {
         crateName = "valence-coprocessor-redis";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor Redis data backend implementation.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/data/redis; };
@@ -21564,7 +21564,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-service" = rec {
         crateName = "valence-coprocessor-service";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor service application.";
         crateBin = [
@@ -21670,7 +21670,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-sp1" = rec {
         crateName = "valence-coprocessor-sp1";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor SP1 prover backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/sp1; };
@@ -21775,7 +21775,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-types" = rec {
         crateName = "valence-coprocessor-types";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor types definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/types; };
@@ -21832,7 +21832,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-wasm" = rec {
         crateName = "valence-coprocessor-wasm";
-        version = "0.4.4";
+        version = "0.4.5";
         edition = "2021";
         description = "The Valence co-processor WASM module backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/wasm; };
