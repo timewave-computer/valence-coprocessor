@@ -35,10 +35,18 @@
       systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
 
       perSystem = { pkgs, system, self', inputs', config, ... }: {
+        _module.args.pkgs = import inputs.nixpkgs {
+          inherit system;
+          overlays = [ inputs.rust-overlay.overlays.default ];
+        };
         crate2nix = {
           cargoNix = ./Cargo.nix;
           devshell.name = "default"; # adds update-cargo-nix command to devshells.default
           profile = "optimized";
+          toolchain = {
+            rust = pkgs.rust-bin.nightly.latest.default;
+            cargo = pkgs.rust-bin.nightly.latest.default;
+          };
           crateOverrides = inputs'.sp1-nix.tools.crateOverrides // {
             valence-coprocessor-service = attrs: {
               meta.mainProgram = "coprocessor";
