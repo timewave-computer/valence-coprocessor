@@ -49,10 +49,14 @@
           };
           crateOverrides = inputs'.sp1-nix.tools.crateOverrides // {
             valence-coprocessor-service = attrs: {
-              meta.mainProgram = "coprocessor";
+              meta = (attrs.meta or {}) // {
+                mainProgram = "coprocessor";
+              };
             };
             valence-coprocessor-prover = attrs: {
-              meta.mainProgram = "prover";
+              meta = (attrs.meta or {}) // {
+                mainProgram = "prover";
+              };
             };
           };
         };
