@@ -9,7 +9,7 @@ use crate::{Historical, ServiceVm, ServiceZkVm};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Job {
     Prove {
-        controller: Hash,
+        circuit: Hash,
         witness: WitnessCoprocessor,
         payload: Option<Value>,
     },
@@ -221,10 +221,10 @@ impl Worker {
             while let Ok(j) = self.rx.recv() {
                 match j {
                     Job::Prove {
-                        controller,
+                        circuit,
                         witness,
                         payload,
-                    } => self.prove(controller, witness, payload),
+                    } => self.prove(circuit, witness, payload),
                     Job::Quit => {
                         self.tx.send(Ack::Kill).ok();
                         break;
