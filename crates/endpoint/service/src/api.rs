@@ -1,11 +1,13 @@
+use std::path::PathBuf;
+
 use flume::Sender;
-use poem::http::StatusCode;
-use poem::web::Data;
+use poem::{http::StatusCode, web::Data, Error as PoemError};
 use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::{json, Value};
 use valence_coprocessor::{BlockAdded, Hash, HistoricalUpdate, ValidatedDomainBlock};
 use valence_coprocessor::{ControllerData, DomainData};
 
+use crate::Context;
 use crate::{worker::Job, Historical, Registry, ServiceVm, ServiceZkVm};
 
 pub struct Api;
@@ -51,6 +53,17 @@ pub struct RegisterDomainResponse {
 pub struct ControllerStorageFileRequest {
     /// Path of the controller file.
     pub path: String,
+}
+
+#[derive(Object, Debug)]
+pub struct ControllerStorageFileStoreRequest {
+    /// Path of the controller file.
+    ///
+    /// Note: This is a FAT-16 filesystem, so extensions must have max 3 characters.
+    pub path: String,
+
+    /// Base64 contents of the file.
+    pub contents: String,
 }
 
 #[derive(Object, Debug)]
@@ -161,7 +174,9 @@ impl Api {
             nonce: request.nonce.unwrap_or(0),
         };
 
-        let controller = registry.register_controller(*vm, *zkvm, controller)?;
+        let controller = registry
+            .register_controller(*vm, *zkvm, controller)
+            .map_err(perr)?;
         let controller = RegisterControllerResponse {
             controller: hex::encode(controller),
         };
@@ -184,7 +199,7 @@ impl Api {
             circuit: request.circuit.to_vec(),
         };
 
-        let domain = registry.register_domain(*vm, *zkvm, domain)?;
+        let domain = registry.register_domain(*vm, *zkvm, domain).map_err(perr)?;
         let domain = RegisterDomainResponse {
             domain: hex::encode(domain),
         };
@@ -197,12 +212,12 @@ impl Api {
     pub async fn get_storage_raw(
         &self,
         controller: Path<String>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
     ) -> poem::Result<Json<String>> {
-        let controller = try_str_to_hash(&controller)?;
-        let ctx = historical.context(controller);
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let ctx = ctx.clone().with_controller(controller);
 
-        let data = ctx.get_raw_storage()?.unwrap_or_default();
+        let data = ctx.get_raw_storage().map_err(perr)?.unwrap_or_default();
         let data = valence_coprocessor::Base64::encode(data);
 
         Ok(Json(data))
@@ -213,14 +228,14 @@ impl Api {
     pub async fn set_storage_raw(
         &self,
         controller: Path<String>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
         base64: Json<String>,
     ) -> poem::Result<Json<Value>> {
-        let controller = try_str_to_hash(&controller)?;
-        let ctx = historical.context(controller);
-        let data = valence_coprocessor::Base64::decode(&*base64)?;
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let ctx = ctx.clone().with_controller(controller);
+        let data = valence_coprocessor::Base64::decode(&*base64).map_err(perr)?;
 
-        ctx.set_raw_storage(&data)?;
+        ctx.set_raw_storage(&data).map_err(perr)?;
 
         Ok(Json(serde_json::json!({
             "success": true
@@ -232,16 +247,16 @@ impl Api {
     pub async fn get_storage_file(
         &self,
         controller: Path<String>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
         request: Json<ControllerStorageFileRequest>,
     ) -> poem::Result<Json<Value>> {
         let path = request.0.path;
 
         tracing::debug!("received file request for path `{path}`...");
 
-        let controller = try_str_to_hash(&controller)?;
-        let ctx = historical.context(controller);
-        let data = ctx.get_storage_file(&path)?;
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let ctx = ctx.clone().with_controller(controller);
+        let data = ctx.get_storage_file(&path).map_err(perr)?;
         let data = data.map(valence_coprocessor::Base64::encode);
 
         Ok(Json(json!(data)))
@@ -252,16 +267,16 @@ impl Api {
     pub async fn controller_witnesses(
         &self,
         controller: Path<String>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
         vm: Data<&ServiceVm>,
         request: Json<ControllerProveRequest>,
     ) -> poem::Result<Json<ControllerWitnessesResponse>> {
         let ControllerProveRequest { args, .. } = request.0;
 
-        let controller = try_str_to_hash(&controller)?;
-        let ctx = historical.context(controller);
-        let witnesses = ctx.get_circuit_witnesses(*vm, args)?;
-        let witnesses = ctx.get_coprocessor_witness(witnesses)?;
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let ctx = ctx.clone().with_controller(controller);
+        let witnesses = ctx.get_circuit_witnesses(*vm, args).map_err(perr)?;
+        let witnesses = ctx.get_coprocessor_witness(witnesses).map_err(perr)?;
         let witnesses = serde_json::to_value(witnesses).unwrap_or_default();
         let log = ctx.get_log().unwrap_or_default();
 
@@ -275,24 +290,25 @@ impl Api {
         controller: Path<String>,
         pool: Data<&Sender<Job>>,
         vm: Data<&ServiceVm>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
         request: Json<ControllerProveRequest>,
     ) -> poem::Result<Json<Value>> {
         let ControllerProveRequest { args, payload } = request.0;
 
-        let controller = try_str_to_hash(&controller)?;
-        let ctx = historical.context(controller);
-        let witnesses = ctx.get_circuit_witnesses(*vm, args)?;
-        let witness = ctx.get_coprocessor_witness(witnesses)?;
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let ctx = ctx.clone().with_controller(controller);
+        let witnesses = ctx.get_circuit_witnesses(*vm, args).map_err(perr)?;
+        let witness = ctx.get_coprocessor_witness(witnesses).map_err(perr)?;
 
         tracing::debug!("coprocessor witness computed; submitting job...");
 
         pool.send(Job::Prove {
-            controller,
+            circuit: controller,
             witness,
             payload,
         })
-        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))?;
+        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))
+        .map_err(perr)?;
 
         Ok(Json(json!({"status": "received"})))
     }
@@ -305,25 +321,30 @@ impl Api {
         root: Path<String>,
         pool: Data<&Sender<Job>>,
         vm: Data<&ServiceVm>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
         request: Json<ControllerProveRequest>,
     ) -> poem::Result<Json<Value>> {
         let ControllerProveRequest { args, payload } = request.0;
 
-        let controller = try_str_to_hash(&controller)?;
-        let root = try_str_to_hash(&root)?;
-        let ctx = historical.context_with_root(controller, root);
-        let witnesses = ctx.get_circuit_witnesses(*vm, args)?;
-        let witness = ctx.get_coprocessor_witness(witnesses)?;
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let root = try_str_to_hash(&root).map_err(perr)?;
+        let ctx = ctx
+            .clone()
+            .with_controller(controller)
+            .with_historical(root);
+
+        let witnesses = ctx.get_circuit_witnesses(*vm, args).map_err(perr)?;
+        let witness = ctx.get_coprocessor_witness(witnesses).map_err(perr)?;
 
         tracing::debug!("coprocessor witness computed; submitting job...");
 
         pool.send(Job::Prove {
-            controller,
+            circuit: controller,
             witness,
             payload,
         })
-        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))?;
+        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))
+        .map_err(perr)?;
 
         Ok(Json(json!({"status": "received"})))
     }
@@ -333,14 +354,14 @@ impl Api {
     pub async fn controller_vk(
         &self,
         controller: Path<String>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
         zkvm: Data<&ServiceZkVm>,
     ) -> poem::Result<Json<ControllerVkResponse>> {
-        let controller = try_str_to_hash(&controller)?;
-        let ctx = historical.context(controller);
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let ctx = ctx.clone().with_controller(controller);
 
-        let vk = ctx.get_verifying_key(*zkvm)?;
-        let log = ctx.get_log()?;
+        let vk = ctx.get_verifying_key(*zkvm).map_err(perr)?;
+        let log = ctx.get_log().map_err(perr)?;
 
         Ok(Json(ControllerVkResponse {
             base64: Base64(vk),
@@ -353,13 +374,15 @@ impl Api {
     pub async fn controller_circuit(
         &self,
         controller: Path<String>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
     ) -> poem::Result<Json<ControllerCircuitResponse>> {
-        let controller = try_str_to_hash(&controller)?;
-        let ctx = historical.context(controller);
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let ctx = ctx.clone().with_controller(controller);
         let circuit = ctx
-            .get_zkvm()?
-            .ok_or_else(|| anyhow::anyhow!("no circuit data available"))?;
+            .get_zkvm()
+            .map_err(perr)?
+            .ok_or_else(|| anyhow::anyhow!("no circuit data available"))
+            .map_err(perr)?;
 
         Ok(Json(ControllerCircuitResponse {
             base64: Base64(circuit),
@@ -371,13 +394,15 @@ impl Api {
     pub async fn controller_runtime(
         &self,
         controller: Path<String>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
     ) -> poem::Result<Json<ControllerCircuitResponse>> {
-        let controller = try_str_to_hash(&controller)?;
-        let ctx = historical.context(controller);
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let ctx = ctx.clone().with_controller(controller);
         let circuit = ctx
-            .get_controller(&controller)?
-            .ok_or_else(|| anyhow::anyhow!("no runtime data available"))?;
+            .get_controller(&controller)
+            .map_err(perr)?
+            .ok_or_else(|| anyhow::anyhow!("no runtime data available"))
+            .map_err(perr)?;
 
         Ok(Json(ControllerCircuitResponse {
             base64: Base64(circuit),
@@ -389,7 +414,7 @@ impl Api {
     pub async fn controller_entrypoint(
         &self,
         controller: Path<String>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
         vm: Data<&ServiceVm>,
         args: Json<Value>,
     ) -> poem::Result<Json<ControllerEntrypointResponse>> {
@@ -399,11 +424,11 @@ impl Api {
             &args.0
         );
 
-        let controller = try_str_to_hash(&controller)?;
-        let ctx = historical.context(controller);
+        let controller = try_str_to_hash(&controller).map_err(perr)?;
+        let ctx = ctx.clone().with_controller(controller);
 
-        let ret = ctx.entrypoint(*vm, args.0)?;
-        let log = ctx.get_log()?;
+        let ret = ctx.entrypoint(*vm, args.0).map_err(perr)?;
+        let log = ctx.get_log().map_err(perr)?;
 
         Ok(Json(ControllerEntrypointResponse { ret, log }))
     }
@@ -413,10 +438,10 @@ impl Api {
     pub async fn domain_latest(
         &self,
         domain: Path<String>,
-        historical: Data<&Historical>,
+        ctx: Data<&Context>,
     ) -> poem::Result<Json<Value>> {
         let id = DomainData::identifier_from_parts(&domain);
-        let ctx = historical.context(id);
+        let ctx = ctx.clone().with_controller(id);
         let coprocessor = ctx.get_historical();
 
         let ValidatedDomainBlock {
@@ -425,7 +450,8 @@ impl Api {
             root,
             payload,
         } = ctx
-            .get_latest_block(&domain)?
+            .get_latest_block(&domain)
+            .map_err(perr)?
             .ok_or_else(|| anyhow::anyhow!("no block data available for the domain"))?;
 
         Ok(Json(json!({
@@ -454,7 +480,9 @@ impl Api {
             smt,
             log,
             block,
-        } = historical.add_domain_block(*vm, &domain, args.0)?;
+        } = historical
+            .add_domain_block(*vm, &domain, args.0)
+            .map_err(perr)?;
 
         let ValidatedDomainBlock {
             number,
@@ -492,8 +520,8 @@ impl Api {
         root: Path<String>,
         historical: Data<&Historical>,
     ) -> poem::Result<Json<Value>> {
-        let root = try_str_to_hash(&root)?;
-        let update = historical.get_historical_update(&root)?;
+        let root = try_str_to_hash(&root).map_err(perr)?;
+        let update = historical.get_historical_update(&root).map_err(perr)?;
         let HistoricalUpdate {
             uuid,
             root,
@@ -521,8 +549,10 @@ impl Api {
         number: Path<String>,
         historical: Data<&Historical>,
     ) -> poem::Result<Json<Value>> {
-        let number = number.parse().map_err(|_| r400())?;
-        let proof = historical.get_block_proof_for_domain(&domain, number)?;
+        let number = number.parse().map_err(perr)?;
+        let proof = historical
+            .get_block_proof_for_domain(&domain, number)
+            .map_err(perr)?;
 
         Ok(Json(json!(proof)))
     }
@@ -541,19 +571,26 @@ impl Api {
             to.as_str()
         );
 
-        let from = try_str_to_hash(&from)?;
-        let to = try_str_to_hash(&to)?;
+        let from = try_str_to_hash(&from).map_err(perr)?;
+        let to = try_str_to_hash(&to).map_err(perr)?;
 
         // skip current update
         let from = historical
-            .get_historical_update_from_previous(&from)?
+            .get_historical_update_from_previous(&from)
+            .map_err(perr)?
             .ok_or_else(r400)?
             .root;
 
         tracing::debug!("previous root `{}`...", hex::encode(from));
 
-        let from = historical.get_historical_update(&from)?.ok_or_else(r400)?;
-        let mut to = historical.get_historical_update(&to)?.ok_or_else(r400)?;
+        let from = historical
+            .get_historical_update(&from)
+            .map_err(perr)?
+            .ok_or_else(r400)?;
+        let mut to = historical
+            .get_historical_update(&to)
+            .map_err(perr)?
+            .ok_or_else(r400)?;
 
         tracing::debug!(
             "historical range set from `{}` to `{}`...",
@@ -578,7 +615,10 @@ impl Api {
 
             updates.push(proof);
 
-            to = match historical.get_historical_update(&to.previous)? {
+            to = match historical
+                .get_historical_update(&to.previous)
+                .map_err(perr)?
+            {
                 Some(u) => u,
                 None if to.root == from.root => break,
                 _ => return Err(r500()),
@@ -591,6 +631,214 @@ impl Api {
 
         Ok(Json(serde_json::to_value(updates).unwrap_or_default()))
     }
+
+    /// Returns the raw storage of the circuit.
+    #[oai(path = "/circuit/storage/raw", method = "get")]
+    pub async fn circuit_storage_raw_get(&self, ctx: Data<&Context>) -> poem::Result<Json<Value>> {
+        let data = ctx
+            .get_raw_storage()
+            .map_err(perr)?
+            .map(valence_coprocessor::Base64::encode);
+
+        Ok(Json(json!(data)))
+    }
+
+    /// Replaces the raw storage of the circuit.
+    #[oai(path = "/circuit/storage/raw", method = "post")]
+    pub async fn circuit_storage_raw_post(
+        &self,
+        ctx: Data<&Context>,
+        base64: Json<String>,
+    ) -> poem::Result<Json<Value>> {
+        let data = valence_coprocessor::Base64::decode(&*base64).map_err(perr)?;
+
+        ctx.set_raw_storage(&data).map_err(perr)?;
+
+        Ok(Json(Value::Null))
+    }
+
+    /// Returns a file from the storage of the circuit.
+    ///
+    /// Note: This is a FAT-16 filesystem, so extensions must have max 3 characters.
+    #[oai(path = "/circuit/storage/fs", method = "get")]
+    pub async fn circuit_storage_fs_get(
+        &self,
+        ctx: Data<&Context>,
+        request: Json<ControllerStorageFileRequest>,
+    ) -> poem::Result<Json<Value>> {
+        let path = request.0.path;
+
+        tracing::debug!("received file request for path `{path}`...");
+
+        let data = ctx.get_storage_file(&path).map_err(perr)?;
+        let data = data.map(valence_coprocessor::Base64::encode);
+
+        Ok(Json(json!(data)))
+    }
+
+    /// Replaces a file from the storage of the circuit.
+    ///
+    /// Note: This is a FAT-16 filesystem, so extensions must have max 3 characters.
+    #[oai(path = "/circuit/storage/fs", method = "post")]
+    pub async fn circuit_storage_fs_post(
+        &self,
+        ctx: Data<&Context>,
+        request: Json<ControllerStorageFileStoreRequest>,
+    ) -> poem::Result<Json<Value>> {
+        let ControllerStorageFileStoreRequest { path, contents } = request.0;
+
+        tracing::debug!("received file store for path `{path}`...");
+
+        if PathBuf::from(&path)
+            .extension()
+            .is_some_and(|ext| ext.len() > 3)
+        {
+            return Err(PoemError::from_string(
+                "file extensions must have at most 3 characters",
+                StatusCode::BAD_REQUEST,
+            ));
+        }
+
+        let contents = valence_coprocessor::Base64::decode(contents).map_err(perr)?;
+
+        ctx.set_storage_file(&path, &contents).map_err(perr)?;
+
+        Ok(Json(Value::Null))
+    }
+
+    /// Computes the witnesses for a circuit proof.
+    #[oai(path = "/circuit/witnesses", method = "post")]
+    pub async fn circuit_witnesses(
+        &self,
+        ctx: Data<&Context>,
+        vm: Data<&ServiceVm>,
+        request: Json<ControllerProveRequest>,
+    ) -> poem::Result<Json<ControllerWitnessesResponse>> {
+        let ControllerProveRequest { args, .. } = request.0;
+
+        tracing::debug!(
+            "get witnesses for `{}` with `{:?}`...",
+            hex::encode(ctx.controller()),
+            args
+        );
+
+        fn return_with_log<E: ToString>(
+            ctx: &Context,
+            err: E,
+        ) -> Json<ControllerWitnessesResponse> {
+            let err = err.to_string();
+
+            tracing::debug!("failed to compute witnesses: {err}");
+
+            Json(ControllerWitnessesResponse {
+                witnesses: Value::Null,
+                log: [ctx.get_log().unwrap_or_default().as_slice(), &[err]].concat(),
+            })
+        }
+
+        let witnesses = match ctx.get_circuit_witnesses(*vm, args) {
+            Ok(w) => w,
+            Err(e) => return Ok(return_with_log(&ctx, e)),
+        };
+
+        let witnesses = match ctx.get_coprocessor_witness(witnesses) {
+            Ok(w) => w,
+            Err(e) => return Ok(return_with_log(&ctx, e)),
+        };
+
+        let witnesses = serde_json::to_value(witnesses).unwrap_or_default();
+        let log = ctx.get_log().unwrap_or_default();
+
+        Ok(Json(ControllerWitnessesResponse { witnesses, log }))
+    }
+
+    /// Computes the circuit proof.
+    #[oai(path = "/circuit/prove", method = "post")]
+    pub async fn circuit_prove(
+        &self,
+        pool: Data<&Sender<Job>>,
+        vm: Data<&ServiceVm>,
+        ctx: Data<&Context>,
+        request: Json<ControllerProveRequest>,
+    ) -> poem::Result<Json<Value>> {
+        let ControllerProveRequest { args, payload } = request.0;
+
+        let witnesses = ctx.get_circuit_witnesses(*vm, args).map_err(perr)?;
+        let witness = ctx.get_coprocessor_witness(witnesses).map_err(perr)?;
+        let circuit = *ctx.controller();
+
+        tracing::debug!("coprocessor witness computed; submitting job...");
+
+        pool.send(Job::Prove {
+            circuit,
+            witness,
+            payload,
+        })
+        .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))
+        .map_err(perr)?;
+
+        Ok(Json(json!({"status": "received"})))
+    }
+
+    /// Returns the circuit verifying key.
+    #[oai(path = "/circuit/vk", method = "get")]
+    pub async fn circuit_vk(
+        &self,
+        ctx: Data<&Context>,
+        zkvm: Data<&ServiceZkVm>,
+    ) -> poem::Result<Json<Value>> {
+        let vk = ctx.get_verifying_key(*zkvm).map_err(perr)?;
+        let vk = valence_coprocessor::Base64::encode(vk);
+
+        Ok(Json(Value::String(vk)))
+    }
+
+    /// Returns the circuit bytecode.
+    #[oai(path = "/circuit/bytecode", method = "get")]
+    pub async fn circuit_bytecode(&self, ctx: Data<&Context>) -> poem::Result<Json<Value>> {
+        let circuit = ctx
+            .get_zkvm()
+            .map_err(perr)?
+            .ok_or_else(|| anyhow::anyhow!("no circuit data available"))
+            .map_err(perr)?;
+        let circuit = valence_coprocessor::Base64::encode(circuit);
+
+        Ok(Json(Value::String(circuit)))
+    }
+
+    /// Returns the circuit runtime bytecode.
+    #[oai(path = "/circuit/runtime", method = "get")]
+    pub async fn circuit_runtime(&self, ctx: Data<&Context>) -> poem::Result<Json<Value>> {
+        let controller = ctx.controller();
+        let runtime = ctx
+            .get_controller(controller)
+            .map_err(perr)?
+            .ok_or_else(|| anyhow::anyhow!("no runtime data available"))
+            .map_err(perr)?;
+        let runtime = valence_coprocessor::Base64::encode(runtime);
+
+        Ok(Json(Value::String(runtime)))
+    }
+
+    /// Calls the circuit entrypoint.
+    #[oai(path = "/circuit/entrypoint", method = "post")]
+    pub async fn circuit_entrypoint(
+        &self,
+        ctx: Data<&Context>,
+        vm: Data<&ServiceVm>,
+        args: Json<Value>,
+    ) -> poem::Result<Json<ControllerEntrypointResponse>> {
+        tracing::debug!("received entrypoint request for {:?}", &args.0);
+
+        let ret = ctx.entrypoint(*vm, args.0).map_err(perr)?;
+        let log = ctx.get_log().map_err(perr)?;
+
+        Ok(Json(ControllerEntrypointResponse { ret, log }))
+    }
+}
+
+fn perr<E: ToString>(err: E) -> PoemError {
+    PoemError::from_string(err.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 fn r400() -> poem::Error {

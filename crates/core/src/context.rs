@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use alloc::{rc::Rc, vec::Vec};
+use alloc::vec::Vec;
 
 use serde_json::Value;
 use valence_coprocessor_types::{CompoundOpening, HistoricalUpdate};
@@ -15,40 +15,21 @@ pub use buf_fs::{File, FileSystem};
 /// Execution context with blake3 hasher.
 pub type Blake3Context<D> = ExecutionContext<Blake3Hasher, D>;
 
-struct ExecutionContextInner<H, D>
-where
-    H: Hasher,
-    D: DataBackend,
-{
-    data: D,
-    hasher: PhantomData<H>,
-    registry: Registry<D>,
-    historical_root: Hash,
-    controller: Hash,
-
-    #[cfg(feature = "std")]
-    log: ::std::sync::Mutex<Vec<String>>,
-}
-
 /// Execution context for a Valence controller.
+#[derive(Clone)]
 pub struct ExecutionContext<H, D>
 where
     H: Hasher,
     D: DataBackend,
 {
-    inner: Rc<ExecutionContextInner<H, D>>,
-}
+    controller: Hash,
+    data: D,
+    hasher: PhantomData<H>,
+    historical: Hash,
+    registry: Registry<D>,
 
-impl<H, D> Clone for ExecutionContext<H, D>
-where
-    H: Hasher,
-    D: DataBackend,
-{
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
-    }
+    #[cfg(feature = "std")]
+    log: ::std::sync::Arc<::std::sync::Mutex<Vec<String>>>,
 }
 
 impl<H, D> ExecutionContext<H, D>
@@ -71,26 +52,53 @@ where
     /// Controller function name to the entrypoint.
     pub const CONTROLLER_ENTRYPOINT: &str = "entrypoint";
 
+    /// Initializes a new execution context.
+    #[allow(dead_code)]
+    pub(crate) fn init(controller: Hash, historical: Hash, data: D) -> Self {
+        Self {
+            data: data.clone(),
+            controller,
+            hasher: PhantomData,
+            historical,
+            registry: Registry::from(data.clone()),
+
+            #[cfg(feature = "std")]
+            log: ::std::sync::Arc::new(Vec::with_capacity(10).into()),
+        }
+    }
+
     /// Returns the controller being executed.
     pub fn controller(&self) -> &Hash {
-        &self.inner.controller
+        &self.controller
     }
 
     /// Returns a zkVM circuit.
     pub fn get_zkvm(&self) -> anyhow::Result<Option<Vec<u8>>> {
-        self.inner.registry.get_zkvm(&self.inner.controller)
+        self.registry.get_zkvm(&self.controller)
+    }
+
+    /// Replaces the internal controller with the provided id.
+    pub fn with_controller(mut self, controller: Hash) -> Self {
+        self.controller = controller;
+        self
+    }
+
+    /// Replaces the internal historical with the provided root.
+    pub fn with_historical(mut self, historical: Hash) -> Self {
+        self.historical = historical;
+        self
     }
 
     /// Returns a controller.
     pub fn get_controller(&self, controller: &Hash) -> anyhow::Result<Option<Vec<u8>>> {
-        self.inner.registry.get_controller(controller)
+        self.registry.get_controller(controller)
     }
 
     /// Returns a domain controller.
     pub fn get_domain_controller(&self, domain: &str) -> anyhow::Result<Option<Vec<u8>>> {
         let domain = DomainData::identifier_from_parts(domain);
 
-        self.inner.registry.get_controller(&domain)
+        self.registry.get_controller(&domain)
     }
 
     /// Computes the circuit witnesses.
@@ -119,8 +127,8 @@ where
         witnesses: Vec<Witness>,
     ) -> anyhow::Result<WitnessCoprocessor> {
         WitnessCoprocessor::try_from_witnesses::<H, D>(
-            self.inner.data.clone(),
-            self.inner.historical_root,
+            self.data.clone(),
+            self.historical,
             witnesses,
         )
     }
@@ -158,12 +166,7 @@ where
     where
         VM: Vm<H, D>,
     {
-        let witnesses = vm.execute(
-            self,
-            &self.inner.controller,
-            Self::CONTROLLER_GET_WITNESSES,
-            args,
-        )?;
+        let witnesses = vm.execute(self, &self.controller, Self::CONTROLLER_GET_WITNESSES, args)?;
 
         Ok(serde_json::from_value(witnesses)?)
     }
@@ -215,22 +218,20 @@ where
 
     /// Returns the controller raw storage.
     pub fn get_raw_storage(&self) -> anyhow::Result<Option<Vec<u8>>> {
-        self.inner
-            .data
-            .get_bulk(Self::PREFIX_CONTROLLER, &self.inner.controller)
+        self.data
+            .get_bulk(Self::PREFIX_CONTROLLER, &self.controller)
     }
 
     /// Overrides the controller raw storage.
     pub fn set_raw_storage(&self, storage: &[u8]) -> anyhow::Result<()> {
-        self.inner
-            .data
-            .set_bulk(Self::PREFIX_CONTROLLER, &self.inner.controller, storage)
+        self.data
+            .set_bulk(Self::PREFIX_CONTROLLER, &self.controller, storage)
             .map(|_| ())
     }
 
     /// Returns the last included block for the provided domain.
     pub fn get_latest_block(&self, domain: &str) -> anyhow::Result<Option<ValidatedDomainBlock>> {
-        Historical::<H, D>::get_latest_block(&self.inner.data, domain)
+        Historical::<H, D>::get_latest_block(&self.data, domain)
     }
 
     /// Returns a Merkle proof that opens a block number to the historical root.
@@ -240,8 +241,8 @@ where
         block_number: u64,
     ) -> anyhow::Result<CompoundOpening> {
         Historical::<H, D>::get_block_proof_for_domain_with_historical(
-            self.inner.data.clone(),
-            self.inner.historical_root,
+            self.data.clone(),
+            self.historical,
             domain,
             block_number,
         )
@@ -249,7 +250,7 @@ where
 
     /// Returns the chained historical update from the current historical root.
     pub fn get_historical_update(&self, root: &Hash) -> anyhow::Result<Option<HistoricalUpdate>> {
-        Historical::<H, D>::get_historical_update_with_data(&self.inner.data, root)
+        Historical::<H, D>::get_historical_update_with_data(&self.data, root)
     }
 
     /// Returns the chained historical update from the previous historical root.
@@ -257,14 +258,13 @@ where
         &self,
         root: &Hash,
     ) -> anyhow::Result<Option<HistoricalUpdate>> {
-        Historical::<H, D>::get_historical_update_from_previous_with_data(&self.inner.data, root)
+        Historical::<H, D>::get_historical_update_from_previous_with_data(&self.data, root)
     }
 
     #[cfg(feature = "std")]
     /// Returns the internal logs of the context.
     pub fn get_log(&self) -> anyhow::Result<Vec<String>> {
-        self.inner
-            .log
+        self.log
             .lock()
             .map_err(|e| anyhow::anyhow!("failed to lock logs: {e}"))
             .map(|l| l.clone())
@@ -276,8 +276,7 @@ where
     where
         I: IntoIterator<Item = String>,
     {
-        self.inner
-            .log
+        self.log
             .lock()
             .map_err(|e| anyhow::anyhow!("failed to lock logs: {e}"))?
             .extend(log);
@@ -287,7 +286,7 @@ where
 
     /// Returns the current historical SMT root.
     pub fn get_historical(&self) -> Hash {
-        self.inner.historical_root
+        self.historical
     }
 
     /// Calls the entrypoint of the controller with the provided arguments.
@@ -296,28 +295,5 @@ where
         VM: Vm<H, D>,
     {
         vm.execute(self, self.controller(), Self::CONTROLLER_ENTRYPOINT, args)
-    }
-}
-
-impl<H, D> ExecutionContext<H, D>
-where
-    H: Hasher,
-    D: DataBackend,
-{
-    /// Initializes a new execution context.
-    #[allow(dead_code)]
-    pub(crate) fn init(controller: Hash, historical_root: Hash, data: D) -> Self {
-        Self {
-            inner: Rc::new(ExecutionContextInner {
-                data: data.clone(),
-                hasher: PhantomData,
-                historical_root,
-                registry: Registry::from(data.clone()),
-                controller,
-
-                #[cfg(feature = "std")]
-                log: Vec::with_capacity(10).into(),
-            }),
-        }
     }
 }

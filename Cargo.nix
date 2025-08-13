@@ -620,10 +620,10 @@ rec {
       };
       "anyhow" = rec {
         crateName = "anyhow";
-        version = "1.0.98";
+        version = "1.0.99";
         edition = "2018";
         description = "Flexible concrete Error type built on std::error::Error";
-        sha256 = "11ylvjdrcjs0q9jgk1af4r5cx1qppj63plxqkq595vmc24rjsvg1";
+        sha256 = "001icqvkfl28rxxmk99rm4gvdzxqngj5v50yg2bh3dzcvqfllrxh";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -832,7 +832,7 @@ rec {
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
 
@@ -1131,7 +1131,7 @@ rec {
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" "parsing" "extra-traits" ];
           }
         ];
@@ -1207,7 +1207,7 @@ rec {
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" "parsing" "extra-traits" ];
           }
         ];
@@ -1487,7 +1487,7 @@ rec {
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
 
@@ -1704,7 +1704,7 @@ rec {
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" "visit-mut" ];
           }
         ];
@@ -1732,7 +1732,7 @@ rec {
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "clone-impls" "full" "parsing" "printing" "proc-macro" "visit-mut" ];
           }
@@ -2283,7 +2283,7 @@ constant-time operation and embedded-friendly no_std support
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" "extra-traits" "visit-mut" ];
           }
         ];
@@ -2687,7 +2687,7 @@ constant-time operation and embedded-friendly no_std support
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
 
@@ -2776,7 +2776,7 @@ constant-time operation and embedded-friendly no_std support
       };
       "cargo-valence" = rec {
         crateName = "cargo-valence";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor cargo subcommand.";
         crateBin = [
@@ -2920,7 +2920,7 @@ constant-time operation and embedded-friendly no_std support
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "clone-impls" "extra-traits" "fold" "full" "parsing" "printing" ];
           }
@@ -3156,11 +3156,11 @@ item that gets emitted.
       };
       "clap" = rec {
         crateName = "clap";
-        version = "4.5.43";
+        version = "4.5.45";
         edition = "2021";
         description = "A simple to use, efficient, and full-featured Command Line Argument Parser";
         crateBin = [];
-        sha256 = "0vzc91f7968q57fmbr9lxg2hwa3lyb37m49ilf553693vk4rgzah";
+        sha256 = "0663m85dd0aq1g3mkwz5b8pkjv4f5k2smlz7bagib4iqf15fgh0z";
         dependencies = [
           {
             name = "clap_builder";
@@ -3199,10 +3199,10 @@ item that gets emitted.
       };
       "clap_builder" = rec {
         crateName = "clap_builder";
-        version = "4.5.43";
+        version = "4.5.44";
         edition = "2021";
         description = "A simple to use, efficient, and full-featured Command Line Argument Parser";
-        sha256 = "0rcgrp7lfcfsbg2qih4jf2q4qni2jp68bbrl413a07sf54q5hny3";
+        sha256 = "1a48x3c9q1l7r6wbgy71mq6kfsihpqzxsnbaaamcgwvp88hz9rxk";
         dependencies = [
           {
             name = "anstream";
@@ -3239,10 +3239,10 @@ item that gets emitted.
       };
       "clap_derive" = rec {
         crateName = "clap_derive";
-        version = "4.5.41";
+        version = "4.5.45";
         edition = "2021";
         description = "Parse command line argument by defining a struct, derive crate.";
-        sha256 = "14glxqpfjs7z6m37f3ycrhgdkpyqmgwbr4vk1y34rjjrd8w54kzg";
+        sha256 = "1xir8wn5d10wpmnzmzjf2k1ib7j5mmzsm6v3yap6qlvx1axk3jql";
         procMacro = true;
         dependencies = [
           {
@@ -3259,7 +3259,7 @@ item that gets emitted.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -3294,7 +3294,7 @@ item that gets emitted.
         dependencies = [
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
             usesDefaultFeatures = false;
           }
         ];
@@ -4423,7 +4423,7 @@ implementing custom derives. Use https://crates.io/crates/darling in your code.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" "extra-traits" ];
           }
         ];
@@ -4456,7 +4456,7 @@ implementing custom derives. Use https://crates.io/crates/darling in your code.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
 
@@ -5011,7 +5011,7 @@ full support for heapless no_std targets
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
         features = {
@@ -5055,7 +5055,7 @@ full support for heapless no_std targets
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
           {
             name = "unicode-xid";
@@ -5312,7 +5312,7 @@ on macOS.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
         features = {
@@ -5531,13 +5531,13 @@ RFC6979 deterministic signatures as well as support for added entropy
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
         devDependencies = [
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -5867,7 +5867,7 @@ and public/secret keys composed thereof.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "derive" "parsing" "printing" "proc-macro" ];
           }
@@ -5915,7 +5915,7 @@ and public/secret keys composed thereof.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
         features = {
@@ -6515,7 +6515,7 @@ composability, and iterator-like interfaces.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -8631,7 +8631,7 @@ composability, and iterator-like interfaces.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" "visit" "fold" "extra-traits" ];
           }
         ];
@@ -9812,7 +9812,7 @@ and keccak-p variants
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -10725,7 +10725,7 @@ Supports various backends including num-bigint, etc..
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -11654,7 +11654,7 @@ signing/verification, and general purpose curve arithmetic
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" "visit" ];
           }
         ];
@@ -11961,7 +11961,7 @@ cryptographic private keys.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "parsing" "printing" "clone-impls" "proc-macro" "full" "visit-mut" ];
           }
@@ -12170,7 +12170,7 @@ Cargo build scripts.
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
           }
           {
             name = "tokio";
@@ -12305,7 +12305,7 @@ Cargo build scripts.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -12392,7 +12392,7 @@ Cargo build scripts.
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
           }
           {
             name = "tokio";
@@ -12482,12 +12482,12 @@ Cargo build scripts.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" "visit-mut" ];
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
           }
         ];
 
@@ -12645,7 +12645,7 @@ Cargo build scripts.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "full" ];
           }
@@ -12658,7 +12658,7 @@ Cargo build scripts.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "clone-impls" "extra-traits" "parsing" "printing" "visit-mut" ];
           }
@@ -12741,10 +12741,10 @@ equation coefficients
       };
       "proc-macro2" = rec {
         crateName = "proc-macro2";
-        version = "1.0.96";
+        version = "1.0.97";
         edition = "2021";
         description = "A substitute implementation of the compiler's `proc_macro` API to decouple token-based libraries from the procedural macro use case.";
-        sha256 = "1q2vm8yiycsr6ij5ps7hljzjwf76a468g9kbz4gflb77bbw0kvxy";
+        sha256 = "1wgnf8a4xw9grvn7q1s77208mlnvvwpizs2zx9sfpvwxf7bqj5yn";
         libName = "proc_macro2";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
@@ -12916,7 +12916,7 @@ equation coefficients
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "extra-traits" ];
           }
         ];
@@ -13065,7 +13065,7 @@ equation coefficients
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
           }
           {
             name = "tokio";
@@ -13181,7 +13181,7 @@ equation coefficients
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
           }
           {
             name = "tinyvec";
@@ -13621,14 +13621,10 @@ equation coefficients
       };
       "rayon" = rec {
         crateName = "rayon";
-        version = "1.10.0";
+        version = "1.11.0";
         edition = "2021";
         description = "Simple work-stealing parallelism for Rust";
-        sha256 = "1ylgnzwgllajalr4v00y4kj22klq2jbwllm70aha232iah0sc65l";
-        authors = [
-          "Niko Matsakis <niko@alum.mit.edu>"
-          "Josh Stone <cuviper@gmail.com>"
-        ];
+        sha256 = "13x5fxb7rn4j2yw0cr26n7782jkc7rjzmdkg42qxk3xz0p8033rn";
         dependencies = [
           {
             name = "either";
@@ -13646,16 +13642,12 @@ equation coefficients
       };
       "rayon-core" = rec {
         crateName = "rayon-core";
-        version = "1.12.1";
+        version = "1.13.0";
         edition = "2021";
         description = "Core APIs for Rayon";
         links = "rayon-core";
-        sha256 = "1qpwim68ai5h0j7axa8ai8z0payaawv3id0lrgkqmapx7lx8fr8l";
+        sha256 = "14dbr0sq83a6lf1rfjq5xdpk5r6zgzvmzs5j6110vlv2007qpq92";
         libName = "rayon_core";
-        authors = [
-          "Niko Matsakis <niko@alum.mit.edu>"
-          "Josh Stone <cuviper@gmail.com>"
-        ];
         dependencies = [
           {
             name = "crossbeam-deque";
@@ -13860,7 +13852,7 @@ equation coefficients
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
           }
         ];
         features = {
@@ -14139,10 +14131,10 @@ finite automata and guarantees linear time matching on all inputs.
       };
       "reqwest" = rec {
         crateName = "reqwest";
-        version = "0.12.22";
+        version = "0.12.23";
         edition = "2021";
         description = "higher level HTTP client library";
-        sha256 = "0cbmfrcrk6wbg93apmji0fln1ca9322af2kc7dpa18vcgs9k3jfb";
+        sha256 = "1svw1k0jx17cmlwhixwqfv3bgpjapciw7klkghnd9cljh16g6afl";
         authors = [
           "Sean McArthur <sean@seanmonstar.com>"
         ];
@@ -14337,7 +14329,7 @@ finite automata and guarantees linear time matching on all inputs.
             packageId = "tower 0.5.2";
             usesDefaultFeatures = false;
             target = { target, features }: (!("wasm32" == target."arch" or null));
-            features = [ "timeout" "util" ];
+            features = [ "retry" "timeout" "util" ];
           }
           {
             name = "tower-http";
@@ -14374,7 +14366,7 @@ finite automata and guarantees linear time matching on all inputs.
             name = "web-sys";
             packageId = "web-sys";
             target = { target, features }: ("wasm32" == target."arch" or null);
-            features = [ "AbortController" "AbortSignal" "Headers" "Request" "RequestInit" "RequestMode" "Response" "Window" "FormData" "Blob" "BlobPropertyBag" "ServiceWorkerGlobalScope" "RequestCredentials" "File" "ReadableStream" ];
+            features = [ "AbortController" "AbortSignal" "Headers" "Request" "RequestInit" "RequestMode" "Response" "Window" "FormData" "Blob" "BlobPropertyBag" "ServiceWorkerGlobalScope" "RequestCredentials" "File" "ReadableStream" "RequestCache" ];
           }
           {
             name = "webpki-roots";
@@ -15406,7 +15398,7 @@ fork-like interface.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "derive" "visit" "visit-mut" "extra-traits" ];
           }
         ];
@@ -15818,7 +15810,7 @@ Elliptic-Curve-Point-to-Octet-String encoding
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "clone-impls" "derive" "parsing" "printing" "proc-macro" ];
           }
@@ -16095,7 +16087,7 @@ contains secrets (e.g. cryptographic keys)
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "full" "printing" "parsing" "clone-impls" ];
           }
@@ -18265,7 +18257,7 @@ possible intended.
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
             usesDefaultFeatures = false;
           }
         ];
@@ -18467,7 +18459,7 @@ OSA, Damerau-Levenshtein, Jaro, Jaro-Winkler, and Sørensen-Dice.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "parsing" "extra-traits" ];
           }
         ];
@@ -18627,12 +18619,12 @@ OSA, Damerau-Levenshtein, Jaro, Jaro-Winkler, and Sørensen-Dice.
         };
         resolvedDefaultFeatures = [ "clone-impls" "default" "derive" "extra-traits" "full" "parsing" "printing" "proc-macro" "quote" "visit" ];
       };
-      "syn 2.0.104" = rec {
+      "syn 2.0.105" = rec {
         crateName = "syn";
-        version = "2.0.104";
+        version = "2.0.105";
         edition = "2021";
         description = "Parser for Rust source code";
-        sha256 = "0h2s8cxh5dsh9h41dxnlzpifqqn59cqgm0kljawws61ljq2zgdhp";
+        sha256 = "06f63ymdffzgm6a95mr0cml8ky61hm1gfp3i2bkmhd75a2rgrhvv";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
@@ -18706,7 +18698,7 @@ OSA, Damerau-Levenshtein, Jaro, Jaro-Winkler, and Sørensen-Dice.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "derive" "parsing" "printing" "clone-impls" "visit" "extra-traits" ];
           }
@@ -18934,19 +18926,19 @@ OSA, Damerau-Levenshtein, Jaro, Jaro-Winkler, and Sørensen-Dice.
         ];
 
       };
-      "thiserror 2.0.12" = rec {
+      "thiserror 2.0.14" = rec {
         crateName = "thiserror";
-        version = "2.0.12";
+        version = "2.0.14";
         edition = "2021";
         description = "derive(Error)";
-        sha256 = "024791nsc0np63g2pq30cjf9acj38z3jwx9apvvi8qsqmqnqlysn";
+        sha256 = "07pl090jsmj7nyfzg1bhxdnm2450lppdd1hn7zgcnhn8lv1lj28b";
         authors = [
           "David Tolnay <dtolnay@gmail.com>"
         ];
         dependencies = [
           {
             name = "thiserror-impl";
-            packageId = "thiserror-impl 2.0.12";
+            packageId = "thiserror-impl 2.0.14";
           }
         ];
         features = {
@@ -18976,17 +18968,17 @@ OSA, Damerau-Levenshtein, Jaro, Jaro-Winkler, and Sørensen-Dice.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
 
       };
-      "thiserror-impl 2.0.12" = rec {
+      "thiserror-impl 2.0.14" = rec {
         crateName = "thiserror-impl";
-        version = "2.0.12";
+        version = "2.0.14";
         edition = "2021";
         description = "Implementation detail of the `thiserror` crate";
-        sha256 = "07bsn7shydaidvyyrm7jz29vp78vrxr9cr9044rfmn078lmz8z3z";
+        sha256 = "09zjv8jplnyc2jqn4n4zfk019ql8hg7bxrhj0l7dsbwwmfs48nyc";
         procMacro = true;
         libName = "thiserror_impl";
         authors = [
@@ -19003,7 +18995,7 @@ OSA, Damerau-Levenshtein, Jaro, Jaro-Winkler, and Sørensen-Dice.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
           }
         ];
 
@@ -19439,7 +19431,7 @@ backed applications.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -20179,7 +20171,7 @@ clients and servers.
           "tracing" = [ "dep:tracing" ];
           "util" = [ "__common" "futures-util" "pin-project-lite" "sync_wrapper" ];
         };
-        resolvedDefaultFeatures = [ "__common" "futures-core" "futures-util" "log" "make" "pin-project-lite" "sync_wrapper" "timeout" "tokio" "tracing" "util" ];
+        resolvedDefaultFeatures = [ "__common" "futures-core" "futures-util" "log" "make" "pin-project-lite" "retry" "sync_wrapper" "timeout" "tokio" "tracing" "util" ];
       };
       "tower-http" = rec {
         crateName = "tower-http";
@@ -20435,7 +20427,7 @@ clients and servers.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "full" "parsing" "printing" "visit-mut" "clone-impls" "extra-traits" "proc-macro" ];
           }
@@ -20736,7 +20728,7 @@ clients and servers.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -20816,7 +20808,7 @@ clients and servers.
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
           }
           {
             name = "utf-8";
@@ -21196,7 +21188,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor" = rec {
         crateName = "valence-coprocessor";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/core; };
@@ -21304,7 +21296,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-client" = rec {
         crateName = "valence-coprocessor-client";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor client";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/utils/client; };
@@ -21365,7 +21357,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-merkle" = rec {
         crateName = "valence-coprocessor-merkle";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor Merkle primitives";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/merkle; };
@@ -21421,7 +21413,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-prover" = rec {
         crateName = "valence-coprocessor-prover";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor prover service.";
         crateBin = [
@@ -21532,7 +21524,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-redis" = rec {
         crateName = "valence-coprocessor-redis";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor Redis data backend implementation.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/data/redis; };
@@ -21564,7 +21556,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-service" = rec {
         crateName = "valence-coprocessor-service";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor service application.";
         crateBin = [
@@ -21670,7 +21662,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-sp1" = rec {
         crateName = "valence-coprocessor-sp1";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor SP1 prover backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/sp1; };
@@ -21775,7 +21767,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-types" = rec {
         crateName = "valence-coprocessor-types";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor types definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/types; };
@@ -21832,7 +21824,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-wasm" = rec {
         crateName = "valence-coprocessor-wasm";
-        version = "0.4.5";
+        version = "0.4.6";
         edition = "2021";
         description = "The Valence co-processor WASM module backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/wasm; };
@@ -22172,7 +22164,7 @@ Windows platforms.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
           {
@@ -22278,7 +22270,7 @@ Windows platforms.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "visit" "visit-mut" "full" ];
           }
           {
@@ -22980,7 +22972,7 @@ dependency.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "extra-traits" ];
           }
           {
@@ -23099,7 +23091,7 @@ dependency.
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
           }
           {
             name = "wasmparser";
@@ -23456,7 +23448,7 @@ dependency.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -24112,7 +24104,7 @@ dependency.
           "default" = [ "std" ];
           "std" = [ "wasm-bindgen/std" "js-sys/std" ];
         };
-        resolvedDefaultFeatures = [ "AbortController" "AbortSignal" "Blob" "BlobPropertyBag" "Event" "EventTarget" "File" "FormData" "Headers" "MessageEvent" "QueuingStrategy" "ReadableByteStreamController" "ReadableStream" "ReadableStreamByobReader" "ReadableStreamByobRequest" "ReadableStreamDefaultController" "ReadableStreamDefaultReader" "ReadableStreamGetReaderOptions" "ReadableStreamReadResult" "ReadableStreamReaderMode" "ReadableStreamType" "ReadableWritablePair" "Request" "RequestCredentials" "RequestInit" "RequestMode" "Response" "ServiceWorkerGlobalScope" "StreamPipeOptions" "TransformStream" "TransformStreamDefaultController" "Transformer" "UnderlyingSink" "UnderlyingSource" "Window" "Worker" "WorkerGlobalScope" "WritableStream" "WritableStreamDefaultController" "WritableStreamDefaultWriter" "default" "std" ];
+        resolvedDefaultFeatures = [ "AbortController" "AbortSignal" "Blob" "BlobPropertyBag" "Event" "EventTarget" "File" "FormData" "Headers" "MessageEvent" "QueuingStrategy" "ReadableByteStreamController" "ReadableStream" "ReadableStreamByobReader" "ReadableStreamByobRequest" "ReadableStreamDefaultController" "ReadableStreamDefaultReader" "ReadableStreamGetReaderOptions" "ReadableStreamReadResult" "ReadableStreamReaderMode" "ReadableStreamType" "ReadableWritablePair" "Request" "RequestCache" "RequestCredentials" "RequestInit" "RequestMode" "Response" "ServiceWorkerGlobalScope" "StreamPipeOptions" "TransformStream" "TransformStreamDefaultController" "Transformer" "UnderlyingSink" "UnderlyingSource" "Window" "Worker" "WorkerGlobalScope" "WritableStream" "WritableStreamDefaultController" "WritableStreamDefaultWriter" "default" "std" ];
       };
       "web-time" = rec {
         crateName = "web-time";
@@ -24282,7 +24274,7 @@ dependency.
           }
           {
             name = "thiserror";
-            packageId = "thiserror 2.0.12";
+            packageId = "thiserror 2.0.14";
           }
           {
             name = "wasmparser";
@@ -25080,7 +25072,7 @@ dependency.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "parsing" "proc-macro" "printing" "full" "clone-impls" ];
           }
@@ -25111,7 +25103,7 @@ dependency.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             usesDefaultFeatures = false;
             features = [ "parsing" "proc-macro" "printing" "full" "clone-impls" ];
           }
@@ -26947,7 +26939,7 @@ dependency.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "fold" ];
           }
           {
@@ -27017,7 +27009,7 @@ dependency.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" ];
           }
         ];
@@ -27068,7 +27060,7 @@ dependency.
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "fold" ];
           }
           {
@@ -27129,7 +27121,7 @@ even WASM!
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "full" "extra-traits" "visit" ];
           }
         ];
@@ -27241,7 +27233,7 @@ even WASM!
           }
           {
             name = "syn";
-            packageId = "syn 2.0.104";
+            packageId = "syn 2.0.105";
             features = [ "extra-traits" ];
           }
         ];

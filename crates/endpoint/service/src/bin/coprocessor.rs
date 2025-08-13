@@ -7,7 +7,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt
 use valence_coprocessor::Registry;
 use valence_coprocessor_redis::RedisBackend;
 use valence_coprocessor_service::{
-    api::Api, data::ServiceBackend, worker::Pool, Historical, ServiceVm, ServiceZkVm,
+    api::Api, data::ServiceBackend, middleware, worker::Pool, Historical, ServiceVm, ServiceZkVm,
 };
 
 #[derive(Parser)]
@@ -79,6 +79,7 @@ async fn main() -> anyhow::Result<()> {
         .nest("/spec", api_service.spec_endpoint())
         .nest("/spec/yaml", api_service.spec_endpoint_yaml())
         .nest("/api", api_service)
+        .around(middleware::context)
         .data(registry)
         .data(vm)
         .data(zkvm)
