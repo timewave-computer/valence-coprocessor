@@ -1049,11 +1049,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1754979969,
-        "narHash": "sha256-P0S8JrHOz95Gk9c10wYWAh7SPWAs7zGAbFxZ2NpkMeM=",
+        "lastModified": 1755049705,
+        "narHash": "sha256-BQ0hHKKswurtvQitF0VvySA++gl1tkSe6PlOzFw0jKs=",
         "owner": "timewave-computer",
         "repo": "sp1.nix",
-        "rev": "71124993ab7cf1e513bd3bd07f1514e9d8aee919",
+        "rev": "c6a3949c328773eaee0a1c0b96e07e948751e2d3",
         "type": "github"
       },
       "original": {
