@@ -37,12 +37,14 @@ fn deploy_hello() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
+    let historical = Blake3Historical::load(data).unwrap();
+    let ctx = historical.context_without_controller();
     let controller = ControllerData::default().with_controller(hello);
     let controller = registry
-        .register_controller(&vm, &zkvm, controller)
+        .register_controller(&vm, &zkvm, &ctx, controller)
         .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(controller);
+    let ctx = historical.context(controller);
 
     let ret = ctx.entrypoint(&vm, json!({"name": "Valence"})).unwrap()["message"]
         .as_str()
@@ -62,12 +64,14 @@ fn deploy_storage() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
+    let historical = Blake3Historical::load(data).unwrap();
+    let ctx = historical.context_without_controller();
     let controller = ControllerData::default().with_controller(storage);
     let controller = registry
-        .register_controller(&vm, &zkvm, controller)
+        .register_controller(&vm, &zkvm, &ctx, controller)
         .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(controller);
+    let ctx = historical.context(controller);
 
     let path = "/var/share/foo.bin";
     let contents = "Valence";
@@ -126,12 +130,14 @@ fn deploy_raw_storage() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
+    let historical = Blake3Historical::load(data).unwrap();
+    let ctx = historical.context_without_controller();
     let controller = ControllerData::default().with_controller(storage);
     let controller = registry
-        .register_controller(&vm, &zkvm, controller)
+        .register_controller(&vm, &zkvm, &ctx, controller)
         .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(controller);
+    let ctx = historical.context(controller);
 
     assert!(ctx.get_raw_storage().unwrap().is_none());
 
@@ -152,12 +158,14 @@ fn deploy_controller() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
+    let historical = Blake3Historical::load(data).unwrap();
+    let ctx = historical.context_without_controller();
     let controller = ControllerData::default().with_controller(controller);
     let controller = registry
-        .register_controller(&vm, &zkvm, controller)
+        .register_controller(&vm, &zkvm, &ctx, controller)
         .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(controller);
+    let ctx = historical.context(controller);
 
     let ret: Vec<_> = ctx
         .entrypoint(&vm, json!({}))
@@ -195,12 +203,14 @@ fn deploy_http() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
+    let historical = Blake3Historical::load(data).unwrap();
+    let ctx = historical.context_without_controller();
     let controller = ControllerData::default().with_controller(controller);
     let controller = registry
-        .register_controller(&vm, &zkvm, controller)
+        .register_controller(&vm, &zkvm, &ctx, controller)
         .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(controller);
+    let ctx = historical.context(controller);
 
     let ret = ctx
         .entrypoint(
@@ -229,12 +239,14 @@ fn deploy_alchemy() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
+    let historical = Blake3Historical::load(data).unwrap();
+    let ctx = historical.context_without_controller();
     let controller = ControllerData::default().with_controller(alchemy);
     let controller = registry
-        .register_controller(&vm, &zkvm, controller)
+        .register_controller(&vm, &zkvm, &ctx, controller)
         .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(controller);
+    let ctx = historical.context(controller);
 
     let ret = ctx
         .entrypoint(
@@ -265,12 +277,14 @@ fn deploy_log() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
+    let historical = Blake3Historical::load(data).unwrap();
+    let ctx = historical.context_without_controller();
     let controller = ControllerData::default().with_controller(hello);
     let controller = registry
-        .register_controller(&vm, &zkvm, controller)
+        .register_controller(&vm, &zkvm, &ctx, controller)
         .unwrap();
 
-    let ctx = Blake3Historical::load(data).unwrap().context(controller);
+    let ctx = historical.context(controller);
 
     ctx.entrypoint(&vm, json!({"name": "Valence"})).unwrap();
 
@@ -282,7 +296,7 @@ fn deploy_log() {
 
 #[test]
 fn deploy_historical() {
-    let historical = get_controller_bytes("historical");
+    let controller = get_controller_bytes("historical");
     let data = MemoryBackend::default();
     let registry = Registry::from(data.clone());
 
@@ -290,12 +304,12 @@ fn deploy_historical() {
     let vm = ValenceWasm::new(capacity).unwrap();
     let zkvm = MockZkVm::default();
 
-    let controller = ControllerData::default().with_controller(historical);
-    let controller = registry
-        .register_controller(&vm, &zkvm, controller)
-        .unwrap();
-
     let historical = Blake3Historical::load(data).unwrap();
+    let ctx = historical.context_without_controller();
+    let controller = ControllerData::default().with_controller(controller);
+    let controller = registry
+        .register_controller(&vm, &zkvm, &ctx, controller)
+        .unwrap();
 
     let domain = "ethereum";
     let id = DomainData::identifier_from_parts("ethereum");

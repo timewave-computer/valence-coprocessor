@@ -42,11 +42,13 @@ fn deploy_hello() {
     let vm = MockVm;
     let zkvm = Sp1ZkVm::new(mode, capacity).unwrap();
 
+    let historical = Historical::load(data).unwrap();
+    let ctx = historical.context_without_controller();
     let controller = ControllerData::default().with_circuit(hello);
     let controller = registry
-        .register_controller(&vm, &zkvm, controller)
+        .register_controller(&vm, &zkvm, &ctx, controller)
         .unwrap();
-    let ctx = Historical::load(data).unwrap().context(controller);
+    let ctx = historical.context(controller);
 
     let witness = String::from("Valence");
     let witness = Witness::Data(witness.as_bytes().to_vec());

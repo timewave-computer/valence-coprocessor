@@ -9,6 +9,7 @@ description = "The Valence co-processor definition"
 anyhow.workspace = true
 buf-fs.workspace = true
 base64.workspace = true
+const-hex.workspace = true
 hashbrown.workspace = true
 msgpacker.workspace = true
 reqwest = { workspace = true, optional = true }

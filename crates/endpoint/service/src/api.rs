@@ -166,6 +166,7 @@ impl Api {
         registry: Data<&Registry>,
         vm: Data<&ServiceVm>,
         zkvm: Data<&ServiceZkVm>,
+        ctx: Data<&Context>,
         request: Json<RegisterControllerRequest>,
     ) -> poem::Result<Json<RegisterControllerResponse>> {
         let controller = ControllerData {
@@ -175,7 +176,7 @@ impl Api {
         };
 
         let controller = registry
-            .register_controller(*vm, *zkvm, controller)
+            .register_controller(*vm, *zkvm, *ctx, controller)
             .map_err(perr)?;
         let controller = RegisterControllerResponse {
             controller: hex::encode(controller),
@@ -191,6 +192,7 @@ impl Api {
         registry: Data<&Registry>,
         vm: Data<&ServiceVm>,
         zkvm: Data<&ServiceZkVm>,
+        ctx: Data<&Context>,
         request: Json<RegisterDomainRequest>,
     ) -> poem::Result<Json<RegisterDomainResponse>> {
         let domain = DomainData {
@@ -199,7 +201,9 @@ impl Api {
             circuit: request.circuit.to_vec(),
         };
 
-        let domain = registry.register_domain(*vm, *zkvm, domain).map_err(perr)?;
+        let domain = registry
+            .register_domain(*vm, *zkvm, *ctx, domain)
+            .map_err(perr)?;
         let domain = RegisterDomainResponse {
             domain: hex::encode(domain),
         };

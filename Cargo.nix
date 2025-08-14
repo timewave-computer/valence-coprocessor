@@ -62,16 +62,6 @@ rec {
       # File a bug if you depend on any for non-debug work!
       debug = internal.debugCrate { inherit packageId; };
     };
-    "valence-coprocessor-client" = rec {
-      packageId = "valence-coprocessor-client";
-      build = internal.buildRustCrateWithFeatures {
-        packageId = "valence-coprocessor-client";
-      };
-
-      # Debug support which might change between releases.
-      # File a bug if you depend on any for non-debug work!
-      debug = internal.debugCrate { inherit packageId; };
-    };
     "valence-coprocessor-merkle" = rec {
       packageId = "valence-coprocessor-merkle";
       build = internal.buildRustCrateWithFeatures {
@@ -635,10 +625,10 @@ rec {
       };
       "arbitrary" = rec {
         crateName = "arbitrary";
-        version = "1.4.1";
+        version = "1.4.2";
         edition = "2021";
         description = "The trait for generating structured data from unstructured data";
-        sha256 = "08zj2yanll5s5gsbmvgwvbq39iqzy3nia3yx3db3zwba08yhpqnx";
+        sha256 = "1wcbi4x7i3lzcrkjda4810nqv03lpmvfhb0a85xrq1mbqjikdl63";
         authors = [
           "The Rust-Fuzz Project Developers"
           "Nick Fitzgerald <fitzgen@gmail.com>"
@@ -1712,10 +1702,10 @@ rec {
       };
       "async-trait" = rec {
         crateName = "async-trait";
-        version = "0.1.88";
+        version = "0.1.89";
         edition = "2021";
         description = "Type erasure for async trait methods";
-        sha256 = "1dgxvz7g75cmz6vqqz0mri4xazc6a8xfj1db6r9fxz29lzyd6fg5";
+        sha256 = "1fsxxmz3rzx1prn1h3rs7kyjhkap60i7xvi0ldapkvbb14nssdch";
         procMacro = true;
         libName = "async_trait";
         authors = [
@@ -2776,7 +2766,7 @@ constant-time operation and embedded-friendly no_std support
       };
       "cargo-valence" = rec {
         crateName = "cargo-valence";
-        version = "0.4.6";
+        version = "0.4.7";
         edition = "2021";
         description = "The Valence co-processor cargo subcommand.";
         crateBin = [
@@ -15314,6 +15304,21 @@ fork-like interface.
           "no-panic" = [ "dep:no-panic" ];
         };
       };
+      "ryu-js" = rec {
+        crateName = "ryu-js";
+        version = "1.0.2";
+        edition = "2018";
+        description = "Fast floating point to string conversion, ECMAScript compliant.";
+        sha256 = "05gaq3mraijpinin02cxanpfjcic28z6f8wjnq1hkyyng0b66afx";
+        libName = "ryu_js";
+        authors = [
+          "David Tolnay <dtolnay@gmail.com>"
+          "boa-dev"
+        ];
+        features = {
+          "no-panic" = [ "dep:no-panic" ];
+        };
+      };
       "scale-info" = rec {
         crateName = "scale-info";
         version = "2.11.6";
@@ -15863,7 +15868,37 @@ Elliptic-Curve-Point-to-Octet-String encoding
           "preserve_order" = [ "indexmap" "std" ];
           "std" = [ "memchr/std" "serde/std" ];
         };
-        resolvedDefaultFeatures = [ "alloc" "default" "raw_value" "std" "unbounded_depth" ];
+        resolvedDefaultFeatures = [ "alloc" "default" "float_roundtrip" "raw_value" "std" "unbounded_depth" ];
+      };
+      "serde_json_canonicalizer" = rec {
+        crateName = "serde_json_canonicalizer";
+        version = "0.3.1";
+        edition = "2021";
+        description = "JSON Canonicalization Scheme (JCS - RFC 8785) implementation";
+        sha256 = "0c8wxx1m35jl984y4i5kwmdkj5abh0b4najwwx3nwiggmrvpyxqz";
+        dependencies = [
+          {
+            name = "ryu-js";
+            packageId = "ryu-js";
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+          }
+          {
+            name = "serde_json";
+            packageId = "serde_json";
+            features = [ "float_roundtrip" ];
+          }
+        ];
+        devDependencies = [
+          {
+            name = "serde";
+            packageId = "serde";
+            features = [ "derive" ];
+          }
+        ];
+
       };
       "serde_path_to_error" = rec {
         crateName = "serde_path_to_error";
@@ -21184,11 +21219,11 @@ Unicode Standard Annex #31.
           "v7" = [ "rng" ];
           "zerocopy" = [ "dep:zerocopy" ];
         };
-        resolvedDefaultFeatures = [ "default" "rng" "std" "v4" "v7" ];
+        resolvedDefaultFeatures = [ "default" "rng" "std" "v7" ];
       };
       "valence-coprocessor" = rec {
         crateName = "valence-coprocessor";
-        version = "0.4.6";
+        version = "0.4.7";
         edition = "2021";
         description = "The Valence co-processor definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/core; };
@@ -21211,6 +21246,12 @@ Unicode Standard Annex #31.
           {
             name = "buf-fs";
             packageId = "buf-fs";
+          }
+          {
+            name = "const-hex";
+            packageId = "const-hex";
+            usesDefaultFeatures = false;
+            features = [ "alloc" "core-error" ];
           }
           {
             name = "hashbrown";
@@ -21294,70 +21335,9 @@ Unicode Standard Annex #31.
         };
         resolvedDefaultFeatures = [ "default" "mocks" "reqwest" "std" "uuid" ];
       };
-      "valence-coprocessor-client" = rec {
-        crateName = "valence-coprocessor-client";
-        version = "0.4.6";
-        edition = "2021";
-        description = "The Valence co-processor client";
-        src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/utils/client; };
-        libName = "valence_coprocessor_client";
-        authors = [
-          "Timewave Labs"
-        ];
-        dependencies = [
-          {
-            name = "anyhow";
-            packageId = "anyhow";
-            usesDefaultFeatures = false;
-          }
-          {
-            name = "hex";
-            packageId = "hex";
-            usesDefaultFeatures = false;
-            features = [ "alloc" ];
-          }
-          {
-            name = "reqwest";
-            packageId = "reqwest";
-            features = [ "blocking" "json" ];
-          }
-          {
-            name = "serde";
-            packageId = "serde";
-            usesDefaultFeatures = false;
-            features = [ "alloc" "derive" ];
-          }
-          {
-            name = "serde_json";
-            packageId = "serde_json";
-            usesDefaultFeatures = false;
-            features = [ "alloc" ];
-          }
-          {
-            name = "tokio";
-            packageId = "tokio";
-            features = [ "full" ];
-          }
-          {
-            name = "tracing";
-            packageId = "tracing";
-            usesDefaultFeatures = false;
-          }
-          {
-            name = "uuid";
-            packageId = "uuid";
-            features = [ "v4" ];
-          }
-          {
-            name = "valence-coprocessor";
-            packageId = "valence-coprocessor";
-          }
-        ];
-
-      };
       "valence-coprocessor-merkle" = rec {
         crateName = "valence-coprocessor-merkle";
-        version = "0.4.6";
+        version = "0.4.7";
         edition = "2021";
         description = "The Valence co-processor Merkle primitives";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/merkle; };
@@ -21413,7 +21393,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-prover" = rec {
         crateName = "valence-coprocessor-prover";
-        version = "0.4.6";
+        version = "0.4.7";
         edition = "2021";
         description = "The Valence co-processor prover service.";
         crateBin = [
@@ -21524,7 +21504,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-redis" = rec {
         crateName = "valence-coprocessor-redis";
-        version = "0.4.6";
+        version = "0.4.7";
         edition = "2021";
         description = "The Valence co-processor Redis data backend implementation.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/data/redis; };
@@ -21556,7 +21536,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-service" = rec {
         crateName = "valence-coprocessor-service";
-        version = "0.4.6";
+        version = "0.4.7";
         edition = "2021";
         description = "The Valence co-processor service application.";
         crateBin = [
@@ -21581,6 +21561,12 @@ Unicode Standard Annex #31.
             name = "clap";
             packageId = "clap";
             features = [ "derive" "env" ];
+          }
+          {
+            name = "const-hex";
+            packageId = "const-hex";
+            usesDefaultFeatures = false;
+            features = [ "alloc" "core-error" ];
           }
           {
             name = "dirs";
@@ -21657,12 +21643,16 @@ Unicode Standard Annex #31.
             name = "valence-coprocessor-wasm";
             packageId = "valence-coprocessor-wasm";
           }
+          {
+            name = "valence-crypto-utils";
+            packageId = "valence-crypto-utils";
+          }
         ];
 
       };
       "valence-coprocessor-sp1" = rec {
         crateName = "valence-coprocessor-sp1";
-        version = "0.4.6";
+        version = "0.4.7";
         edition = "2021";
         description = "The Valence co-processor SP1 prover backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/sp1; };
@@ -21767,7 +21757,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-types" = rec {
         crateName = "valence-coprocessor-types";
-        version = "0.4.6";
+        version = "0.4.7";
         edition = "2021";
         description = "The Valence co-processor types definition";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/types; };
@@ -21824,7 +21814,7 @@ Unicode Standard Annex #31.
       };
       "valence-coprocessor-wasm" = rec {
         crateName = "valence-coprocessor-wasm";
-        version = "0.4.6";
+        version = "0.4.7";
         edition = "2021";
         description = "The Valence co-processor WASM module backend.";
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./crates/runtime/wasm; };
@@ -21916,6 +21906,66 @@ Unicode Standard Annex #31.
           "wasmtime" = [ "dep:wasmtime" ];
         };
         resolvedDefaultFeatures = [ "abi-handlers" "default" "dlmalloc" "hashbrown" "serde" "std" "tests-runtime" "wasmtime" ];
+      };
+      "valence-crypto-utils" = rec {
+        crateName = "valence-crypto-utils";
+        version = "0.1.0";
+        edition = "2024";
+        description = "A collection of crypto utilities for the Valence ecosystem.";
+        sha256 = "0hjz0khbphx0wnf6f93cfn07p5qqpyrbb1daw7dp1848dxkwa338";
+        libName = "valence_crypto_utils";
+        authors = [
+          "Timewave Labs"
+        ];
+        dependencies = [
+          {
+            name = "anyhow";
+            packageId = "anyhow";
+            usesDefaultFeatures = false;
+          }
+          {
+            name = "const-hex";
+            packageId = "const-hex";
+            usesDefaultFeatures = false;
+            features = [ "alloc" "core-error" ];
+          }
+          {
+            name = "k256";
+            packageId = "k256";
+            usesDefaultFeatures = false;
+            features = [ "alloc" "ecdsa" "serde" ];
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            usesDefaultFeatures = false;
+            features = [ "alloc" "derive" ];
+          }
+          {
+            name = "serde_json";
+            packageId = "serde_json";
+            usesDefaultFeatures = false;
+            features = [ "alloc" ];
+          }
+          {
+            name = "serde_json_canonicalizer";
+            packageId = "serde_json_canonicalizer";
+            optional = true;
+          }
+          {
+            name = "sha2";
+            packageId = "sha2 0.10.9";
+            optional = true;
+            usesDefaultFeatures = false;
+          }
+        ];
+        features = {
+          "default" = [ "std" ];
+          "serde_json_canonicalizer" = [ "dep:serde_json_canonicalizer" ];
+          "sha2" = [ "dep:sha2" ];
+          "std" = [ "anyhow/default" "k256/default" "serde_json_canonicalizer" "sha2" "sha2/default" ];
+        };
+        resolvedDefaultFeatures = [ "default" "serde_json_canonicalizer" "sha2" "std" ];
       };
       "valuable" = rec {
         crateName = "valuable";
@@ -22340,13 +22390,13 @@ dependency.
         };
         resolvedDefaultFeatures = [ "component-model" "default" "std" ];
       };
-      "wasm-encoder 0.236.0" = rec {
+      "wasm-encoder 0.236.1" = rec {
         crateName = "wasm-encoder";
-        version = "0.236.0";
+        version = "0.236.1";
         edition = "2021";
         description = "A low-level WebAssembly encoder.
 ";
-        sha256 = "02v80y75wjqmxznn7fdylnr89rzzj0hnmqfjc9r3q3dbcs8rf21i";
+        sha256 = "1rs1313r45zkjj35z2kyga4l5066542gqcyki7jvf91w9zywqkvj";
         libName = "wasm_encoder";
         authors = [
           "Nick Fitzgerald <fitzgen@gmail.com>"
@@ -22359,7 +22409,7 @@ dependency.
           }
           {
             name = "wasmparser";
-            packageId = "wasmparser 0.236.0";
+            packageId = "wasmparser 0.236.1";
             optional = true;
             usesDefaultFeatures = false;
             features = [ "simd" "simd" ];
@@ -22468,13 +22518,13 @@ dependency.
         };
         resolvedDefaultFeatures = [ "component-model" "features" "serde" "simd" "std" "validate" ];
       };
-      "wasmparser 0.236.0" = rec {
+      "wasmparser 0.236.1" = rec {
         crateName = "wasmparser";
-        version = "0.236.0";
+        version = "0.236.1";
         edition = "2021";
         description = "A simple event-driven library for parsing WebAssembly binary files.
 ";
-        sha256 = "1lp3n8np9lbnx8x1wymm3w7q30s5nmwryywxrgrzc1d78vlfxl8n";
+        sha256 = "1mx1gb3718086vac636qmb2wr8x44rlywb580iscym5j7qgyicd9";
         authors = [
           "Yury Delendik <ydelendik@mozilla.com>"
         ];
@@ -23557,11 +23607,11 @@ dependency.
       };
       "wast" = rec {
         crateName = "wast";
-        version = "236.0.0";
+        version = "236.0.1";
         edition = "2021";
         description = "Customizable Rust parsers for the WebAssembly Text formats WAT and WAST
 ";
-        sha256 = "1ipkyk993rbnv0rvr7pradanzjhp2vaas9lvpxpvl6dmxbxbdmhi";
+        sha256 = "07z5yvzl0spfamzj7lqbahnc6m26rnqd8bv3jk9hhs4wvfsc9gnk";
         authors = [
           "Alex Crichton <alex@alexcrichton.com>"
         ];
@@ -23585,7 +23635,7 @@ dependency.
           }
           {
             name = "wasm-encoder";
-            packageId = "wasm-encoder 0.236.0";
+            packageId = "wasm-encoder 0.236.1";
             usesDefaultFeatures = false;
             features = [ "std" ];
           }
@@ -23599,11 +23649,11 @@ dependency.
       };
       "wat" = rec {
         crateName = "wat";
-        version = "1.236.0";
+        version = "1.236.1";
         edition = "2021";
         description = "Rust parser for the WebAssembly Text format, WAT
 ";
-        sha256 = "026b9mqd522q5fnnkbk3zgmam22l1lczk99igwglc3s0491p0cfc";
+        sha256 = "1nxvqav58h9cdwwgp89yikxdlp986v18y2940vliq1ynfwpmwiv4";
         authors = [
           "Alex Crichton <alex@alexcrichton.com>"
         ];
