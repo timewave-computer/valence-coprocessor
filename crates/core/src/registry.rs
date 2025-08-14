@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use valence_coprocessor_types::{ControllerData, DomainData};
 
-use crate::{DataBackend, Hash, Hasher, Vm, ZkVm};
+use crate::{DataBackend, ExecutionContext, Hash, Hasher, Permission, Vm, ZkVm};
 
 /// Artifacts repository.
 pub struct Registry<D: DataBackend> {
@@ -28,6 +28,7 @@ impl<D: DataBackend> Registry<D> {
         &self,
         vm: &M,
         zkvm: &Z,
+        ctx: &ExecutionContext<H, D>,
         controller: ControllerData,
     ) -> anyhow::Result<Hash>
     where
@@ -36,6 +37,9 @@ impl<D: DataBackend> Registry<D> {
         Z: ZkVm<Hasher = H>,
     {
         let id = controller.identifier();
+
+        ctx.ensure(&Permission::CircuitControllerWrite(id))?;
+
         let ControllerData {
             controller,
             circuit,
@@ -56,6 +60,7 @@ impl<D: DataBackend> Registry<D> {
         &self,
         vm: &M,
         zkvm: &Z,
+        ctx: &ExecutionContext<H, D>,
         domain: DomainData,
     ) -> anyhow::Result<Hash>
     where
@@ -64,6 +69,9 @@ impl<D: DataBackend> Registry<D> {
         Z: ZkVm<Hasher = H>,
     {
         let id = domain.identifier();
+
+        ctx.ensure(&Permission::CircuitControllerWrite(id))?;
+
         let DomainData {
             controller,
             circuit,

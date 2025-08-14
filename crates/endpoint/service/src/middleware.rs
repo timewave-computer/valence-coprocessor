@@ -1,5 +1,7 @@
-use poem::{http::StatusCode, Endpoint, Error, Request};
+use poem::{http::StatusCode, Body, Endpoint, Error, Request};
+use serde_json::Value;
 use valence_coprocessor::Hash;
+use valence_crypto_utils::Ecdsa;
 
 use crate::Historical;
 
@@ -16,15 +18,43 @@ pub async fn context<E: Endpoint>(next: E, mut req: Request) -> poem::Result<E::
         .map(try_str_to_hash)
         .transpose()?;
 
+    let signature = req
+        .header("valence-coprocessor-signature")
+        .map(String::from);
+
+    let mut owner = None;
+    if let Some(signature) = signature {
+        let signature = const_hex::decode(signature)
+            .map_err(|e| Error::from_string(e.to_string(), StatusCode::BAD_REQUEST))?;
+
+        let body = req.take_body();
+        let data: Value = body.into_json().await?;
+        let message = serde_json::to_vec(&data)
+            .map_err(|e| Error::from_string(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR))?;
+
+        owner.replace(
+            Ecdsa::recover_from_json(&signature, &message)
+                .map_err(|e| Error::from_string(e.to_string(), StatusCode::BAD_REQUEST))?,
+        );
+
+        let body = Body::from_json(data)
+            .map_err(|e| Error::from_string(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR))?;
+        req.set_body(body);
+    }
+
     let ext = req.extensions_mut();
     let historical: &Historical = ext
         .get()
         .ok_or_else(|| Error::from_status(StatusCode::INTERNAL_SERVER_ERROR))?;
 
-    let ctx = match root {
+    let mut ctx = match root {
         Some(root) => historical.context_with_root(controller, root),
         None => historical.context(controller),
     };
+
+    if let Some(owner) = owner {
+        ctx = ctx.with_owner(owner);
+    }
 
     ext.insert(ctx);
 

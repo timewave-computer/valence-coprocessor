@@ -9,7 +9,6 @@ members = [
   "crates/endpoint/service",
   "crates/runtime/sp1",
   "crates/runtime/wasm",
-  "crates/utils/client",
 ]
 resolver = "2"
 default-members = ["crates/core", "crates/merkle", "crates/types"]
@@ -18,7 +17,7 @@ default-members = ["crates/core", "crates/merkle", "crates/types"]
 authors = ["Timewave Labs"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.4.6"
+version = "0.4.7"
 repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]
@@ -29,8 +28,13 @@ bincode = "1.3.3"
 blake3 = { version = "1.6.1", default-features = false }
 buf-fs = "0.1.2"
 clap = { version = "4.5.37", features = ["derive", "env"] }
+const-hex = { version = "1.14.1", default-features = false, features = [
+  "alloc",
+  "core-error",
+] }
 hashbrown = "0.15.2"
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
+k256 = { version = "0.13.4", default-features = false, features = ["alloc"] }
 lru = "0.14.0"
 msgpacker = { version = "0.4.8", default-features = false, features = [
   "alloc",
@@ -47,6 +51,8 @@ serde_cbor = "0.11.2"
 serde_json = { version = "1.0.140", default-features = false, features = [
   "alloc",
 ] }
+serde_json_canonicalizer = "0.3.1"
+sha2 = { version = "0.10.9", default-features = false }
 sp1-core-executor = "=5.0.8"
 sp1-sdk = "=5.0.8"
 sp1-stark = "=5.0.8"
@@ -54,6 +60,7 @@ sp1-verifier = "=5.0.8"
 tokio = { version = "1.44.2", features = ["full"] }
 tracing = { version = "0.1.41", default-features = false }
 uuid = { version = "1.17.0", features = ["v7"] }
+valence-crypto-utils = { version = "0.1.0", default-features = false }
 zerocopy = { version = "0.8.23", features = ["alloc", "derive"] }
 
 [profile.dev]

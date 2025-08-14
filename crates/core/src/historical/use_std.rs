@@ -29,6 +29,14 @@ where
         ExecutionContext::init(controller, current, self.data.clone())
     }
 
+    /// Initializes a new context.
+    pub fn context_without_controller(&self) -> ExecutionContext<H, D> {
+        let current = self.current();
+        let controller = Hash::default();
+
+        ExecutionContext::init(controller, current, self.data.clone())
+    }
+
     /// Initializes a new context with the provided historical root.
     pub fn context_with_root(&self, controller: Hash, root: Hash) -> ExecutionContext<H, D> {
         ExecutionContext::init(controller, root, self.data.clone())
