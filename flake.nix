@@ -63,7 +63,9 @@
         
         checks = with config.crate2nix.checks; {
           inherit cargo-valence;
-          prover = valence-coprocessor-prover;
+          prover = valence-coprocessor-prover.override {
+            features = [ "gpu" ];
+          };
           service = valence-coprocessor-service;
         };
 
