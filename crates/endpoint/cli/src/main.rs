@@ -9,6 +9,9 @@ fn main() -> anyhow::Result<()> {
         docker_host,
     } = Cli::parse();
 
+    eprintln!("cargo-valence is deprecated! Use valence-domain-clients instead.");
+    eprintln!("https://github.com/timewave-computer/valence-domain-clients?tab=readme-ov-file#cli");
+
     let app = App::default()
         .with_tag(tag)
         .with_socket(socket)
