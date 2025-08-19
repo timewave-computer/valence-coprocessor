@@ -17,7 +17,7 @@ default-members = ["crates/core", "crates/merkle", "crates/types"]
 authors = ["Timewave Labs"]
 edition = "2021"
 license = "Apache-2.0"
-version = "0.4.7"
+version = "0.4.8"
 repository = "https://github.com/timewave-computer/valence-coprocessor"
 
 [workspace.dependencies]

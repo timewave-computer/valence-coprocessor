@@ -88,7 +88,7 @@ To install:
 ```sh
 cargo install \
   --git https://github.com/timewave-computer/valence-coprocessor.git \
-  --tag v0.4.4 \
+  --tag v0.4.8 \
   --locked cargo-valence
 ```
 

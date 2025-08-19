@@ -26,7 +26,7 @@ where
 
         let witnesses = vm.execute(self, controller, Self::CONTROLLER_GET_WITNESSES, args)?;
 
-        tracing::debug!("inner controller executed; parsing `{witnesses:?}`...");
+        tracing::trace!("inner controller executed; parsing `{witnesses:?}`...");
 
         let witnesses = serde_json::from_value(witnesses)?;
 
@@ -65,7 +65,8 @@ where
     where
         VM: Vm<H, D>,
     {
-        tracing::debug!("fetching state proof for `{domain}` with {args:?}...");
+        tracing::debug!("fetching state proof for `{domain}`...");
+        tracing::trace!("args {args:?}...");
 
         let domain = DomainData::identifier_from_parts(domain);
         let proof = vm.execute(self, &domain, Self::CONTROLLER_GET_STATE_PROOF, args)?;

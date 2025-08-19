@@ -123,7 +123,7 @@ where
         f: &str,
         args: Value,
     ) -> anyhow::Result<Value> {
-        tracing::debug!("executing controller {controller:x?}, {f}({:?})", args);
+        tracing::trace!("executing controller {controller:x?}, {f}({:?})", args);
 
         let runtime = Runtime {
             args,
@@ -180,7 +180,7 @@ where
             log.push(e.to_string());
         }
 
-        tracing::debug!("function executed; ret `{ret:?}`...");
+        tracing::trace!("function executed; ret `{ret:?}`...");
 
         ctx.extend_log(log)?;
 

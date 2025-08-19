@@ -225,7 +225,7 @@ impl Worker {
 
                     let res = worker.execute(req).await;
 
-                    tracing::debug!("worker computed {res:?}");
+                    tracing::trace!("worker computed {res:?}");
 
                     Self::send(s, res);
                 }
