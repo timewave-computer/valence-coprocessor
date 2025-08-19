@@ -39,6 +39,8 @@ impl<D: DataBackend> Registry<D> {
         let id = controller.identifier();
 
         ctx.ensure(&Permission::CircuitControllerWrite(id))?;
+        ctx.allow(&Permission::CircuitControllerWrite(id))?;
+        ctx.allow(&Permission::CircuitStorageWrite(id))?;
 
         let ControllerData {
             controller,
@@ -71,6 +73,8 @@ impl<D: DataBackend> Registry<D> {
         let id = domain.identifier();
 
         ctx.ensure(&Permission::CircuitControllerWrite(id))?;
+        ctx.allow(&Permission::CircuitControllerWrite(id))?;
+        ctx.allow(&Permission::CircuitStorageWrite(id))?;
 
         let DomainData {
             controller,

@@ -495,6 +495,8 @@ impl Api {
             ..
         } = block;
 
+        tracing::debug!("block validated for domain `{}`.", &*domain);
+
         Ok(Json(DomainAddBlockResponse {
             domain,
             prev_smt,
