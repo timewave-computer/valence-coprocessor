@@ -79,40 +79,11 @@ graph LR
   RecentHistory -- "Sync" --> Latest
 ```
 
-#### CLI helper
+#### CLI
 
-The Valence co-processor includes a CLI helper to facilitate the use of standard operations like deploying a domain, circuit, proving statements, and retrieving state information.
+The Valence coprocessor utilizes the domain-client as CLI for development, debugging, and deployment tasks.
 
-To install:
-
-```sh
-cargo install \
-  --git https://github.com/timewave-computer/valence-coprocessor.git \
-  --tag v0.4.8 \
-  --locked cargo-valence
-```
-
-Check [valence-coprocessor-app](https://github.com/timewave-computer/valence-coprocessor-app) for an app template.
-
-To deploy an application, you can call `cargo-valence deploy`:
-
-```sh
-cargo-valence --docker-host \
-  deploy circuit \
-  --controller ./crates/controller \
-  --circuit valence-coprocessor-app-vault-circuit
-```
-
-This process aims to deploy the circuit into a locally running co-processor instance. It leverages a Docker host network, ensuring seamless operation without additional setup. On Linux systems, utilize the `--docker-host` option. However, for Windows and OSX users, opt for the `--socket` option instead, and ensure you've identified your exposed IP address accessible to Docker containers, as this is where the circuit will be deployed.
-
-To deploy a circuit to the public co-processor:
-
-```sh
-cargo-valence --socket https://service.coprocessor.valence.zone \
-  deploy circuit \
-  --controller ./crates/controller \
-  --circuit valence-coprocessor-app-vault-circuit
-```
+https://github.com/timewave-computer/valence-domain-clients?tab=readme-ov-file#cli
 
 #### Local execution
 
