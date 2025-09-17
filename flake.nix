@@ -186,10 +186,9 @@
         { config, lib, ... }:
         let
           cfg = config.services.valence-coprocessor.service;
-        in
-        {
-          options = {
-            services.valence-coprocessor.service = {
+          inherit (lib) types;
+          instanceModule = { name, config, ... }: {
+            options = {
               package = lib.mkOption {
                 type = lib.types.package;
                 default = self'.packages.service;
@@ -198,21 +197,48 @@
                 type = lib.types.listOf (lib.types.str);
                 default = [];
               };
+              envFiles = lib.mkOption {
+                type = types.listOf types.path;
+                default = [];
+              };
+              service = lib.mkOption {
+                type = types.attrsOf types.anything;
+                internal = true;
+              };
+            };
+            config.service = {
+              enable = true;
+              serviceConfig = {
+                Type = "simple";
+                DynamicUser = true;
+                StateDirectory = "valence-coprocessor-service-${name}";
+                ExecStart = "${lib.getExe config.package} ${lib.escapeShellArgs config.flags}";
+                EnvironmentFile = config.envFiles;
+              };
+              wantedBy = [ "multi-user.target" ];
+            };
+          };
+        in
+        {
+          options = {
+            services.valence-coprocessor.service = {
+              instances = lib.mkOption {
+                type = types.attrsOf (types.submodule {
+                  imports = [ instanceModule cfg.perInstance ];
+                });
+                default = {};
+              };
+              perInstance = lib.mkOption {
+                type = types.deferredModule;
+                default = {};
+              };
             };
           };
           config = {
-            systemd.services = {
-              valence-coprocessor = {
-                enable = true;
-                serviceConfig = {
-                  Type = "simple";
-                  DynamicUser = true;
-                  StateDirectory = "valence-coprocessor";
-                  ExecStart = "${lib.getExe cfg.package} ${lib.escapeShellArgs cfg.flags}";
-                };
-                wantedBy = [ "multi-user.target" ];
-              };
-            };
+            systemd.services = lib.mapAttrs' (name: instance: {
+              name = "valence-coprocessor-service-${name}";
+              value = instance.service;
+            }) cfg.instances;
           };
         }
       );
