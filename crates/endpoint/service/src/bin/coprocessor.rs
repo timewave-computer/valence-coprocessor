@@ -5,9 +5,10 @@ use poem::{listener::TcpListener, EndpointExt as _, Route};
 use poem_openapi::OpenApiService;
 use tracing_subscriber::{fmt, layer::SubscriberExt as _, util::SubscriberInitExt as _, EnvFilter};
 use valence_coprocessor::Registry;
+use valence_coprocessor_prover::scheduler::ProverScheduler;
 use valence_coprocessor_redis::RedisBackend;
 use valence_coprocessor_service::{
-    api::Api, data::ServiceBackend, middleware, worker::Pool, Historical, ServiceVm, ServiceZkVm,
+    api::Api, data::ServiceBackend, middleware, worker::Pool, Historical, ServiceVm,
 };
 
 #[derive(Parser)]
@@ -20,7 +21,7 @@ struct Cli {
     #[arg(short, long, env, value_name = "REDIS")]
     redis: Option<String>,
 
-    /// Socket to the Prover service backend. Fallback to SP1 mock prover.
+    /// Socket to the Prover service backend.
     #[arg(short, long, value_name = "PROVER")]
     prover: Option<String>,
 
@@ -56,10 +57,13 @@ async fn main() -> anyhow::Result<()> {
     let registry = Registry::from(data.clone());
     let vm = ServiceVm::new(capacity)?;
 
-    let zkvm = match prover {
-        Some(addr) => ServiceZkVm::service(addr),
-        None => ServiceZkVm::mock(capacity)?,
-    };
+    tracing::info!("initiating prover scheduler...");
+
+    let zkvm = ProverScheduler::default();
+
+    if let Some(p) = &prover {
+        zkvm.push(None, p);
+    }
 
     tracing::info!("initiating historical tree...");
 

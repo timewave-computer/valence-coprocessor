@@ -3,8 +3,9 @@ use std::{thread, time::Duration};
 use flume::{Receiver, Sender};
 use serde_json::{json, Value};
 use valence_coprocessor::{Hash, WitnessCoprocessor, ZkVm as _};
+use valence_coprocessor_prover::scheduler::ProverScheduler;
 
-use crate::{Historical, ServiceVm, ServiceZkVm};
+use crate::{Historical, ServiceVm};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Job {
@@ -12,6 +13,7 @@ pub enum Job {
         circuit: Hash,
         witness: WitnessCoprocessor,
         payload: Option<Value>,
+        owner: Option<Vec<u8>>,
     },
     Quit,
 }
@@ -34,11 +36,11 @@ pub struct Pool {
     frequency: Duration,
     historical: Historical,
     vm: ServiceVm,
-    zkvm: ServiceZkVm,
+    zkvm: ProverScheduler,
 }
 
 impl Pool {
-    pub fn new(historical: Historical, vm: ServiceVm, zkvm: ServiceZkVm) -> Self {
+    pub fn new(historical: Historical, vm: ServiceVm, zkvm: ProverScheduler) -> Self {
         let (tx, rx) = flume::unbounded();
         let (ack_tx, ack) = flume::unbounded();
 
@@ -170,16 +172,27 @@ impl Pool {
 pub struct Worker {
     historical: Historical,
     vm: ServiceVm,
-    zkvm: ServiceZkVm,
+    zkvm: ProverScheduler,
     rx: Receiver<Job>,
     tx: Sender<Ack>,
 }
 
 impl Worker {
-    pub fn prove(&self, controller: Hash, witness: WitnessCoprocessor, payload: Option<Value>) {
+    pub fn prove(
+        &self,
+        controller: Hash,
+        witness: WitnessCoprocessor,
+        payload: Option<Value>,
+        owner: Option<Vec<u8>>,
+    ) {
         tracing::debug!("worker recv: {}", hex::encode(controller));
 
-        let ctx = self.historical.context(controller);
+        let mut ctx = self.historical.context(controller);
+
+        if let Some(o) = owner {
+            ctx = ctx.with_owner(o);
+        }
+
         let res = self.zkvm.prove(&ctx, witness);
 
         tracing::debug!(
@@ -224,7 +237,8 @@ impl Worker {
                         circuit,
                         witness,
                         payload,
-                    } => self.prove(circuit, witness, payload),
+                        owner,
+                    } => self.prove(circuit, witness, payload, owner),
                     Job::Quit => {
                         self.tx.send(Ack::Kill).ok();
                         break;

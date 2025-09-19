@@ -6,9 +6,10 @@ use poem_openapi::{param::Path, payload::Json, types::Base64, Object, OpenApi};
 use serde_json::{json, Value};
 use valence_coprocessor::{BlockAdded, Hash, HistoricalUpdate, ValidatedDomainBlock};
 use valence_coprocessor::{ControllerData, DomainData};
+use valence_coprocessor_prover::scheduler::ProverScheduler;
 
 use crate::Context;
-use crate::{worker::Job, Historical, Registry, ServiceVm, ServiceZkVm};
+use crate::{worker::Job, Historical, Registry, ServiceVm};
 
 pub struct Api;
 
@@ -130,6 +131,12 @@ pub struct ControllerEntrypointResponse {
 }
 
 #[derive(Object, Debug)]
+pub struct ProverRequest {
+    /// A prover address.
+    pub address: String,
+}
+
+#[derive(Object, Debug)]
 pub struct DomainAddBlockResponse {
     /// Domain to which the block was added.
     pub domain: String,
@@ -165,7 +172,7 @@ impl Api {
         &self,
         registry: Data<&Registry>,
         vm: Data<&ServiceVm>,
-        zkvm: Data<&ServiceZkVm>,
+        zkvm: Data<&ProverScheduler>,
         ctx: Data<&Context>,
         request: Json<RegisterControllerRequest>,
     ) -> poem::Result<Json<RegisterControllerResponse>> {
@@ -191,7 +198,7 @@ impl Api {
         &self,
         registry: Data<&Registry>,
         vm: Data<&ServiceVm>,
-        zkvm: Data<&ServiceZkVm>,
+        zkvm: Data<&ProverScheduler>,
         ctx: Data<&Context>,
         request: Json<RegisterDomainRequest>,
     ) -> poem::Result<Json<RegisterDomainResponse>> {
@@ -303,6 +310,7 @@ impl Api {
         let ctx = ctx.clone().with_controller(controller);
         let witnesses = ctx.get_circuit_witnesses(*vm, args).map_err(perr)?;
         let witness = ctx.get_coprocessor_witness(witnesses).map_err(perr)?;
+        let owner = ctx.owner().map(|o| o.to_vec());
 
         tracing::debug!("coprocessor witness computed; submitting job...");
 
@@ -310,6 +318,7 @@ impl Api {
             circuit: controller,
             witness,
             payload,
+            owner,
         })
         .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))
         .map_err(perr)?;
@@ -339,6 +348,7 @@ impl Api {
 
         let witnesses = ctx.get_circuit_witnesses(*vm, args).map_err(perr)?;
         let witness = ctx.get_coprocessor_witness(witnesses).map_err(perr)?;
+        let owner = ctx.owner().map(|o| o.to_vec());
 
         tracing::debug!("coprocessor witness computed; submitting job...");
 
@@ -346,6 +356,7 @@ impl Api {
             circuit: controller,
             witness,
             payload,
+            owner,
         })
         .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))
         .map_err(perr)?;
@@ -359,7 +370,7 @@ impl Api {
         &self,
         controller: Path<String>,
         ctx: Data<&Context>,
-        zkvm: Data<&ServiceZkVm>,
+        zkvm: Data<&ProverScheduler>,
     ) -> poem::Result<Json<ControllerVkResponse>> {
         let controller = try_str_to_hash(&controller).map_err(perr)?;
         let ctx = ctx.clone().with_controller(controller);
@@ -771,6 +782,7 @@ impl Api {
 
         let witnesses = ctx.get_circuit_witnesses(*vm, args).map_err(perr)?;
         let witness = ctx.get_coprocessor_witness(witnesses).map_err(perr)?;
+        let owner = ctx.owner().map(|o| o.to_vec());
         let circuit = *ctx.controller();
 
         tracing::debug!("coprocessor witness computed; submitting job...");
@@ -779,6 +791,7 @@ impl Api {
             circuit,
             witness,
             payload,
+            owner,
         })
         .map_err(|e| anyhow::anyhow!("failed to submit prove job: {e}"))
         .map_err(perr)?;
@@ -791,7 +804,7 @@ impl Api {
     pub async fn circuit_vk(
         &self,
         ctx: Data<&Context>,
-        zkvm: Data<&ServiceZkVm>,
+        zkvm: Data<&ProverScheduler>,
     ) -> poem::Result<Json<Value>> {
         let vk = ctx.get_verifying_key(*zkvm).map_err(perr)?;
         let vk = valence_coprocessor::Base64::encode(vk);
@@ -840,6 +853,63 @@ impl Api {
         let log = ctx.get_log().map_err(perr)?;
 
         Ok(Json(ControllerEntrypointResponse { ret, log }))
+    }
+
+    /// Adds an owned prover to the scheduler.
+    #[oai(path = "/prover", method = "post")]
+    pub async fn prover_post(
+        &self,
+        ctx: Data<&Context>,
+        zkvm: Data<&ProverScheduler>,
+        args: Json<ProverRequest>,
+    ) -> poem::Result<Json<Value>> {
+        let address = args.0.address;
+
+        tracing::debug!("adding owned prover `{address}`...");
+
+        let owner = ctx.owner().ok_or_else(|| {
+            tracing::debug!("attempt to add prover without an owner");
+            r400()
+        })?;
+
+        zkvm.push(Some(owner), &address);
+
+        Ok(Json(json!({"added": true})))
+    }
+
+    /// Removes an owned prover from the scheduler.
+    #[oai(path = "/prover", method = "delete")]
+    pub async fn prover_delete(
+        &self,
+        ctx: Data<&Context>,
+        zkvm: Data<&ProverScheduler>,
+        args: Json<ProverRequest>,
+    ) -> poem::Result<Json<Value>> {
+        let address = args.0.address;
+
+        tracing::debug!("deleting owned prover `{address}`...");
+
+        let owner = ctx.owner().ok_or_else(|| {
+            tracing::debug!("attempt to delete prover without an owner");
+            r400()
+        })?;
+
+        let removed = zkvm.remove(Some(owner), &address).is_some();
+
+        Ok(Json(json!({"removed": removed})))
+    }
+
+    /// Adds an owned prover.
+    #[oai(path = "/prover", method = "get")]
+    pub async fn prover_get(
+        &self,
+        ctx: Data<&Context>,
+        zkvm: Data<&ProverScheduler>,
+    ) -> poem::Result<Json<Value>> {
+        let owner = ctx.owner();
+        let allocated = zkvm.allocated(owner);
+
+        Ok(Json(json!(allocated)))
     }
 }
 
