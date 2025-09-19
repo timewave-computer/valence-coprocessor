@@ -1,6 +1,6 @@
 use std::{env, net::TcpStream};
 
-use msgpacker::{Packable as _, Unpackable as _};
+use msgpacker::{MsgPacker, Packable as _, Unpackable as _};
 use serde::{Deserialize, Serialize};
 use sp1_sdk::SP1VerifyingKey;
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
@@ -8,7 +8,7 @@ use valence_coprocessor::{Base64, Blake3Hasher, Hash, Hasher as _, Proof};
 
 use crate::types::{Circuit, ProofType, RecursiveProof, Request, Response};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, MsgPacker)]
 pub struct Client {
     pub addr: String,
 }
@@ -27,6 +27,10 @@ impl Client {
         Self {
             addr: addr.to_string(),
         }
+    }
+
+    pub fn address(&self) -> &str {
+        &self.addr
     }
 
     fn connect(&self) -> anyhow::Result<WebSocket<MaybeTlsStream<TcpStream>>> {

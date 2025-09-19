@@ -58,6 +58,11 @@ where
         self
     }
 
+    /// Returns the associated owner, if present.
+    pub fn owner(&self) -> Option<&[u8]> {
+        self.owner.as_deref()
+    }
+
     /// Asserts the owner is present and has the permission.
     fn _assert(&self, permission: &Permission) -> anyhow::Result<()> {
         let owner = self
@@ -67,6 +72,8 @@ where
 
         let permission = permission.to_string();
         let token = H::key(&permission, owner.as_slice());
+
+        tracing::debug!("checking resource `{}`...", const_hex::encode(token));
 
         self.data
             .get(Self::PREFIX_AUTH, &token)?
@@ -85,11 +92,15 @@ where
             let resource = permission.to_string();
             let resource = H::hash(resource.as_bytes());
 
+            tracing::debug!("resource `{}` locked...", const_hex::encode(resource));
+
             self.data.set(Self::PREFIX_AUTH_LOCKED, &resource, &[])?;
         }
 
         let token = permission.to_string();
         let token = H::key(&token, owner);
+
+        tracing::debug!("resource `{}` granted...", const_hex::encode(token));
 
         self.data.set(Self::PREFIX_AUTH, &token, &[])?;
 
@@ -116,6 +127,11 @@ where
                 .get(Self::PREFIX_AUTH_LOCKED, &resource)?
                 .is_some()
             {
+                tracing::debug!(
+                    "resource `{}` locked; ensuring permission...",
+                    const_hex::encode(resource)
+                );
+
                 self._assert(permission)?;
             }
         }

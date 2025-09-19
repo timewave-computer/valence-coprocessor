@@ -1,4 +1,7 @@
-use poem::{http::StatusCode, Body, Endpoint, Error, Request};
+use poem::{
+    http::{Method, StatusCode},
+    Body, Endpoint, Error, Request,
+};
 use serde_json::Value;
 use valence_coprocessor::Hash;
 use valence_crypto_utils::Ecdsa;
@@ -27,19 +30,34 @@ pub async fn context<E: Endpoint>(next: E, mut req: Request) -> poem::Result<E::
         let signature = const_hex::decode(signature)
             .map_err(|e| Error::from_string(e.to_string(), StatusCode::BAD_REQUEST))?;
 
-        let body = req.take_body();
-        let data: Value = body.into_json().await?;
+        let data = match req.method() {
+            &Method::GET => Value::Null,
+
+            _ => {
+                let body = req.take_body();
+                let data: Value = body.into_json().await?;
+
+                let body = Body::from_json(&data).map_err(|e| {
+                    Error::from_string(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+                })?;
+                req.set_body(body);
+
+                data
+            }
+        };
+
         let message = serde_json::to_vec(&data)
             .map_err(|e| Error::from_string(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR))?;
 
-        owner.replace(
-            Ecdsa::recover_from_json(&signature, &message)
-                .map_err(|e| Error::from_string(e.to_string(), StatusCode::BAD_REQUEST))?,
-        );
+        let uuid = req
+            .header("valence-coprocessor-uuid")
+            .map(String::from)
+            .unwrap_or_default();
 
-        let body = Body::from_json(data)
-            .map_err(|e| Error::from_string(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR))?;
-        req.set_body(body);
+        let recovered = Ecdsa::recover_from_json_with_id(&signature, uuid.as_bytes(), &message)
+            .map_err(|e| Error::from_string(e.to_string(), StatusCode::BAD_REQUEST))?;
+
+        owner.replace(recovered);
     }
 
     let ext = req.extensions_mut();
